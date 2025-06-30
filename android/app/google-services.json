@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "160931289066",
+    "project_id": "qvise-test-1",
+    "storage_bucket": "qvise-test-1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:160931289066:android:610a98dfde5afc8aa50493",
+        "android_client_info": {
+          "package_name": "com.example.qvise"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCdUkIm55lM4cL2NGDKyKmq22OrNjiM58Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:160931289066:android:78f01b4cbc9c2e29a50493",
+        "android_client_info": {
+          "package_name": "com.example.qvisetest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCdUkIm55lM4cL2NGDKyKmq22OrNjiM58Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
