@@ -32,7 +32,7 @@ class ProfileTab extends ConsumerWidget {
                 gradient: LinearGradient(
                   colors: [
                     context.primaryColor,
-                    context.primaryColor.withOpacity(0.8),
+                    context.primaryColor.withValues(alpha: 0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -46,7 +46,7 @@ class ProfileTab extends ConsumerWidget {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: user.photoUrl != null
@@ -79,7 +79,7 @@ class ProfileTab extends ConsumerWidget {
                   Text(
                     user.email,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 16,
                     ),
                   ),
@@ -92,10 +92,10 @@ class ProfileTab extends ConsumerWidget {
                       vertical: AppSpacing.sm,
                     ),
                     decoration: BoxDecoration(
-                      color: isPremium ? Colors.amber.withOpacity(0.2) : Colors.white.withOpacity(0.2),
+                      color: isPremium ? Colors.amber.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
                       border: Border.all(
-                        color: isPremium ? Colors.amber.withOpacity(0.5) : Colors.white.withOpacity(0.5),
+                        color: isPremium ? Colors.amber.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
                       ),
                     ),
                     child: Row(
@@ -132,8 +132,8 @@ class ProfileTab extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
                 border: Border.all(
                   color: user.isEmailVerified 
-                      ? AppColors.success.withOpacity(0.3) 
-                      : AppColors.warning.withOpacity(0.3),
+                      ? AppColors.success.withValues(alpha: 0.3) 
+                      : AppColors.warning.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
@@ -181,8 +181,41 @@ class ProfileTab extends ConsumerWidget {
               ),
               child: Column(
                 children: [
-                  // Theme selector
-                  const ThemeModeListTile(),
+                  // Theme selector - Using simple ListTile since ThemeModeListTile needs to be generated
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final themeModeAsync = ref.watch(themeModeNotifierProvider);
+                      
+                      return themeModeAsync.when(
+                        data: (themeMode) => ListTile(
+                          leading: Icon(_getThemeIcon(themeMode)),
+                          title: const Text('Theme'),
+                          subtitle: Text(_getThemeName(themeMode)),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: () => _showThemeDialog(context, ref, themeMode),
+                        ),
+                        loading: () => const ListTile(
+                          leading: Icon(Icons.brightness_auto),
+                          title: Text('Theme'),
+                          subtitle: Text('Loading...'),
+                          trailing: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                        error: (error, _) => ListTile(
+                          leading: const Icon(Icons.error_outline),
+                          title: const Text('Theme'),
+                          subtitle: const Text('Error loading theme'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.refresh),
+                            onPressed: () => ref.read(themeModeNotifierProvider.notifier).refreshTheme(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   Divider(height: 1, color: context.dividerColor),
                   
                   // Premium Toggle (for testing)
@@ -247,6 +280,61 @@ class ProfileTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
             
+            // Add Theme Toggle Button for quick access
+            Container(
+              width: double.infinity,
+              padding: AppSpacing.paddingAllMd,
+              decoration: BoxDecoration(
+                color: context.surfaceVariantColor.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                border: Border.all(color: context.borderColor),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.palette),
+                  const SizedBox(width: AppSpacing.sm),
+                  const Text(
+                    'Quick Theme Toggle',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const Spacer(),
+                  // Custom theme toggle button since ThemeToggleButton needs to be generated
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final themeModeAsync = ref.watch(themeModeNotifierProvider);
+                      
+                      return themeModeAsync.when(
+                        data: (themeMode) => IconButton(
+                          icon: Icon(_getThemeIcon(themeMode)),
+                          onPressed: () {
+                            ref.read(themeModeNotifierProvider.notifier).toggleTheme();
+                          },
+                          tooltip: 'Toggle theme (${_getThemeName(themeMode)})',
+                        ),
+                        loading: () => const IconButton(
+                          icon: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          onPressed: null,
+                          tooltip: 'Loading theme...',
+                        ),
+                        error: (error, _) => IconButton(
+                          icon: const Icon(Icons.error_outline),
+                          onPressed: () {
+                            ref.read(themeModeNotifierProvider.notifier).refreshTheme();
+                          },
+                          tooltip: 'Theme error - tap to retry',
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            
             // Logout Button
             SizedBox(
               width: double.infinity,
@@ -278,7 +366,7 @@ class ProfileTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.email_outlined, color: AppColors.warning, size: 100),
+            const Icon(Icons.email_outlined, color: AppColors.warning, size: 100),
             const SizedBox(height: AppSpacing.lg),
             Text(
               'Email Verification Required',
@@ -294,7 +382,7 @@ class ProfileTab extends ConsumerWidget {
               onPressed: () => _handleLogout(context, ref),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.xl,
                   vertical: AppSpacing.md,
                 ),
@@ -320,16 +408,16 @@ class ProfileTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, color: AppColors.error, size: 100),
+            const Icon(Icons.error_outline, color: AppColors.error, size: 100),
             const SizedBox(height: AppSpacing.lg),
             const Text('Error'),
             const SizedBox(height: AppSpacing.sm),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
               child: Text(
                 error,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.error),
+                style: const TextStyle(color: AppColors.error),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -341,6 +429,55 @@ class ProfileTab extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Helper functions for theme management
+  IconData _getThemeIcon(ThemeMode mode) {
+    return switch (mode) {
+      ThemeMode.light => Icons.light_mode,
+      ThemeMode.dark => Icons.dark_mode,
+      ThemeMode.system => Icons.brightness_auto,
+    };
+  }
+
+  String _getThemeName(ThemeMode mode) {
+    return switch (mode) {
+      ThemeMode.light => 'Light',
+      ThemeMode.dark => 'Dark',
+      ThemeMode.system => 'System',
+    };
+  }
+
+  void _showThemeDialog(BuildContext context, WidgetRef ref, ThemeMode currentMode) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Choose Theme'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ThemeMode.values.map((mode) {
+            return RadioListTile<ThemeMode>(
+              title: Text(_getThemeName(mode)),
+              secondary: Icon(_getThemeIcon(mode)),
+              value: mode,
+              groupValue: currentMode,
+              onChanged: (ThemeMode? value) {
+                if (value != null) {
+                  ref.read(themeModeNotifierProvider.notifier).setThemeMode(value);
+                  Navigator.of(dialogContext).pop();
+                }
+              },
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
       ),
     );
   }

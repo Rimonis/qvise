@@ -68,26 +68,69 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch theme mode from provider
-    // FIX: Use .value to extract the ThemeMode from the AsyncValue
-    final themeMode = ref.watch(themeModeNotifierProvider).value;
+    // FIX: Properly handle AsyncValue loading states instead of extracting .value
+    final themeModeAsync = ref.watch(themeModeNotifierProvider);
 
-    return MaterialApp.router(
-      routerConfig: ref.watch(routerProvider),
-      debugShowCheckedModeBanner: false,
-      title: 'Qvise',
-      // Use our custom theme
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode, // This now correctly receives a ThemeMode?
-      builder: (context, child) {
-        // Add any global wrapping widgets here
-        return GestureDetector(
-          // Dismiss keyboard when tapping outside text fields
-          onTap: () {
-            FocusManager.instance.primaryFocus?.unfocus();
+    return themeModeAsync.when(
+      // Theme loaded successfully
+      data: (themeMode) => MaterialApp.router(
+        routerConfig: ref.watch(routerProvider),
+        debugShowCheckedModeBanner: false,
+        title: 'Qvise',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: themeMode,
+        builder: (context, child) {
+          // Add any global wrapping widgets here
+          return GestureDetector(
+            // Dismiss keyboard when tapping outside text fields
+            onTap: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+            },
+            child: child!,
+          );
+        },
+      ),
+      // Loading state - show app with system theme while loading preferences
+      loading: () => MaterialApp.router(
+        routerConfig: ref.watch(routerProvider),
+        debugShowCheckedModeBanner: false,
+        title: 'Qvise',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system, // Use system default while loading
+        builder: (context, child) {
+          return GestureDetector(
+            onTap: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+            },
+            child: child!,
+          );
+        },
+      ),
+      // Error state - fallback to system theme
+      error: (error, stackTrace) {
+        // Log the error in debug mode
+        if (kDebugMode) {
+          print('Theme loading error: $error');
+          print(stackTrace);
+        }
+        
+        return MaterialApp.router(
+          routerConfig: ref.watch(routerProvider),
+          debugShowCheckedModeBanner: false,
+          title: 'Qvise',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.system, // Fallback to system theme
+          builder: (context, child) {
+            return GestureDetector(
+              onTap: () {
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
+              child: child!,
+            );
           },
-          child: child!,
         );
       },
     );

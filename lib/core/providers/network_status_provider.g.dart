@@ -9,11 +9,7 @@ part of 'network_status_provider.dart';
 String _$currentNetworkStatusHash() =>
     r'9cc373abb97535afc4ec7783bb7dc3b68eabbc7a';
 
-/// A simple provider that returns the current network status as a boolean.
-///
-/// Returns `true` if online, and `false` if offline or in a loading/error state.
-///
-/// Copied from [currentNetworkStatus].
+/// See also [currentNetworkStatus].
 @ProviderFor(currentNetworkStatus)
 final currentNetworkStatusProvider = AutoDisposeProvider<bool>.internal(
   currentNetworkStatus,
@@ -52,24 +48,16 @@ class _SystemHash {
   }
 }
 
-/// Provider to check if specific features should be available based on network status.
-///
-/// Copied from [isOfflineFeatureAvailable].
+/// See also [isOfflineFeatureAvailable].
 @ProviderFor(isOfflineFeatureAvailable)
 const isOfflineFeatureAvailableProvider = IsOfflineFeatureAvailableFamily();
 
-/// Provider to check if specific features should be available based on network status.
-///
-/// Copied from [isOfflineFeatureAvailable].
+/// See also [isOfflineFeatureAvailable].
 class IsOfflineFeatureAvailableFamily extends Family<bool> {
-  /// Provider to check if specific features should be available based on network status.
-  ///
-  /// Copied from [isOfflineFeatureAvailable].
+  /// See also [isOfflineFeatureAvailable].
   const IsOfflineFeatureAvailableFamily();
 
-  /// Provider to check if specific features should be available based on network status.
-  ///
-  /// Copied from [isOfflineFeatureAvailable].
+  /// See also [isOfflineFeatureAvailable].
   IsOfflineFeatureAvailableProvider call(
     String feature,
   ) {
@@ -102,13 +90,9 @@ class IsOfflineFeatureAvailableFamily extends Family<bool> {
   String? get name => r'isOfflineFeatureAvailableProvider';
 }
 
-/// Provider to check if specific features should be available based on network status.
-///
-/// Copied from [isOfflineFeatureAvailable].
+/// See also [isOfflineFeatureAvailable].
 class IsOfflineFeatureAvailableProvider extends AutoDisposeProvider<bool> {
-  /// Provider to check if specific features should be available based on network status.
-  ///
-  /// Copied from [isOfflineFeatureAvailable].
+  /// See also [isOfflineFeatureAvailable].
   IsOfflineFeatureAvailableProvider(
     String feature,
   ) : this._internal(
@@ -195,11 +179,7 @@ class _IsOfflineFeatureAvailableProviderElement
 
 String _$networkStatusHash() => r'6a88840160e0aed4ca833f2ff5df4dac713b3454';
 
-/// A `StreamNotifier` that manages and exposes the device's network connection status.
-///
-/// It correctly overrides the `build` method by returning a `Stream<bool>`.
-///
-/// Copied from [NetworkStatus].
+/// See also [NetworkStatus].
 @ProviderFor(NetworkStatus)
 final networkStatusProvider =
     StreamNotifierProvider<NetworkStatus, bool>.internal(

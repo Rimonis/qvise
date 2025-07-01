@@ -6,7 +6,7 @@ part of 'theme_mode_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$isDarkModeHash() => r'bb9447f42d664a36a13ace50cf8d2d1bbe20bf88';
+String _$isDarkModeHash() => r'08fe29ad64734017b79e73f1bbd3791115e10045';
 
 /// A derived provider that returns a simple boolean indicating if dark mode is active.
 /// It correctly handles the 'system' theme by checking the platform's brightness.
@@ -25,7 +25,7 @@ final isDarkModeProvider = AutoDisposeProvider<bool>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef IsDarkModeRef = AutoDisposeProviderRef<bool>;
-String _$themeModeNotifierHash() => r'699674ca1b63926f7bfc12112d57add821bc9936';
+String _$themeModeNotifierHash() => r'6e9625829ecd8fc22480e35616fae6082a698811';
 
 /// An AsyncNotifier that manages and persists the application's theme mode.
 ///
