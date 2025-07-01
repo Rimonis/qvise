@@ -13,15 +13,14 @@ String _$contentLocalDataSourceHash() =>
 @ProviderFor(contentLocalDataSource)
 final contentLocalDataSourceProvider =
     Provider<ContentLocalDataSource>.internal(
-      contentLocalDataSource,
-      name: r'contentLocalDataSourceProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$contentLocalDataSourceHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+  contentLocalDataSource,
+  name: r'contentLocalDataSourceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$contentLocalDataSourceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
@@ -33,15 +32,14 @@ String _$contentRemoteDataSourceHash() =>
 @ProviderFor(contentRemoteDataSource)
 final contentRemoteDataSourceProvider =
     Provider<ContentRemoteDataSource>.internal(
-      contentRemoteDataSource,
-      name: r'contentRemoteDataSourceProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$contentRemoteDataSourceHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+  contentRemoteDataSource,
+  name: r'contentRemoteDataSourceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$contentRemoteDataSourceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
@@ -53,10 +51,9 @@ String _$contentRepositoryHash() => r'4c5bc5e3e9a6480cf3ff76971791af18cacbc072';
 final contentRepositoryProvider = Provider<ContentRepository>.internal(
   contentRepository,
   name: r'contentRepositoryProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$contentRepositoryHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$contentRepositoryHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -88,10 +85,9 @@ String _$getTopicsBySubjectHash() =>
 final getTopicsBySubjectProvider = Provider<GetTopicsBySubject>.internal(
   getTopicsBySubject,
   name: r'getTopicsBySubjectProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$getTopicsBySubjectHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$getTopicsBySubjectHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -106,10 +102,9 @@ String _$getLessonsByTopicHash() => r'dd24b0e05b697b0097e1b8eb41302e08cda7afef';
 final getLessonsByTopicProvider = Provider<GetLessonsByTopic>.internal(
   getLessonsByTopic,
   name: r'getLessonsByTopicProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$getLessonsByTopicHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$getLessonsByTopicHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -172,10 +167,9 @@ String _$deleteSubjectHash() => r'caf9ab7d23ed01ec340e1bbcdeb1d79ae28d0e9e';
 final deleteSubjectProvider = Provider<DeleteSubject>.internal(
   deleteSubject,
   name: r'deleteSubjectProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$deleteSubjectHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$deleteSubjectHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );

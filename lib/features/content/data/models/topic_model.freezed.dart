@@ -12,8 +12,7 @@ part of 'topic_model.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
-);
+    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 TopicModel _$TopicModelFromJson(Map<String, dynamic> json) {
   return _TopicModel.fromJson(json);
@@ -42,19 +41,17 @@ mixin _$TopicModel {
 /// @nodoc
 abstract class $TopicModelCopyWith<$Res> {
   factory $TopicModelCopyWith(
-    TopicModel value,
-    $Res Function(TopicModel) then,
-  ) = _$TopicModelCopyWithImpl<$Res, TopicModel>;
+          TopicModel value, $Res Function(TopicModel) then) =
+      _$TopicModelCopyWithImpl<$Res, TopicModel>;
   @useResult
-  $Res call({
-    String name,
-    String subjectName,
-    String userId,
-    double proficiency,
-    int lessonCount,
-    DateTime lastStudied,
-    DateTime createdAt,
-  });
+  $Res call(
+      {String name,
+      String subjectName,
+      String userId,
+      double proficiency,
+      int lessonCount,
+      DateTime lastStudied,
+      DateTime createdAt});
 }
 
 /// @nodoc
@@ -80,46 +77,36 @@ class _$TopicModelCopyWithImpl<$Res, $Val extends TopicModel>
     Object? lastStudied = null,
     Object? createdAt = null,
   }) {
-    return _then(
-      _value.copyWith(
-            name:
-                null == name
-                    ? _value.name
-                    : name // ignore: cast_nullable_to_non_nullable
-                        as String,
-            subjectName:
-                null == subjectName
-                    ? _value.subjectName
-                    : subjectName // ignore: cast_nullable_to_non_nullable
-                        as String,
-            userId:
-                null == userId
-                    ? _value.userId
-                    : userId // ignore: cast_nullable_to_non_nullable
-                        as String,
-            proficiency:
-                null == proficiency
-                    ? _value.proficiency
-                    : proficiency // ignore: cast_nullable_to_non_nullable
-                        as double,
-            lessonCount:
-                null == lessonCount
-                    ? _value.lessonCount
-                    : lessonCount // ignore: cast_nullable_to_non_nullable
-                        as int,
-            lastStudied:
-                null == lastStudied
-                    ? _value.lastStudied
-                    : lastStudied // ignore: cast_nullable_to_non_nullable
-                        as DateTime,
-            createdAt:
-                null == createdAt
-                    ? _value.createdAt
-                    : createdAt // ignore: cast_nullable_to_non_nullable
-                        as DateTime,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      subjectName: null == subjectName
+          ? _value.subjectName
+          : subjectName // ignore: cast_nullable_to_non_nullable
+              as String,
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      proficiency: null == proficiency
+          ? _value.proficiency
+          : proficiency // ignore: cast_nullable_to_non_nullable
+              as double,
+      lessonCount: null == lessonCount
+          ? _value.lessonCount
+          : lessonCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      lastStudied: null == lastStudied
+          ? _value.lastStudied
+          : lastStudied // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+    ) as $Val);
   }
 }
 
@@ -127,20 +114,18 @@ class _$TopicModelCopyWithImpl<$Res, $Val extends TopicModel>
 abstract class _$$TopicModelImplCopyWith<$Res>
     implements $TopicModelCopyWith<$Res> {
   factory _$$TopicModelImplCopyWith(
-    _$TopicModelImpl value,
-    $Res Function(_$TopicModelImpl) then,
-  ) = __$$TopicModelImplCopyWithImpl<$Res>;
+          _$TopicModelImpl value, $Res Function(_$TopicModelImpl) then) =
+      __$$TopicModelImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String name,
-    String subjectName,
-    String userId,
-    double proficiency,
-    int lessonCount,
-    DateTime lastStudied,
-    DateTime createdAt,
-  });
+  $Res call(
+      {String name,
+      String subjectName,
+      String userId,
+      double proficiency,
+      int lessonCount,
+      DateTime lastStudied,
+      DateTime createdAt});
 }
 
 /// @nodoc
@@ -148,9 +133,8 @@ class __$$TopicModelImplCopyWithImpl<$Res>
     extends _$TopicModelCopyWithImpl<$Res, _$TopicModelImpl>
     implements _$$TopicModelImplCopyWith<$Res> {
   __$$TopicModelImplCopyWithImpl(
-    _$TopicModelImpl _value,
-    $Res Function(_$TopicModelImpl) _then,
-  ) : super(_value, _then);
+      _$TopicModelImpl _value, $Res Function(_$TopicModelImpl) _then)
+      : super(_value, _then);
 
   /// Create a copy of TopicModel
   /// with the given fields replaced by the non-null parameter values.
@@ -165,60 +149,51 @@ class __$$TopicModelImplCopyWithImpl<$Res>
     Object? lastStudied = null,
     Object? createdAt = null,
   }) {
-    return _then(
-      _$TopicModelImpl(
-        name:
-            null == name
-                ? _value.name
-                : name // ignore: cast_nullable_to_non_nullable
-                    as String,
-        subjectName:
-            null == subjectName
-                ? _value.subjectName
-                : subjectName // ignore: cast_nullable_to_non_nullable
-                    as String,
-        userId:
-            null == userId
-                ? _value.userId
-                : userId // ignore: cast_nullable_to_non_nullable
-                    as String,
-        proficiency:
-            null == proficiency
-                ? _value.proficiency
-                : proficiency // ignore: cast_nullable_to_non_nullable
-                    as double,
-        lessonCount:
-            null == lessonCount
-                ? _value.lessonCount
-                : lessonCount // ignore: cast_nullable_to_non_nullable
-                    as int,
-        lastStudied:
-            null == lastStudied
-                ? _value.lastStudied
-                : lastStudied // ignore: cast_nullable_to_non_nullable
-                    as DateTime,
-        createdAt:
-            null == createdAt
-                ? _value.createdAt
-                : createdAt // ignore: cast_nullable_to_non_nullable
-                    as DateTime,
-      ),
-    );
+    return _then(_$TopicModelImpl(
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      subjectName: null == subjectName
+          ? _value.subjectName
+          : subjectName // ignore: cast_nullable_to_non_nullable
+              as String,
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      proficiency: null == proficiency
+          ? _value.proficiency
+          : proficiency // ignore: cast_nullable_to_non_nullable
+              as double,
+      lessonCount: null == lessonCount
+          ? _value.lessonCount
+          : lessonCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      lastStudied: null == lastStudied
+          ? _value.lastStudied
+          : lastStudied // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+    ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$TopicModelImpl extends _TopicModel {
-  const _$TopicModelImpl({
-    required this.name,
-    required this.subjectName,
-    required this.userId,
-    required this.proficiency,
-    required this.lessonCount,
-    required this.lastStudied,
-    required this.createdAt,
-  }) : super._();
+  const _$TopicModelImpl(
+      {required this.name,
+      required this.subjectName,
+      required this.userId,
+      required this.proficiency,
+      required this.lessonCount,
+      required this.lastStudied,
+      required this.createdAt})
+      : super._();
 
   factory _$TopicModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$TopicModelImplFromJson(json);
@@ -264,16 +239,8 @@ class _$TopicModelImpl extends _TopicModel {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    name,
-    subjectName,
-    userId,
-    proficiency,
-    lessonCount,
-    lastStudied,
-    createdAt,
-  );
+  int get hashCode => Object.hash(runtimeType, name, subjectName, userId,
+      proficiency, lessonCount, lastStudied, createdAt);
 
   /// Create a copy of TopicModel
   /// with the given fields replaced by the non-null parameter values.
@@ -285,20 +252,21 @@ class _$TopicModelImpl extends _TopicModel {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$TopicModelImplToJson(this);
+    return _$$TopicModelImplToJson(
+      this,
+    );
   }
 }
 
 abstract class _TopicModel extends TopicModel {
-  const factory _TopicModel({
-    required final String name,
-    required final String subjectName,
-    required final String userId,
-    required final double proficiency,
-    required final int lessonCount,
-    required final DateTime lastStudied,
-    required final DateTime createdAt,
-  }) = _$TopicModelImpl;
+  const factory _TopicModel(
+      {required final String name,
+      required final String subjectName,
+      required final String userId,
+      required final double proficiency,
+      required final int lessonCount,
+      required final DateTime lastStudied,
+      required final DateTime createdAt}) = _$TopicModelImpl;
   const _TopicModel._() : super._();
 
   factory _TopicModel.fromJson(Map<String, dynamic> json) =

@@ -13,15 +13,14 @@ String _$internetConnectionCheckerHash() =>
 @ProviderFor(internetConnectionChecker)
 final internetConnectionCheckerProvider =
     Provider<InternetConnectionChecker>.internal(
-      internetConnectionChecker,
-      name: r'internetConnectionCheckerProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$internetConnectionCheckerHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+  internetConnectionChecker,
+  name: r'internetConnectionCheckerProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$internetConnectionCheckerHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
@@ -34,10 +33,9 @@ String _$firebaseInitializationHash() =>
 final firebaseInitializationProvider = FutureProvider<void>.internal(
   firebaseInitialization,
   name: r'firebaseInitializationProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$firebaseInitializationHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$firebaseInitializationHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -68,10 +66,9 @@ String _$firebaseFirestoreHash() => r'da44e0544482927855093596d84cb41842b27214';
 final firebaseFirestoreProvider = Provider<FirebaseFirestore>.internal(
   firebaseFirestore,
   name: r'firebaseFirestoreProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$firebaseFirestoreHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$firebaseFirestoreHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -102,10 +99,9 @@ String _$authStateChangesHash() => r'f01ce67b236527169625e05eb213da2b7ad317ba';
 final authStateChangesProvider = StreamProvider<firebase_auth.User?>.internal(
   authStateChanges,
   name: r'authStateChangesProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$authStateChangesHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$authStateChangesHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -136,10 +132,9 @@ String _$isAuthenticatedHash() => r'19e3e08e57b6375be3cbfa8cf38d7b28b674d7d0';
 final isAuthenticatedProvider = AutoDisposeProvider<bool>.internal(
   isAuthenticated,
   name: r'isAuthenticatedProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$isAuthenticatedHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$isAuthenticatedHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -154,15 +149,14 @@ String _$authLocalDataSourceHash() =>
 @ProviderFor(authLocalDataSource)
 final authLocalDataSourceProvider =
     FutureProvider<AuthLocalDataSource>.internal(
-      authLocalDataSource,
-      name: r'authLocalDataSourceProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$authLocalDataSourceHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+  authLocalDataSource,
+  name: r'authLocalDataSourceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$authLocalDataSourceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
@@ -175,10 +169,9 @@ String _$authRemoteDataSourceHash() =>
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>.internal(
   authRemoteDataSource,
   name: r'authRemoteDataSourceProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$authRemoteDataSourceHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$authRemoteDataSourceHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -193,10 +186,9 @@ String _$authRepositoryHash() => r'abdaf81684e2c53717f3a92ee64aee91b9945022';
 final authRepositoryProvider = FutureProvider<AuthRepository>.internal(
   authRepository,
   name: r'authRepositoryProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$authRepositoryHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$authRepositoryHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -211,10 +203,9 @@ String _$getCurrentUserHash() => r'0d97e2c07cacd84619bf01b912f574250eae538f';
 final getCurrentUserProvider = FutureProvider<GetCurrentUser>.internal(
   getCurrentUser,
   name: r'getCurrentUserProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$getCurrentUserHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$getCurrentUserHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -229,15 +220,14 @@ String _$signInWithEmailPasswordHash() =>
 @ProviderFor(signInWithEmailPassword)
 final signInWithEmailPasswordProvider =
     FutureProvider<SignInWithEmailPassword>.internal(
-      signInWithEmailPassword,
-      name: r'signInWithEmailPasswordProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$signInWithEmailPasswordHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+  signInWithEmailPassword,
+  name: r'signInWithEmailPasswordProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$signInWithEmailPasswordHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
@@ -249,15 +239,14 @@ String _$signUpWithEmailPasswordHash() =>
 @ProviderFor(signUpWithEmailPassword)
 final signUpWithEmailPasswordProvider =
     FutureProvider<SignUpWithEmailPassword>.internal(
-      signUpWithEmailPassword,
-      name: r'signUpWithEmailPasswordProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$signUpWithEmailPasswordHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+  signUpWithEmailPassword,
+  name: r'signUpWithEmailPasswordProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$signUpWithEmailPasswordHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
@@ -269,10 +258,9 @@ String _$signInWithGoogleHash() => r'5de2f7dd3735891c202fbb3a384cd82eed1f0371';
 final signInWithGoogleProvider = FutureProvider<SignInWithGoogle>.internal(
   signInWithGoogle,
   name: r'signInWithGoogleProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$signInWithGoogleHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$signInWithGoogleHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -303,15 +291,14 @@ String _$sendEmailVerificationHash() =>
 @ProviderFor(sendEmailVerification)
 final sendEmailVerificationProvider =
     FutureProvider<SendEmailVerification>.internal(
-      sendEmailVerification,
-      name: r'sendEmailVerificationProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$sendEmailVerificationHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+  sendEmailVerification,
+  name: r'sendEmailVerificationProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$sendEmailVerificationHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
@@ -323,15 +310,14 @@ String _$checkEmailVerificationHash() =>
 @ProviderFor(checkEmailVerification)
 final checkEmailVerificationProvider =
     FutureProvider<CheckEmailVerification>.internal(
-      checkEmailVerification,
-      name: r'checkEmailVerificationProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$checkEmailVerificationHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+  checkEmailVerification,
+  name: r'checkEmailVerificationProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$checkEmailVerificationHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
@@ -343,10 +329,9 @@ String _$resetPasswordHash() => r'129639d09819e179a25c50a24e561367ead30de2';
 final resetPasswordProvider = FutureProvider<ResetPassword>.internal(
   resetPassword,
   name: r'resetPasswordProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$resetPasswordHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$resetPasswordHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );

@@ -13,7 +13,7 @@ void main() async {
   // Set up error handling for async errors
   runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
-    
+
     // Set up Flutter error handling
     FlutterError.onError = (FlutterErrorDetails details) {
       if (kDebugMode) {
@@ -27,11 +27,10 @@ void main() async {
         }
       }
     };
-    
+
     try {
       await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform
-      );
+          options: DefaultFirebaseOptions.currentPlatform);
     } catch (e) {
       if (kDebugMode) {
         print('Firebase initialization error: $e');
@@ -39,7 +38,7 @@ void main() async {
       // Continue running the app even if Firebase fails to initialize
       // The app should handle this gracefully
     }
-    
+
     runApp(
       ProviderScope(
         child: ErrorBoundary(
@@ -70,8 +69,9 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch theme mode from provider
-    final themeMode = ref.watch(themeModeNotifierProvider);
-    
+    // FIX: Use .value to extract the ThemeMode from the AsyncValue
+    final themeMode = ref.watch(themeModeNotifierProvider).value;
+
     return MaterialApp.router(
       routerConfig: ref.watch(routerProvider),
       debugShowCheckedModeBanner: false,
@@ -79,7 +79,7 @@ class MyApp extends ConsumerWidget {
       // Use our custom theme
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode, // Use theme mode from provider
+      themeMode: themeMode, // This now correctly receives a ThemeMode?
       builder: (context, child) {
         // Add any global wrapping widgets here
         return GestureDetector(

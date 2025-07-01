@@ -15,28 +15,30 @@ class CreateTab extends ConsumerStatefulWidget {
   ConsumerState<CreateTab> createState() => _CreateTabState();
 }
 
-class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveClientMixin {
+class _CreateTabState extends ConsumerState<CreateTab>
+    with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
   bool _isRefreshing = false;
-  
+
   @override
   bool get wantKeepAlive => true;
-  
+
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _handleRefresh() async {
     if (_isRefreshing) return;
-    
+
     setState(() {
       _isRefreshing = true;
     });
-    
+
     try {
-      await ref.refresh(unlockedLessonsProvider.future);
+      // FIX: Call ref.refresh on the provider itself, not its .future property.
+      await ref.refresh(unlockedLessonsProvider);
     } finally {
       if (mounted) {
         setState(() {
@@ -49,10 +51,11 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
-    
+
+    // FIX: Get the boolean value from the AsyncValue, defaulting to false.
+    final isOnline = ref.watch(networkStatusProvider).value ?? false;
     final unlockedLessonsAsync = ref.watch(unlockedLessonsProvider);
-    final isOnline = ref.watch(networkStatusProvider);
-    
+
     // Show offline message if needed
     if (!isOnline) {
       return Center(
@@ -85,7 +88,7 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
         ),
       );
     }
-    
+
     return unlockedLessonsAsync.when(
       data: (unlockedLessons) {
         if (unlockedLessons.isEmpty) {
@@ -93,12 +96,13 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
           return EmptyContentWidget(
             icon: Icons.edit,
             title: 'Start Creating',
-            description: 'Create your first lesson and start building your knowledge base!',
+            description:
+                'Create your first lesson and start building your knowledge base!',
             buttonText: 'Create Lesson',
             onButtonPressed: () => _navigateToSubjectSelection(context),
           );
         }
-        
+
         // Show unlocked lessons
         return Scaffold(
           body: RefreshIndicator(
@@ -112,7 +116,11 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
                     margin: const EdgeInsets.all(16),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                      // FIX: Replaced deprecated withOpacity with withAlpha
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primaryContainer
+                          .withAlpha(77), // ~0.3 opacity
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -140,26 +148,33 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
                         Text(
                           '${unlockedLessons.length} unlocked ${unlockedLessons.length == 1 ? 'lesson' : 'lessons'} ready for editing',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            // FIX: Replaced deprecated withOpacity with withAlpha
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withAlpha(179), // ~0.7 opacity
                           ),
                         ),
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
+                            // FIX: Replaced deprecated withOpacity with withAlpha
+                            color: Colors.orange.withAlpha(26), // ~0.1 opacity
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                            border: Border.all(
+                                color: Colors.orange
+                                    .withAlpha(77)), // ~0.3 opacity
                           ),
-                          child: Row(
+                          child: const Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.info_outline,
                                 size: 16,
                                 color: Colors.orange,
                               ),
-                              const SizedBox(width: 8),
-                              const Expanded(
+                              SizedBox(width: 8),
+                              Expanded(
                                 child: Text(
                                   'Add content to your lessons, then lock them to start spaced repetition',
                                   style: TextStyle(
@@ -175,7 +190,7 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
                     ),
                   ),
                 ),
-                
+
                 // Lessons list
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -187,8 +202,10 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
                           padding: const EdgeInsets.only(bottom: 12),
                           child: UnlockedLessonCard(
                             lesson: lesson,
-                            onTap: () => _navigateToLessonEditor(context, lesson),
-                            onDelete: () => _showDeleteDialog(context, ref, lesson),
+                            onTap: () =>
+                                _navigateToLessonEditor(context, lesson),
+                            onDelete: () =>
+                                _showDeleteDialog(context, ref, lesson),
                           ),
                         );
                       },
@@ -196,7 +213,7 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
                     ),
                   ),
                 ),
-                
+
                 // Bottom padding for FAB
                 const SliverToBoxAdapter(
                   child: SizedBox(height: 80),
@@ -238,16 +255,18 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
       ),
     );
   }
-  
-  Widget? _buildLockButton(BuildContext context, WidgetRef ref, List<Lesson> unlockedLessons) {
+
+  Widget? _buildLockButton(
+      BuildContext context, WidgetRef ref, List<Lesson> unlockedLessons) {
     if (unlockedLessons.isEmpty) return null;
-    
-    final readyToLock = unlockedLessons.where((lesson) => lesson.totalContentCount > 0).toList();
-    
+
+    final readyToLock =
+        unlockedLessons.where((lesson) => lesson.totalContentCount > 0).toList();
+
     if (readyToLock.isEmpty && unlockedLessons.length < 2) {
       return null; // Don't show lock button if only one empty lesson
     }
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -255,7 +274,8 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            // FIX: Replaced deprecated withOpacity with withAlpha
+            color: Colors.black.withAlpha(26), // ~0.1 opacity
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -270,13 +290,16 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  // FIX: Replaced deprecated withOpacity with withAlpha
+                  color: Colors.green.withAlpha(26), // ~0.1 opacity
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                  border: Border.all(
+                      color: Colors.green.withAlpha(77)), // ~0.3 opacity
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    const Icon(Icons.check_circle,
+                        color: Colors.green, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -317,7 +340,7 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
       ),
     );
   }
-  
+
   void _navigateToSubjectSelection(BuildContext context) {
     Navigator.push(
       context,
@@ -326,7 +349,7 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
       ),
     );
   }
-  
+
   void _navigateToLessonEditor(BuildContext context, Lesson lesson) {
     // TODO: Navigate to lesson editor screen
     ScaffoldMessenger.of(context).showSnackBar(
@@ -336,7 +359,7 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
       ),
     );
   }
-  
+
   void _showDeleteDialog(BuildContext context, WidgetRef ref, Lesson lesson) {
     showDialog(
       context: context,
@@ -355,7 +378,12 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
             onPressed: () async {
               Navigator.pop(dialogContext);
               try {
-                await ref.read(lessonsNotifierProvider(lesson.subjectName, lesson.topicName).notifier)
+                // This assumes `lessonsNotifierProvider` is an AutoDisposeFamilyAsyncNotifier
+                // or similar that takes these parameters.
+                await ref
+                    .read(lessonsNotifierProvider(
+                            lesson.subjectName, lesson.topicName)
+                        .notifier)
                     .deleteLesson(lesson.id);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -388,8 +416,9 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
       ),
     );
   }
-  
-  void _showLockDialog(BuildContext context, WidgetRef ref, List<Lesson> readyToLock) {
+
+  void _showLockDialog(
+      BuildContext context, WidgetRef ref, List<Lesson> readyToLock) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -398,34 +427,37 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Lock ${readyToLock.length} ${readyToLock.length == 1 ? 'lesson' : 'lessons'} and start spaced repetition?',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            const Text(
+              'Lock lessons and start spaced repetition?',
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
             Container(
               constraints: const BoxConstraints(maxHeight: 200),
               child: SingleChildScrollView(
                 child: Column(
-                  children: readyToLock.map((lesson) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.book, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            lesson.displayTitle,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          '${lesson.totalContentCount} items',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  )).toList(),
+                  children: readyToLock
+                      .map((lesson) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.book, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    lesson.displayTitle,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Text(
+                                  '${lesson.totalContentCount} items',
+                                  style: const TextStyle(
+                                      fontSize: 12, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ))
+                      .toList(),
                 ),
               ),
             ),
@@ -433,20 +465,22 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                // FIX: Replaced deprecated withOpacity with withAlpha
+                color: Colors.red.withAlpha(26), // ~0.1 opacity
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                border: Border.all(
+                    color: Colors.red.withAlpha(77)), // ~0.3 opacity
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Icon(Icons.warning, color: Colors.red, size: 20),
-                  const SizedBox(width: 8),
+                  Icon(Icons.warning, color: Colors.red, size: 20),
+                  SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Once locked, lessons cannot be unlocked or edited',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.red[700],
+                        color: Color(0xFFC62828), // Colors.red[700]
                       ),
                     ),
                   ),
@@ -466,7 +500,8 @@ class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveCl
               // TODO: Implement lock functionality
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Locked ${readyToLock.length} lessons - Feature Coming Soon'),
+                  content: Text(
+                      'Locked ${readyToLock.length} lessons - Feature Coming Soon'),
                   backgroundColor: Colors.orange,
                   behavior: SnackBarBehavior.floating,
                 ),

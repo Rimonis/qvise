@@ -14,15 +14,13 @@ _$LessonModelImpl _$$LessonModelImplFromJson(Map<String, dynamic> json) =>
       topicName: json['topicName'] as String,
       title: json['title'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
-      lockedAt:
-          json['lockedAt'] == null
-              ? null
-              : DateTime.parse(json['lockedAt'] as String),
+      lockedAt: json['lockedAt'] == null
+          ? null
+          : DateTime.parse(json['lockedAt'] as String),
       nextReviewDate: DateTime.parse(json['nextReviewDate'] as String),
-      lastReviewedAt:
-          json['lastReviewedAt'] == null
-              ? null
-              : DateTime.parse(json['lastReviewedAt'] as String),
+      lastReviewedAt: json['lastReviewedAt'] == null
+          ? null
+          : DateTime.parse(json['lastReviewedAt'] as String),
       reviewStage: (json['reviewStage'] as num).toInt(),
       proficiency: (json['proficiency'] as num).toDouble(),
       isLocked: json['isLocked'] as bool? ?? false,

@@ -12,8 +12,7 @@ part of 'create_lesson_params.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
-);
+    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 /// @nodoc
 mixin _$CreateLessonParams {
@@ -33,17 +32,15 @@ mixin _$CreateLessonParams {
 /// @nodoc
 abstract class $CreateLessonParamsCopyWith<$Res> {
   factory $CreateLessonParamsCopyWith(
-    CreateLessonParams value,
-    $Res Function(CreateLessonParams) then,
-  ) = _$CreateLessonParamsCopyWithImpl<$Res, CreateLessonParams>;
+          CreateLessonParams value, $Res Function(CreateLessonParams) then) =
+      _$CreateLessonParamsCopyWithImpl<$Res, CreateLessonParams>;
   @useResult
-  $Res call({
-    String subjectName,
-    String topicName,
-    String? lessonTitle,
-    bool isNewSubject,
-    bool isNewTopic,
-  });
+  $Res call(
+      {String subjectName,
+      String topicName,
+      String? lessonTitle,
+      bool isNewSubject,
+      bool isNewTopic});
 }
 
 /// @nodoc
@@ -67,65 +64,54 @@ class _$CreateLessonParamsCopyWithImpl<$Res, $Val extends CreateLessonParams>
     Object? isNewSubject = null,
     Object? isNewTopic = null,
   }) {
-    return _then(
-      _value.copyWith(
-            subjectName:
-                null == subjectName
-                    ? _value.subjectName
-                    : subjectName // ignore: cast_nullable_to_non_nullable
-                        as String,
-            topicName:
-                null == topicName
-                    ? _value.topicName
-                    : topicName // ignore: cast_nullable_to_non_nullable
-                        as String,
-            lessonTitle:
-                freezed == lessonTitle
-                    ? _value.lessonTitle
-                    : lessonTitle // ignore: cast_nullable_to_non_nullable
-                        as String?,
-            isNewSubject:
-                null == isNewSubject
-                    ? _value.isNewSubject
-                    : isNewSubject // ignore: cast_nullable_to_non_nullable
-                        as bool,
-            isNewTopic:
-                null == isNewTopic
-                    ? _value.isNewTopic
-                    : isNewTopic // ignore: cast_nullable_to_non_nullable
-                        as bool,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      subjectName: null == subjectName
+          ? _value.subjectName
+          : subjectName // ignore: cast_nullable_to_non_nullable
+              as String,
+      topicName: null == topicName
+          ? _value.topicName
+          : topicName // ignore: cast_nullable_to_non_nullable
+              as String,
+      lessonTitle: freezed == lessonTitle
+          ? _value.lessonTitle
+          : lessonTitle // ignore: cast_nullable_to_non_nullable
+              as String?,
+      isNewSubject: null == isNewSubject
+          ? _value.isNewSubject
+          : isNewSubject // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isNewTopic: null == isNewTopic
+          ? _value.isNewTopic
+          : isNewTopic // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ) as $Val);
   }
 }
 
 /// @nodoc
 abstract class _$$CreateLessonParamsImplCopyWith<$Res>
     implements $CreateLessonParamsCopyWith<$Res> {
-  factory _$$CreateLessonParamsImplCopyWith(
-    _$CreateLessonParamsImpl value,
-    $Res Function(_$CreateLessonParamsImpl) then,
-  ) = __$$CreateLessonParamsImplCopyWithImpl<$Res>;
+  factory _$$CreateLessonParamsImplCopyWith(_$CreateLessonParamsImpl value,
+          $Res Function(_$CreateLessonParamsImpl) then) =
+      __$$CreateLessonParamsImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String subjectName,
-    String topicName,
-    String? lessonTitle,
-    bool isNewSubject,
-    bool isNewTopic,
-  });
+  $Res call(
+      {String subjectName,
+      String topicName,
+      String? lessonTitle,
+      bool isNewSubject,
+      bool isNewTopic});
 }
 
 /// @nodoc
 class __$$CreateLessonParamsImplCopyWithImpl<$Res>
     extends _$CreateLessonParamsCopyWithImpl<$Res, _$CreateLessonParamsImpl>
     implements _$$CreateLessonParamsImplCopyWith<$Res> {
-  __$$CreateLessonParamsImplCopyWithImpl(
-    _$CreateLessonParamsImpl _value,
-    $Res Function(_$CreateLessonParamsImpl) _then,
-  ) : super(_value, _then);
+  __$$CreateLessonParamsImplCopyWithImpl(_$CreateLessonParamsImpl _value,
+      $Res Function(_$CreateLessonParamsImpl) _then)
+      : super(_value, _then);
 
   /// Create a copy of CreateLessonParams
   /// with the given fields replaced by the non-null parameter values.
@@ -138,48 +124,40 @@ class __$$CreateLessonParamsImplCopyWithImpl<$Res>
     Object? isNewSubject = null,
     Object? isNewTopic = null,
   }) {
-    return _then(
-      _$CreateLessonParamsImpl(
-        subjectName:
-            null == subjectName
-                ? _value.subjectName
-                : subjectName // ignore: cast_nullable_to_non_nullable
-                    as String,
-        topicName:
-            null == topicName
-                ? _value.topicName
-                : topicName // ignore: cast_nullable_to_non_nullable
-                    as String,
-        lessonTitle:
-            freezed == lessonTitle
-                ? _value.lessonTitle
-                : lessonTitle // ignore: cast_nullable_to_non_nullable
-                    as String?,
-        isNewSubject:
-            null == isNewSubject
-                ? _value.isNewSubject
-                : isNewSubject // ignore: cast_nullable_to_non_nullable
-                    as bool,
-        isNewTopic:
-            null == isNewTopic
-                ? _value.isNewTopic
-                : isNewTopic // ignore: cast_nullable_to_non_nullable
-                    as bool,
-      ),
-    );
+    return _then(_$CreateLessonParamsImpl(
+      subjectName: null == subjectName
+          ? _value.subjectName
+          : subjectName // ignore: cast_nullable_to_non_nullable
+              as String,
+      topicName: null == topicName
+          ? _value.topicName
+          : topicName // ignore: cast_nullable_to_non_nullable
+              as String,
+      lessonTitle: freezed == lessonTitle
+          ? _value.lessonTitle
+          : lessonTitle // ignore: cast_nullable_to_non_nullable
+              as String?,
+      isNewSubject: null == isNewSubject
+          ? _value.isNewSubject
+          : isNewSubject // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isNewTopic: null == isNewTopic
+          ? _value.isNewTopic
+          : isNewTopic // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ));
   }
 }
 
 /// @nodoc
 
 class _$CreateLessonParamsImpl implements _CreateLessonParams {
-  const _$CreateLessonParamsImpl({
-    required this.subjectName,
-    required this.topicName,
-    this.lessonTitle,
-    required this.isNewSubject,
-    required this.isNewTopic,
-  });
+  const _$CreateLessonParamsImpl(
+      {required this.subjectName,
+      required this.topicName,
+      this.lessonTitle,
+      required this.isNewSubject,
+      required this.isNewTopic});
 
   @override
   final String subjectName;
@@ -215,14 +193,8 @@ class _$CreateLessonParamsImpl implements _CreateLessonParams {
   }
 
   @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    subjectName,
-    topicName,
-    lessonTitle,
-    isNewSubject,
-    isNewTopic,
-  );
+  int get hashCode => Object.hash(runtimeType, subjectName, topicName,
+      lessonTitle, isNewSubject, isNewTopic);
 
   /// Create a copy of CreateLessonParams
   /// with the given fields replaced by the non-null parameter values.
@@ -231,19 +203,16 @@ class _$CreateLessonParamsImpl implements _CreateLessonParams {
   @pragma('vm:prefer-inline')
   _$$CreateLessonParamsImplCopyWith<_$CreateLessonParamsImpl> get copyWith =>
       __$$CreateLessonParamsImplCopyWithImpl<_$CreateLessonParamsImpl>(
-        this,
-        _$identity,
-      );
+          this, _$identity);
 }
 
 abstract class _CreateLessonParams implements CreateLessonParams {
-  const factory _CreateLessonParams({
-    required final String subjectName,
-    required final String topicName,
-    final String? lessonTitle,
-    required final bool isNewSubject,
-    required final bool isNewTopic,
-  }) = _$CreateLessonParamsImpl;
+  const factory _CreateLessonParams(
+      {required final String subjectName,
+      required final String topicName,
+      final String? lessonTitle,
+      required final bool isNewSubject,
+      required final bool isNewTopic}) = _$CreateLessonParamsImpl;
 
   @override
   String get subjectName;

@@ -28,52 +28,32 @@ String _$unlockedLessonsHash() => r'1b3d269ebee8bb3f6b523ed6d3c0474138dfc6fe';
 @ProviderFor(unlockedLessons)
 final unlockedLessonsProvider =
     AutoDisposeFutureProvider<List<Lesson>>.internal(
-      unlockedLessons,
-      name: r'unlockedLessonsProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$unlockedLessonsHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef UnlockedLessonsRef = AutoDisposeFutureProviderRef<List<Lesson>>;
-String _$networkStatusHash() => r'1ee4efaa118fb04b638b078348890b2dcbf7f0b7';
-
-/// See also [networkStatus].
-@ProviderFor(networkStatus)
-final networkStatusProvider = AutoDisposeStreamProvider<bool>.internal(
-  networkStatus,
-  name: r'networkStatusProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$networkStatusHash,
+  unlockedLessons,
+  name: r'unlockedLessonsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$unlockedLessonsHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef NetworkStatusRef = AutoDisposeStreamProviderRef<bool>;
+typedef UnlockedLessonsRef = AutoDisposeFutureProviderRef<List<Lesson>>;
 String _$subjectsNotifierHash() => r'16821f7630a73cf967f43df6ccfca633ae7eea6b';
 
 /// See also [SubjectsNotifier].
 @ProviderFor(SubjectsNotifier)
 final subjectsNotifierProvider =
     AutoDisposeAsyncNotifierProvider<SubjectsNotifier, List<Subject>>.internal(
-      SubjectsNotifier.new,
-      name: r'subjectsNotifierProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$subjectsNotifierHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+  SubjectsNotifier.new,
+  name: r'subjectsNotifierProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$subjectsNotifierHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 typedef _$SubjectsNotifier = AutoDisposeAsyncNotifier<List<Subject>>;
 String _$topicsNotifierHash() => r'af47a655d3cdb88f6bc8f89506b0fba25ddc3d39';
@@ -103,7 +83,9 @@ abstract class _$TopicsNotifier
     extends BuildlessAutoDisposeAsyncNotifier<List<Topic>> {
   late final String subjectName;
 
-  FutureOr<List<Topic>> build(String subjectName);
+  FutureOr<List<Topic>> build(
+    String subjectName,
+  );
 }
 
 /// See also [TopicsNotifier].
@@ -116,15 +98,21 @@ class TopicsNotifierFamily extends Family<AsyncValue<List<Topic>>> {
   const TopicsNotifierFamily();
 
   /// See also [TopicsNotifier].
-  TopicsNotifierProvider call(String subjectName) {
-    return TopicsNotifierProvider(subjectName);
+  TopicsNotifierProvider call(
+    String subjectName,
+  ) {
+    return TopicsNotifierProvider(
+      subjectName,
+    );
   }
 
   @override
   TopicsNotifierProvider getProviderOverride(
     covariant TopicsNotifierProvider provider,
   ) {
-    return call(provider.subjectName);
+    return call(
+      provider.subjectName,
+    );
   }
 
   static const Iterable<ProviderOrFamily>? _dependencies = null;
@@ -146,20 +134,21 @@ class TopicsNotifierFamily extends Family<AsyncValue<List<Topic>>> {
 class TopicsNotifierProvider
     extends AutoDisposeAsyncNotifierProviderImpl<TopicsNotifier, List<Topic>> {
   /// See also [TopicsNotifier].
-  TopicsNotifierProvider(String subjectName)
-    : this._internal(
-        () => TopicsNotifier()..subjectName = subjectName,
-        from: topicsNotifierProvider,
-        name: r'topicsNotifierProvider',
-        debugGetCreateSourceHash:
-            const bool.fromEnvironment('dart.vm.product')
-                ? null
-                : _$topicsNotifierHash,
-        dependencies: TopicsNotifierFamily._dependencies,
-        allTransitiveDependencies:
-            TopicsNotifierFamily._allTransitiveDependencies,
-        subjectName: subjectName,
-      );
+  TopicsNotifierProvider(
+    String subjectName,
+  ) : this._internal(
+          () => TopicsNotifier()..subjectName = subjectName,
+          from: topicsNotifierProvider,
+          name: r'topicsNotifierProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$topicsNotifierHash,
+          dependencies: TopicsNotifierFamily._dependencies,
+          allTransitiveDependencies:
+              TopicsNotifierFamily._allTransitiveDependencies,
+          subjectName: subjectName,
+        );
 
   TopicsNotifierProvider._internal(
     super._createNotifier, {
@@ -174,8 +163,12 @@ class TopicsNotifierProvider
   final String subjectName;
 
   @override
-  FutureOr<List<Topic>> runNotifierBuild(covariant TopicsNotifier notifier) {
-    return notifier.build(subjectName);
+  FutureOr<List<Topic>> runNotifierBuild(
+    covariant TopicsNotifier notifier,
+  ) {
+    return notifier.build(
+      subjectName,
+    );
   }
 
   @override
@@ -196,7 +189,7 @@ class TopicsNotifierProvider
 
   @override
   AutoDisposeAsyncNotifierProviderElement<TopicsNotifier, List<Topic>>
-  createElement() {
+      createElement() {
     return _TopicsNotifierProviderElement(this);
   }
 
@@ -237,7 +230,10 @@ abstract class _$LessonsNotifier
   late final String subjectName;
   late final String topicName;
 
-  FutureOr<List<Lesson>> build(String subjectName, String topicName);
+  FutureOr<List<Lesson>> build(
+    String subjectName,
+    String topicName,
+  );
 }
 
 /// See also [LessonsNotifier].
@@ -250,15 +246,24 @@ class LessonsNotifierFamily extends Family<AsyncValue<List<Lesson>>> {
   const LessonsNotifierFamily();
 
   /// See also [LessonsNotifier].
-  LessonsNotifierProvider call(String subjectName, String topicName) {
-    return LessonsNotifierProvider(subjectName, topicName);
+  LessonsNotifierProvider call(
+    String subjectName,
+    String topicName,
+  ) {
+    return LessonsNotifierProvider(
+      subjectName,
+      topicName,
+    );
   }
 
   @override
   LessonsNotifierProvider getProviderOverride(
     covariant LessonsNotifierProvider provider,
   ) {
-    return call(provider.subjectName, provider.topicName);
+    return call(
+      provider.subjectName,
+      provider.topicName,
+    );
   }
 
   static const Iterable<ProviderOrFamily>? _dependencies = null;
@@ -277,28 +282,28 @@ class LessonsNotifierFamily extends Family<AsyncValue<List<Lesson>>> {
 }
 
 /// See also [LessonsNotifier].
-class LessonsNotifierProvider
-    extends
-        AutoDisposeAsyncNotifierProviderImpl<LessonsNotifier, List<Lesson>> {
+class LessonsNotifierProvider extends AutoDisposeAsyncNotifierProviderImpl<
+    LessonsNotifier, List<Lesson>> {
   /// See also [LessonsNotifier].
-  LessonsNotifierProvider(String subjectName, String topicName)
-    : this._internal(
-        () =>
-            LessonsNotifier()
-              ..subjectName = subjectName
-              ..topicName = topicName,
-        from: lessonsNotifierProvider,
-        name: r'lessonsNotifierProvider',
-        debugGetCreateSourceHash:
-            const bool.fromEnvironment('dart.vm.product')
-                ? null
-                : _$lessonsNotifierHash,
-        dependencies: LessonsNotifierFamily._dependencies,
-        allTransitiveDependencies:
-            LessonsNotifierFamily._allTransitiveDependencies,
-        subjectName: subjectName,
-        topicName: topicName,
-      );
+  LessonsNotifierProvider(
+    String subjectName,
+    String topicName,
+  ) : this._internal(
+          () => LessonsNotifier()
+            ..subjectName = subjectName
+            ..topicName = topicName,
+          from: lessonsNotifierProvider,
+          name: r'lessonsNotifierProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$lessonsNotifierHash,
+          dependencies: LessonsNotifierFamily._dependencies,
+          allTransitiveDependencies:
+              LessonsNotifierFamily._allTransitiveDependencies,
+          subjectName: subjectName,
+          topicName: topicName,
+        );
 
   LessonsNotifierProvider._internal(
     super._createNotifier, {
@@ -315,8 +320,13 @@ class LessonsNotifierProvider
   final String topicName;
 
   @override
-  FutureOr<List<Lesson>> runNotifierBuild(covariant LessonsNotifier notifier) {
-    return notifier.build(subjectName, topicName);
+  FutureOr<List<Lesson>> runNotifierBuild(
+    covariant LessonsNotifier notifier,
+  ) {
+    return notifier.build(
+      subjectName,
+      topicName,
+    );
   }
 
   @override
@@ -324,10 +334,9 @@ class LessonsNotifierProvider
     return ProviderOverride(
       origin: this,
       override: LessonsNotifierProvider._internal(
-        () =>
-            create()
-              ..subjectName = subjectName
-              ..topicName = topicName,
+        () => create()
+          ..subjectName = subjectName
+          ..topicName = topicName,
         from: from,
         name: null,
         dependencies: null,
@@ -341,7 +350,7 @@ class LessonsNotifierProvider
 
   @override
   AutoDisposeAsyncNotifierProviderElement<LessonsNotifier, List<Lesson>>
-  createElement() {
+      createElement() {
     return _LessonsNotifierProviderElement(this);
   }
 
@@ -373,9 +382,8 @@ mixin LessonsNotifierRef on AutoDisposeAsyncNotifierProviderRef<List<Lesson>> {
 }
 
 class _LessonsNotifierProviderElement
-    extends
-        AutoDisposeAsyncNotifierProviderElement<LessonsNotifier, List<Lesson>>
-    with LessonsNotifierRef {
+    extends AutoDisposeAsyncNotifierProviderElement<LessonsNotifier,
+        List<Lesson>> with LessonsNotifierRef {
   _LessonsNotifierProviderElement(super.provider);
 
   @override
@@ -390,15 +398,14 @@ String _$selectedSubjectHash() => r'd811d65905ecdd183cecf2f12e037701dcbcef59';
 @ProviderFor(SelectedSubject)
 final selectedSubjectProvider =
     AutoDisposeNotifierProvider<SelectedSubject, Subject?>.internal(
-      SelectedSubject.new,
-      name: r'selectedSubjectProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$selectedSubjectHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+  SelectedSubject.new,
+  name: r'selectedSubjectProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$selectedSubjectHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 typedef _$SelectedSubject = AutoDisposeNotifier<Subject?>;
 String _$selectedTopicHash() => r'696878546c17ea51a533ded1085eeb00c6744dbd';
@@ -407,15 +414,14 @@ String _$selectedTopicHash() => r'696878546c17ea51a533ded1085eeb00c6744dbd';
 @ProviderFor(SelectedTopic)
 final selectedTopicProvider =
     AutoDisposeNotifierProvider<SelectedTopic, Topic?>.internal(
-      SelectedTopic.new,
-      name: r'selectedTopicProvider',
-      debugGetCreateSourceHash:
-          const bool.fromEnvironment('dart.vm.product')
-              ? null
-              : _$selectedTopicHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+  SelectedTopic.new,
+  name: r'selectedTopicProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$selectedTopicHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
 
 typedef _$SelectedTopic = AutoDisposeNotifier<Topic?>;
 // ignore_for_file: type=lint

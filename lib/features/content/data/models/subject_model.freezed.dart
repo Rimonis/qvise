@@ -12,8 +12,7 @@ part of 'subject_model.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
-);
+    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 SubjectModel _$SubjectModelFromJson(Map<String, dynamic> json) {
   return _SubjectModel.fromJson(json);
@@ -42,19 +41,17 @@ mixin _$SubjectModel {
 /// @nodoc
 abstract class $SubjectModelCopyWith<$Res> {
   factory $SubjectModelCopyWith(
-    SubjectModel value,
-    $Res Function(SubjectModel) then,
-  ) = _$SubjectModelCopyWithImpl<$Res, SubjectModel>;
+          SubjectModel value, $Res Function(SubjectModel) then) =
+      _$SubjectModelCopyWithImpl<$Res, SubjectModel>;
   @useResult
-  $Res call({
-    String name,
-    String userId,
-    double proficiency,
-    int lessonCount,
-    int topicCount,
-    DateTime lastStudied,
-    DateTime createdAt,
-  });
+  $Res call(
+      {String name,
+      String userId,
+      double proficiency,
+      int lessonCount,
+      int topicCount,
+      DateTime lastStudied,
+      DateTime createdAt});
 }
 
 /// @nodoc
@@ -80,46 +77,36 @@ class _$SubjectModelCopyWithImpl<$Res, $Val extends SubjectModel>
     Object? lastStudied = null,
     Object? createdAt = null,
   }) {
-    return _then(
-      _value.copyWith(
-            name:
-                null == name
-                    ? _value.name
-                    : name // ignore: cast_nullable_to_non_nullable
-                        as String,
-            userId:
-                null == userId
-                    ? _value.userId
-                    : userId // ignore: cast_nullable_to_non_nullable
-                        as String,
-            proficiency:
-                null == proficiency
-                    ? _value.proficiency
-                    : proficiency // ignore: cast_nullable_to_non_nullable
-                        as double,
-            lessonCount:
-                null == lessonCount
-                    ? _value.lessonCount
-                    : lessonCount // ignore: cast_nullable_to_non_nullable
-                        as int,
-            topicCount:
-                null == topicCount
-                    ? _value.topicCount
-                    : topicCount // ignore: cast_nullable_to_non_nullable
-                        as int,
-            lastStudied:
-                null == lastStudied
-                    ? _value.lastStudied
-                    : lastStudied // ignore: cast_nullable_to_non_nullable
-                        as DateTime,
-            createdAt:
-                null == createdAt
-                    ? _value.createdAt
-                    : createdAt // ignore: cast_nullable_to_non_nullable
-                        as DateTime,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      proficiency: null == proficiency
+          ? _value.proficiency
+          : proficiency // ignore: cast_nullable_to_non_nullable
+              as double,
+      lessonCount: null == lessonCount
+          ? _value.lessonCount
+          : lessonCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      topicCount: null == topicCount
+          ? _value.topicCount
+          : topicCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      lastStudied: null == lastStudied
+          ? _value.lastStudied
+          : lastStudied // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+    ) as $Val);
   }
 }
 
@@ -127,20 +114,18 @@ class _$SubjectModelCopyWithImpl<$Res, $Val extends SubjectModel>
 abstract class _$$SubjectModelImplCopyWith<$Res>
     implements $SubjectModelCopyWith<$Res> {
   factory _$$SubjectModelImplCopyWith(
-    _$SubjectModelImpl value,
-    $Res Function(_$SubjectModelImpl) then,
-  ) = __$$SubjectModelImplCopyWithImpl<$Res>;
+          _$SubjectModelImpl value, $Res Function(_$SubjectModelImpl) then) =
+      __$$SubjectModelImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String name,
-    String userId,
-    double proficiency,
-    int lessonCount,
-    int topicCount,
-    DateTime lastStudied,
-    DateTime createdAt,
-  });
+  $Res call(
+      {String name,
+      String userId,
+      double proficiency,
+      int lessonCount,
+      int topicCount,
+      DateTime lastStudied,
+      DateTime createdAt});
 }
 
 /// @nodoc
@@ -148,9 +133,8 @@ class __$$SubjectModelImplCopyWithImpl<$Res>
     extends _$SubjectModelCopyWithImpl<$Res, _$SubjectModelImpl>
     implements _$$SubjectModelImplCopyWith<$Res> {
   __$$SubjectModelImplCopyWithImpl(
-    _$SubjectModelImpl _value,
-    $Res Function(_$SubjectModelImpl) _then,
-  ) : super(_value, _then);
+      _$SubjectModelImpl _value, $Res Function(_$SubjectModelImpl) _then)
+      : super(_value, _then);
 
   /// Create a copy of SubjectModel
   /// with the given fields replaced by the non-null parameter values.
@@ -165,60 +149,51 @@ class __$$SubjectModelImplCopyWithImpl<$Res>
     Object? lastStudied = null,
     Object? createdAt = null,
   }) {
-    return _then(
-      _$SubjectModelImpl(
-        name:
-            null == name
-                ? _value.name
-                : name // ignore: cast_nullable_to_non_nullable
-                    as String,
-        userId:
-            null == userId
-                ? _value.userId
-                : userId // ignore: cast_nullable_to_non_nullable
-                    as String,
-        proficiency:
-            null == proficiency
-                ? _value.proficiency
-                : proficiency // ignore: cast_nullable_to_non_nullable
-                    as double,
-        lessonCount:
-            null == lessonCount
-                ? _value.lessonCount
-                : lessonCount // ignore: cast_nullable_to_non_nullable
-                    as int,
-        topicCount:
-            null == topicCount
-                ? _value.topicCount
-                : topicCount // ignore: cast_nullable_to_non_nullable
-                    as int,
-        lastStudied:
-            null == lastStudied
-                ? _value.lastStudied
-                : lastStudied // ignore: cast_nullable_to_non_nullable
-                    as DateTime,
-        createdAt:
-            null == createdAt
-                ? _value.createdAt
-                : createdAt // ignore: cast_nullable_to_non_nullable
-                    as DateTime,
-      ),
-    );
+    return _then(_$SubjectModelImpl(
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      proficiency: null == proficiency
+          ? _value.proficiency
+          : proficiency // ignore: cast_nullable_to_non_nullable
+              as double,
+      lessonCount: null == lessonCount
+          ? _value.lessonCount
+          : lessonCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      topicCount: null == topicCount
+          ? _value.topicCount
+          : topicCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      lastStudied: null == lastStudied
+          ? _value.lastStudied
+          : lastStudied // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+    ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$SubjectModelImpl extends _SubjectModel {
-  const _$SubjectModelImpl({
-    required this.name,
-    required this.userId,
-    required this.proficiency,
-    required this.lessonCount,
-    required this.topicCount,
-    required this.lastStudied,
-    required this.createdAt,
-  }) : super._();
+  const _$SubjectModelImpl(
+      {required this.name,
+      required this.userId,
+      required this.proficiency,
+      required this.lessonCount,
+      required this.topicCount,
+      required this.lastStudied,
+      required this.createdAt})
+      : super._();
 
   factory _$SubjectModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$SubjectModelImplFromJson(json);
@@ -264,16 +239,8 @@ class _$SubjectModelImpl extends _SubjectModel {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    name,
-    userId,
-    proficiency,
-    lessonCount,
-    topicCount,
-    lastStudied,
-    createdAt,
-  );
+  int get hashCode => Object.hash(runtimeType, name, userId, proficiency,
+      lessonCount, topicCount, lastStudied, createdAt);
 
   /// Create a copy of SubjectModel
   /// with the given fields replaced by the non-null parameter values.
@@ -285,20 +252,21 @@ class _$SubjectModelImpl extends _SubjectModel {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$SubjectModelImplToJson(this);
+    return _$$SubjectModelImplToJson(
+      this,
+    );
   }
 }
 
 abstract class _SubjectModel extends SubjectModel {
-  const factory _SubjectModel({
-    required final String name,
-    required final String userId,
-    required final double proficiency,
-    required final int lessonCount,
-    required final int topicCount,
-    required final DateTime lastStudied,
-    required final DateTime createdAt,
-  }) = _$SubjectModelImpl;
+  const factory _SubjectModel(
+      {required final String name,
+      required final String userId,
+      required final double proficiency,
+      required final int lessonCount,
+      required final int topicCount,
+      required final DateTime lastStudied,
+      required final DateTime createdAt}) = _$SubjectModelImpl;
   const _SubjectModel._() : super._();
 
   factory _SubjectModel.fromJson(Map<String, dynamic> json) =

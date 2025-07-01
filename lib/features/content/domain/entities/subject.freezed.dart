@@ -12,8 +12,7 @@ part of 'subject.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
-);
+    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 /// @nodoc
 mixin _$Subject {
@@ -36,15 +35,14 @@ abstract class $SubjectCopyWith<$Res> {
   factory $SubjectCopyWith(Subject value, $Res Function(Subject) then) =
       _$SubjectCopyWithImpl<$Res, Subject>;
   @useResult
-  $Res call({
-    String name,
-    String userId,
-    double proficiency,
-    int lessonCount,
-    int topicCount,
-    DateTime lastStudied,
-    DateTime createdAt,
-  });
+  $Res call(
+      {String name,
+      String userId,
+      double proficiency,
+      int lessonCount,
+      int topicCount,
+      DateTime lastStudied,
+      DateTime createdAt});
 }
 
 /// @nodoc
@@ -70,66 +68,54 @@ class _$SubjectCopyWithImpl<$Res, $Val extends Subject>
     Object? lastStudied = null,
     Object? createdAt = null,
   }) {
-    return _then(
-      _value.copyWith(
-            name:
-                null == name
-                    ? _value.name
-                    : name // ignore: cast_nullable_to_non_nullable
-                        as String,
-            userId:
-                null == userId
-                    ? _value.userId
-                    : userId // ignore: cast_nullable_to_non_nullable
-                        as String,
-            proficiency:
-                null == proficiency
-                    ? _value.proficiency
-                    : proficiency // ignore: cast_nullable_to_non_nullable
-                        as double,
-            lessonCount:
-                null == lessonCount
-                    ? _value.lessonCount
-                    : lessonCount // ignore: cast_nullable_to_non_nullable
-                        as int,
-            topicCount:
-                null == topicCount
-                    ? _value.topicCount
-                    : topicCount // ignore: cast_nullable_to_non_nullable
-                        as int,
-            lastStudied:
-                null == lastStudied
-                    ? _value.lastStudied
-                    : lastStudied // ignore: cast_nullable_to_non_nullable
-                        as DateTime,
-            createdAt:
-                null == createdAt
-                    ? _value.createdAt
-                    : createdAt // ignore: cast_nullable_to_non_nullable
-                        as DateTime,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      proficiency: null == proficiency
+          ? _value.proficiency
+          : proficiency // ignore: cast_nullable_to_non_nullable
+              as double,
+      lessonCount: null == lessonCount
+          ? _value.lessonCount
+          : lessonCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      topicCount: null == topicCount
+          ? _value.topicCount
+          : topicCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      lastStudied: null == lastStudied
+          ? _value.lastStudied
+          : lastStudied // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+    ) as $Val);
   }
 }
 
 /// @nodoc
 abstract class _$$SubjectImplCopyWith<$Res> implements $SubjectCopyWith<$Res> {
   factory _$$SubjectImplCopyWith(
-    _$SubjectImpl value,
-    $Res Function(_$SubjectImpl) then,
-  ) = __$$SubjectImplCopyWithImpl<$Res>;
+          _$SubjectImpl value, $Res Function(_$SubjectImpl) then) =
+      __$$SubjectImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String name,
-    String userId,
-    double proficiency,
-    int lessonCount,
-    int topicCount,
-    DateTime lastStudied,
-    DateTime createdAt,
-  });
+  $Res call(
+      {String name,
+      String userId,
+      double proficiency,
+      int lessonCount,
+      int topicCount,
+      DateTime lastStudied,
+      DateTime createdAt});
 }
 
 /// @nodoc
@@ -137,9 +123,8 @@ class __$$SubjectImplCopyWithImpl<$Res>
     extends _$SubjectCopyWithImpl<$Res, _$SubjectImpl>
     implements _$$SubjectImplCopyWith<$Res> {
   __$$SubjectImplCopyWithImpl(
-    _$SubjectImpl _value,
-    $Res Function(_$SubjectImpl) _then,
-  ) : super(_value, _then);
+      _$SubjectImpl _value, $Res Function(_$SubjectImpl) _then)
+      : super(_value, _then);
 
   /// Create a copy of Subject
   /// with the given fields replaced by the non-null parameter values.
@@ -154,60 +139,51 @@ class __$$SubjectImplCopyWithImpl<$Res>
     Object? lastStudied = null,
     Object? createdAt = null,
   }) {
-    return _then(
-      _$SubjectImpl(
-        name:
-            null == name
-                ? _value.name
-                : name // ignore: cast_nullable_to_non_nullable
-                    as String,
-        userId:
-            null == userId
-                ? _value.userId
-                : userId // ignore: cast_nullable_to_non_nullable
-                    as String,
-        proficiency:
-            null == proficiency
-                ? _value.proficiency
-                : proficiency // ignore: cast_nullable_to_non_nullable
-                    as double,
-        lessonCount:
-            null == lessonCount
-                ? _value.lessonCount
-                : lessonCount // ignore: cast_nullable_to_non_nullable
-                    as int,
-        topicCount:
-            null == topicCount
-                ? _value.topicCount
-                : topicCount // ignore: cast_nullable_to_non_nullable
-                    as int,
-        lastStudied:
-            null == lastStudied
-                ? _value.lastStudied
-                : lastStudied // ignore: cast_nullable_to_non_nullable
-                    as DateTime,
-        createdAt:
-            null == createdAt
-                ? _value.createdAt
-                : createdAt // ignore: cast_nullable_to_non_nullable
-                    as DateTime,
-      ),
-    );
+    return _then(_$SubjectImpl(
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      proficiency: null == proficiency
+          ? _value.proficiency
+          : proficiency // ignore: cast_nullable_to_non_nullable
+              as double,
+      lessonCount: null == lessonCount
+          ? _value.lessonCount
+          : lessonCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      topicCount: null == topicCount
+          ? _value.topicCount
+          : topicCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      lastStudied: null == lastStudied
+          ? _value.lastStudied
+          : lastStudied // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+    ));
   }
 }
 
 /// @nodoc
 
 class _$SubjectImpl extends _Subject {
-  const _$SubjectImpl({
-    required this.name,
-    required this.userId,
-    required this.proficiency,
-    required this.lessonCount,
-    required this.topicCount,
-    required this.lastStudied,
-    required this.createdAt,
-  }) : super._();
+  const _$SubjectImpl(
+      {required this.name,
+      required this.userId,
+      required this.proficiency,
+      required this.lessonCount,
+      required this.topicCount,
+      required this.lastStudied,
+      required this.createdAt})
+      : super._();
 
   @override
   final String name;
@@ -249,16 +225,8 @@ class _$SubjectImpl extends _Subject {
   }
 
   @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    name,
-    userId,
-    proficiency,
-    lessonCount,
-    topicCount,
-    lastStudied,
-    createdAt,
-  );
+  int get hashCode => Object.hash(runtimeType, name, userId, proficiency,
+      lessonCount, topicCount, lastStudied, createdAt);
 
   /// Create a copy of Subject
   /// with the given fields replaced by the non-null parameter values.
@@ -270,15 +238,14 @@ class _$SubjectImpl extends _Subject {
 }
 
 abstract class _Subject extends Subject {
-  const factory _Subject({
-    required final String name,
-    required final String userId,
-    required final double proficiency,
-    required final int lessonCount,
-    required final int topicCount,
-    required final DateTime lastStudied,
-    required final DateTime createdAt,
-  }) = _$SubjectImpl;
+  const factory _Subject(
+      {required final String name,
+      required final String userId,
+      required final double proficiency,
+      required final int lessonCount,
+      required final int topicCount,
+      required final DateTime lastStudied,
+      required final DateTime createdAt}) = _$SubjectImpl;
   const _Subject._() : super._();
 
   @override

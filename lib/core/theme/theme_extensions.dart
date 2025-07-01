@@ -25,9 +25,9 @@ extension ThemeExtensions on BuildContext {
   Color get onSecondaryColor => colorScheme.onSecondary;
   
   // Colors - Surface
-  Color get backgroundColor => colorScheme.background;
+  Color get backgroundColor => colorScheme.surface;
   Color get surfaceColor => colorScheme.surface;
-  Color get surfaceVariantColor => colorScheme.surfaceVariant;
+  Color get surfaceVariantColor => colorScheme.surfaceContainerHighest;
   
   // Colors - Status
   Color get errorColor => colorScheme.error;
@@ -260,7 +260,7 @@ class ThemeUsageExample extends StatelessWidget {
             Container(
               padding: AppSpacing.paddingAllMd,
               decoration: BoxDecoration(
-                color: context.primaryColor.withOpacity(0.1),
+                color: context.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
                 border: Border.all(color: context.primaryColor),
               ),

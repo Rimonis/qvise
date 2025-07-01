@@ -36,7 +36,7 @@ class AppTypography {
         height: 1.22,
         color: AppColors.textPrimary,
       ),
-      
+
       // Headline styles
       headlineLarge: GoogleFonts.poppins(
         fontSize: 32,
@@ -59,7 +59,7 @@ class AppTypography {
         height: 1.33,
         color: AppColors.textPrimary,
       ),
-      
+
       // Title styles
       titleLarge: GoogleFonts.inter(
         fontSize: 22,
@@ -82,7 +82,7 @@ class AppTypography {
         height: 1.43,
         color: AppColors.textPrimary,
       ),
-      
+
       // Body styles
       bodyLarge: GoogleFonts.inter(
         fontSize: 16,
@@ -105,7 +105,7 @@ class AppTypography {
         height: 1.33,
         color: AppColors.textSecondary,
       ),
-      
+
       // Label styles
       labelLarge: GoogleFonts.inter(
         fontSize: 14,
@@ -192,43 +192,49 @@ class AppTypography {
     decoration: TextDecoration.underline,
   );
 
-  // Specific use case styles
-  static TextStyle get appBarTitle => headlineSmall;
-  
-  static TextStyle get cardTitle => titleMedium;
-  
-  static TextStyle get cardSubtitle => bodySmall;
-  
-  static TextStyle get listItemTitle => bodyLarge;
-  
-  static TextStyle get listItemSubtitle => bodyMedium.copyWith(
+  // Specific use case styles - using the base text theme styles
+  static TextStyle get appBarTitle => textTheme.headlineSmall!;
+
+  static TextStyle get cardTitle => textTheme.titleMedium!;
+
+  static TextStyle get cardSubtitle => textTheme.bodySmall!;
+
+  static TextStyle get listItemTitle => textTheme.bodyLarge!;
+
+  static TextStyle get listItemSubtitle => textTheme.bodyMedium!.copyWith(
     color: AppColors.textSecondary,
   );
-  
-  static TextStyle get inputLabel => labelLarge;
-  
-  static TextStyle get inputText => bodyLarge;
-  
-  static TextStyle get inputHint => bodyLarge.copyWith(
+
+  static TextStyle get inputLabel => textTheme.labelLarge!;
+
+  static TextStyle get inputText => textTheme.bodyLarge!;
+
+  static TextStyle get inputHint => textTheme.bodyLarge!.copyWith(
     color: AppColors.textHint,
   );
-  
-  static TextStyle get inputError => bodySmall.copyWith(
+
+  static TextStyle get inputError => textTheme.bodySmall!.copyWith(
     color: AppColors.error,
   );
-  
-  static TextStyle get snackbarText => bodyMedium.copyWith(
+
+  static TextStyle get snackbarText => textTheme.bodyMedium!.copyWith(
     color: Colors.white,
   );
-  
-  static TextStyle get tabLabel => labelLarge;
-  
-  static TextStyle get chipLabel => labelMedium;
-  
-  static TextStyle get tooltipText => bodySmall;
-  
-  static TextStyle get badgeText => labelSmall.copyWith(
+
+  static TextStyle get tabLabel => textTheme.labelLarge!;
+
+  static TextStyle get chipLabel => textTheme.labelMedium!;
+
+  static TextStyle get tooltipText => textTheme.bodySmall!;
+
+  static TextStyle get badgeText => textTheme.labelSmall!.copyWith(
     color: Colors.white,
     fontWeight: FontWeight.w600,
   );
+
+  // FIX: Add the missing static getters here
+  static TextStyle get headlineSmall => textTheme.headlineSmall!;
+  static TextStyle get bodyMedium => textTheme.bodyMedium!;
+  static TextStyle get labelMedium => textTheme.labelMedium!;
+  static TextStyle get bodyLarge => textTheme.bodyLarge!;
 }

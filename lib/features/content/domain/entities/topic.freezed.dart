@@ -12,8 +12,7 @@ part of 'topic.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
-);
+    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 /// @nodoc
 mixin _$Topic {
@@ -36,15 +35,14 @@ abstract class $TopicCopyWith<$Res> {
   factory $TopicCopyWith(Topic value, $Res Function(Topic) then) =
       _$TopicCopyWithImpl<$Res, Topic>;
   @useResult
-  $Res call({
-    String name,
-    String subjectName,
-    String userId,
-    double proficiency,
-    int lessonCount,
-    DateTime lastStudied,
-    DateTime createdAt,
-  });
+  $Res call(
+      {String name,
+      String subjectName,
+      String userId,
+      double proficiency,
+      int lessonCount,
+      DateTime lastStudied,
+      DateTime createdAt});
 }
 
 /// @nodoc
@@ -70,66 +68,54 @@ class _$TopicCopyWithImpl<$Res, $Val extends Topic>
     Object? lastStudied = null,
     Object? createdAt = null,
   }) {
-    return _then(
-      _value.copyWith(
-            name:
-                null == name
-                    ? _value.name
-                    : name // ignore: cast_nullable_to_non_nullable
-                        as String,
-            subjectName:
-                null == subjectName
-                    ? _value.subjectName
-                    : subjectName // ignore: cast_nullable_to_non_nullable
-                        as String,
-            userId:
-                null == userId
-                    ? _value.userId
-                    : userId // ignore: cast_nullable_to_non_nullable
-                        as String,
-            proficiency:
-                null == proficiency
-                    ? _value.proficiency
-                    : proficiency // ignore: cast_nullable_to_non_nullable
-                        as double,
-            lessonCount:
-                null == lessonCount
-                    ? _value.lessonCount
-                    : lessonCount // ignore: cast_nullable_to_non_nullable
-                        as int,
-            lastStudied:
-                null == lastStudied
-                    ? _value.lastStudied
-                    : lastStudied // ignore: cast_nullable_to_non_nullable
-                        as DateTime,
-            createdAt:
-                null == createdAt
-                    ? _value.createdAt
-                    : createdAt // ignore: cast_nullable_to_non_nullable
-                        as DateTime,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      subjectName: null == subjectName
+          ? _value.subjectName
+          : subjectName // ignore: cast_nullable_to_non_nullable
+              as String,
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      proficiency: null == proficiency
+          ? _value.proficiency
+          : proficiency // ignore: cast_nullable_to_non_nullable
+              as double,
+      lessonCount: null == lessonCount
+          ? _value.lessonCount
+          : lessonCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      lastStudied: null == lastStudied
+          ? _value.lastStudied
+          : lastStudied // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+    ) as $Val);
   }
 }
 
 /// @nodoc
 abstract class _$$TopicImplCopyWith<$Res> implements $TopicCopyWith<$Res> {
   factory _$$TopicImplCopyWith(
-    _$TopicImpl value,
-    $Res Function(_$TopicImpl) then,
-  ) = __$$TopicImplCopyWithImpl<$Res>;
+          _$TopicImpl value, $Res Function(_$TopicImpl) then) =
+      __$$TopicImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String name,
-    String subjectName,
-    String userId,
-    double proficiency,
-    int lessonCount,
-    DateTime lastStudied,
-    DateTime createdAt,
-  });
+  $Res call(
+      {String name,
+      String subjectName,
+      String userId,
+      double proficiency,
+      int lessonCount,
+      DateTime lastStudied,
+      DateTime createdAt});
 }
 
 /// @nodoc
@@ -137,9 +123,8 @@ class __$$TopicImplCopyWithImpl<$Res>
     extends _$TopicCopyWithImpl<$Res, _$TopicImpl>
     implements _$$TopicImplCopyWith<$Res> {
   __$$TopicImplCopyWithImpl(
-    _$TopicImpl _value,
-    $Res Function(_$TopicImpl) _then,
-  ) : super(_value, _then);
+      _$TopicImpl _value, $Res Function(_$TopicImpl) _then)
+      : super(_value, _then);
 
   /// Create a copy of Topic
   /// with the given fields replaced by the non-null parameter values.
@@ -154,60 +139,51 @@ class __$$TopicImplCopyWithImpl<$Res>
     Object? lastStudied = null,
     Object? createdAt = null,
   }) {
-    return _then(
-      _$TopicImpl(
-        name:
-            null == name
-                ? _value.name
-                : name // ignore: cast_nullable_to_non_nullable
-                    as String,
-        subjectName:
-            null == subjectName
-                ? _value.subjectName
-                : subjectName // ignore: cast_nullable_to_non_nullable
-                    as String,
-        userId:
-            null == userId
-                ? _value.userId
-                : userId // ignore: cast_nullable_to_non_nullable
-                    as String,
-        proficiency:
-            null == proficiency
-                ? _value.proficiency
-                : proficiency // ignore: cast_nullable_to_non_nullable
-                    as double,
-        lessonCount:
-            null == lessonCount
-                ? _value.lessonCount
-                : lessonCount // ignore: cast_nullable_to_non_nullable
-                    as int,
-        lastStudied:
-            null == lastStudied
-                ? _value.lastStudied
-                : lastStudied // ignore: cast_nullable_to_non_nullable
-                    as DateTime,
-        createdAt:
-            null == createdAt
-                ? _value.createdAt
-                : createdAt // ignore: cast_nullable_to_non_nullable
-                    as DateTime,
-      ),
-    );
+    return _then(_$TopicImpl(
+      name: null == name
+          ? _value.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      subjectName: null == subjectName
+          ? _value.subjectName
+          : subjectName // ignore: cast_nullable_to_non_nullable
+              as String,
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      proficiency: null == proficiency
+          ? _value.proficiency
+          : proficiency // ignore: cast_nullable_to_non_nullable
+              as double,
+      lessonCount: null == lessonCount
+          ? _value.lessonCount
+          : lessonCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      lastStudied: null == lastStudied
+          ? _value.lastStudied
+          : lastStudied // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+    ));
   }
 }
 
 /// @nodoc
 
 class _$TopicImpl extends _Topic {
-  const _$TopicImpl({
-    required this.name,
-    required this.subjectName,
-    required this.userId,
-    required this.proficiency,
-    required this.lessonCount,
-    required this.lastStudied,
-    required this.createdAt,
-  }) : super._();
+  const _$TopicImpl(
+      {required this.name,
+      required this.subjectName,
+      required this.userId,
+      required this.proficiency,
+      required this.lessonCount,
+      required this.lastStudied,
+      required this.createdAt})
+      : super._();
 
   @override
   final String name;
@@ -249,16 +225,8 @@ class _$TopicImpl extends _Topic {
   }
 
   @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    name,
-    subjectName,
-    userId,
-    proficiency,
-    lessonCount,
-    lastStudied,
-    createdAt,
-  );
+  int get hashCode => Object.hash(runtimeType, name, subjectName, userId,
+      proficiency, lessonCount, lastStudied, createdAt);
 
   /// Create a copy of Topic
   /// with the given fields replaced by the non-null parameter values.
@@ -270,15 +238,14 @@ class _$TopicImpl extends _Topic {
 }
 
 abstract class _Topic extends Topic {
-  const factory _Topic({
-    required final String name,
-    required final String subjectName,
-    required final String userId,
-    required final double proficiency,
-    required final int lessonCount,
-    required final DateTime lastStudied,
-    required final DateTime createdAt,
-  }) = _$TopicImpl;
+  const factory _Topic(
+      {required final String name,
+      required final String subjectName,
+      required final String userId,
+      required final double proficiency,
+      required final int lessonCount,
+      required final DateTime lastStudied,
+      required final DateTime createdAt}) = _$TopicImpl;
   const _Topic._() : super._();
 
   @override

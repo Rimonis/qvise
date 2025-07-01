@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qvise/core/providers/network_status_provider.dart';
 import '../../../../core/routes/route_names.dart';
 import '../../domain/entities/subject.dart';
 import '../providers/content_state_providers.dart';

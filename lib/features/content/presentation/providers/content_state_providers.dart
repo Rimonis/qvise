@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../../../core/providers/providers.dart';
 import '../../domain/entities/subject.dart';
 import '../../domain/entities/topic.dart';
 import '../../domain/entities/lesson.dart';
@@ -261,9 +259,3 @@ class SelectedTopic extends _$SelectedTopic {
   }
 }
 
-// Network status provider
-@riverpod
-Stream<bool> networkStatus(Ref ref) {
-  final connectionChecker = ref.watch(internetConnectionCheckerProvider);
-  return connectionChecker.onStatusChange.map((status) => status == InternetConnectionStatus.connected);
-}

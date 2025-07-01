@@ -12,8 +12,7 @@ part of 'user.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
-);
+    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 /// @nodoc
 mixin _$User {
@@ -35,14 +34,13 @@ abstract class $UserCopyWith<$Res> {
   factory $UserCopyWith(User value, $Res Function(User) then) =
       _$UserCopyWithImpl<$Res, User>;
   @useResult
-  $Res call({
-    String id,
-    String email,
-    String? displayName,
-    String? photoUrl,
-    String subscriptionTier,
-    bool isEmailVerified,
-  });
+  $Res call(
+      {String id,
+      String email,
+      String? displayName,
+      String? photoUrl,
+      String subscriptionTier,
+      bool isEmailVerified});
 }
 
 /// @nodoc
@@ -67,60 +65,49 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? subscriptionTier = null,
     Object? isEmailVerified = null,
   }) {
-    return _then(
-      _value.copyWith(
-            id:
-                null == id
-                    ? _value.id
-                    : id // ignore: cast_nullable_to_non_nullable
-                        as String,
-            email:
-                null == email
-                    ? _value.email
-                    : email // ignore: cast_nullable_to_non_nullable
-                        as String,
-            displayName:
-                freezed == displayName
-                    ? _value.displayName
-                    : displayName // ignore: cast_nullable_to_non_nullable
-                        as String?,
-            photoUrl:
-                freezed == photoUrl
-                    ? _value.photoUrl
-                    : photoUrl // ignore: cast_nullable_to_non_nullable
-                        as String?,
-            subscriptionTier:
-                null == subscriptionTier
-                    ? _value.subscriptionTier
-                    : subscriptionTier // ignore: cast_nullable_to_non_nullable
-                        as String,
-            isEmailVerified:
-                null == isEmailVerified
-                    ? _value.isEmailVerified
-                    : isEmailVerified // ignore: cast_nullable_to_non_nullable
-                        as bool,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as String,
+      email: null == email
+          ? _value.email
+          : email // ignore: cast_nullable_to_non_nullable
+              as String,
+      displayName: freezed == displayName
+          ? _value.displayName
+          : displayName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      photoUrl: freezed == photoUrl
+          ? _value.photoUrl
+          : photoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      subscriptionTier: null == subscriptionTier
+          ? _value.subscriptionTier
+          : subscriptionTier // ignore: cast_nullable_to_non_nullable
+              as String,
+      isEmailVerified: null == isEmailVerified
+          ? _value.isEmailVerified
+          : isEmailVerified // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ) as $Val);
   }
 }
 
 /// @nodoc
 abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
   factory _$$UserImplCopyWith(
-    _$UserImpl value,
-    $Res Function(_$UserImpl) then,
-  ) = __$$UserImplCopyWithImpl<$Res>;
+          _$UserImpl value, $Res Function(_$UserImpl) then) =
+      __$$UserImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String id,
-    String email,
-    String? displayName,
-    String? photoUrl,
-    String subscriptionTier,
-    bool isEmailVerified,
-  });
+  $Res call(
+      {String id,
+      String email,
+      String? displayName,
+      String? photoUrl,
+      String subscriptionTier,
+      bool isEmailVerified});
 }
 
 /// @nodoc
@@ -128,7 +115,7 @@ class __$$UserImplCopyWithImpl<$Res>
     extends _$UserCopyWithImpl<$Res, _$UserImpl>
     implements _$$UserImplCopyWith<$Res> {
   __$$UserImplCopyWithImpl(_$UserImpl _value, $Res Function(_$UserImpl) _then)
-    : super(_value, _then);
+      : super(_value, _then);
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -142,54 +129,45 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? subscriptionTier = null,
     Object? isEmailVerified = null,
   }) {
-    return _then(
-      _$UserImpl(
-        id:
-            null == id
-                ? _value.id
-                : id // ignore: cast_nullable_to_non_nullable
-                    as String,
-        email:
-            null == email
-                ? _value.email
-                : email // ignore: cast_nullable_to_non_nullable
-                    as String,
-        displayName:
-            freezed == displayName
-                ? _value.displayName
-                : displayName // ignore: cast_nullable_to_non_nullable
-                    as String?,
-        photoUrl:
-            freezed == photoUrl
-                ? _value.photoUrl
-                : photoUrl // ignore: cast_nullable_to_non_nullable
-                    as String?,
-        subscriptionTier:
-            null == subscriptionTier
-                ? _value.subscriptionTier
-                : subscriptionTier // ignore: cast_nullable_to_non_nullable
-                    as String,
-        isEmailVerified:
-            null == isEmailVerified
-                ? _value.isEmailVerified
-                : isEmailVerified // ignore: cast_nullable_to_non_nullable
-                    as bool,
-      ),
-    );
+    return _then(_$UserImpl(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as String,
+      email: null == email
+          ? _value.email
+          : email // ignore: cast_nullable_to_non_nullable
+              as String,
+      displayName: freezed == displayName
+          ? _value.displayName
+          : displayName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      photoUrl: freezed == photoUrl
+          ? _value.photoUrl
+          : photoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      subscriptionTier: null == subscriptionTier
+          ? _value.subscriptionTier
+          : subscriptionTier // ignore: cast_nullable_to_non_nullable
+              as String,
+      isEmailVerified: null == isEmailVerified
+          ? _value.isEmailVerified
+          : isEmailVerified // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ));
   }
 }
 
 /// @nodoc
 
 class _$UserImpl implements _User {
-  const _$UserImpl({
-    required this.id,
-    required this.email,
-    this.displayName,
-    this.photoUrl,
-    this.subscriptionTier = 'free',
-    this.isEmailVerified = false,
-  });
+  const _$UserImpl(
+      {required this.id,
+      required this.email,
+      this.displayName,
+      this.photoUrl,
+      this.subscriptionTier = 'free',
+      this.isEmailVerified = false});
 
   @override
   final String id;
@@ -229,15 +207,8 @@ class _$UserImpl implements _User {
   }
 
   @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    id,
-    email,
-    displayName,
-    photoUrl,
-    subscriptionTier,
-    isEmailVerified,
-  );
+  int get hashCode => Object.hash(runtimeType, id, email, displayName, photoUrl,
+      subscriptionTier, isEmailVerified);
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -249,14 +220,13 @@ class _$UserImpl implements _User {
 }
 
 abstract class _User implements User {
-  const factory _User({
-    required final String id,
-    required final String email,
-    final String? displayName,
-    final String? photoUrl,
-    final String subscriptionTier,
-    final bool isEmailVerified,
-  }) = _$UserImpl;
+  const factory _User(
+      {required final String id,
+      required final String email,
+      final String? displayName,
+      final String? photoUrl,
+      final String subscriptionTier,
+      final bool isEmailVerified}) = _$UserImpl;
 
   @override
   String get id;

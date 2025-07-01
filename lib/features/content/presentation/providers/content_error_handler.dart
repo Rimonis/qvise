@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // FIX: Added missing import for Ref
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/error/failures.dart';
 
@@ -23,7 +24,7 @@ class ContentError {
   final dynamic originalError;
   final StackTrace? stackTrace;
   final DateTime timestamp;
-  
+
   ContentError({
     required this.type,
     required this.message,
@@ -31,25 +32,26 @@ class ContentError {
     this.originalError,
     this.stackTrace,
   }) : timestamp = DateTime.now();
-  
+
   factory ContentError.fromFailure(Failure failure) {
     ContentErrorType type;
     String details = '';
-    
-    switch (failure.runtimeType) {
-      case NetworkFailure:
+
+    // FIX: Updated to modern pattern matching syntax
+    switch (failure) {
+      case NetworkFailure _:
         type = ContentErrorType.network;
         details = 'Please check your internet connection';
         break;
-      case ServerFailure:
+      case ServerFailure _:
         type = ContentErrorType.serverError;
         details = 'Our servers are experiencing issues. Please try again later';
         break;
-      case CacheFailure:
+      case CacheFailure _:
         type = ContentErrorType.localStorageError;
         details = 'Error accessing local storage';
         break;
-      case AuthFailure:
+      case AuthFailure _:
         type = ContentErrorType.unauthorized;
         details = 'Please sign in again to continue';
         break;
@@ -57,27 +59,27 @@ class ContentError {
         type = ContentErrorType.unknown;
         details = 'An unexpected error occurred';
     }
-    
+
     return ContentError(
       type: type,
       message: failure.message,
       details: details,
     );
   }
-  
+
   factory ContentError.fromException(dynamic exception, [StackTrace? stack]) {
     if (kDebugMode) {
       print('ContentError.fromException: $exception');
       if (stack != null) print(stack);
     }
-    
+
     String message;
     ContentErrorType type;
-    
+
     if (exception is NetworkFailure) {
       return ContentError.fromFailure(exception);
     }
-    
+
     if (exception.toString().contains('NetworkException') ||
         exception.toString().contains('SocketException')) {
       type = ContentErrorType.network;
@@ -91,20 +93,20 @@ class ContentError {
     } else if (exception.toString().contains('404')) {
       type = ContentErrorType.notFound;
       message = 'Content not found';
-    } else if (exception.toString().contains('401') || 
-               exception.toString().contains('403')) {
+    } else if (exception.toString().contains('401') ||
+        exception.toString().contains('403')) {
       type = ContentErrorType.unauthorized;
       message = 'Access denied';
     } else if (exception.toString().contains('500') ||
-               exception.toString().contains('502') ||
-               exception.toString().contains('503')) {
+        exception.toString().contains('502') ||
+        exception.toString().contains('503')) {
       type = ContentErrorType.serverError;
       message = 'Server error';
     } else {
       type = ContentErrorType.unknown;
       message = exception.toString();
     }
-    
+
     return ContentError(
       type: type,
       message: message,
@@ -112,7 +114,7 @@ class ContentError {
       stackTrace: stack,
     );
   }
-  
+
   String get userFriendlyMessage {
     switch (type) {
       case ContentErrorType.network:
@@ -133,7 +135,7 @@ class ContentError {
         return details ?? 'Something went wrong. Please try again.';
     }
   }
-  
+
   bool get isRetryable {
     switch (type) {
       case ContentErrorType.network:
@@ -155,47 +157,47 @@ class ContentError {
 class ContentErrorHandler extends _$ContentErrorHandler {
   final List<ContentError> _errorHistory = [];
   static const int maxHistorySize = 50;
-  
+
   @override
   List<ContentError> build() {
     return [];
   }
-  
+
   void logError(ContentError error) {
     _errorHistory.add(error);
-    
+
     // Keep history size limited
     if (_errorHistory.length > maxHistorySize) {
       _errorHistory.removeAt(0);
     }
-    
+
     // Update state to trigger UI updates if needed
     state = List.from(_errorHistory);
-    
+
     // Log to console in debug mode
     if (kDebugMode) {
       print('ContentError [${error.type}]: ${error.message}');
       if (error.details != null) print('Details: ${error.details}');
       if (error.stackTrace != null) print(error.stackTrace);
     }
-    
+
     // TODO: Send to crash reporting service in production
   }
-  
+
   void clearErrors() {
     _errorHistory.clear();
     state = [];
   }
-  
+
   List<ContentError> getRecentErrors({int count = 10}) {
     final start = (_errorHistory.length - count).clamp(0, _errorHistory.length);
     return _errorHistory.sublist(start);
   }
-  
+
   ContentError? getLastError() {
     return _errorHistory.isNotEmpty ? _errorHistory.last : null;
   }
-  
+
   List<ContentError> getErrorsByType(ContentErrorType type) {
     return _errorHistory.where((error) => error.type == type).toList();
   }
@@ -203,7 +205,7 @@ class ContentErrorHandler extends _$ContentErrorHandler {
 
 // Extension to handle errors in providers easily
 extension AsyncValueErrorHandling<T> on AsyncValue<T> {
-  AsyncValue<T> handleError(WidgetRef ref) {
+  AsyncValue<T> handleError(Ref ref) {
     return maybeWhen(
       error: (error, stack) {
         final contentError = ContentError.fromException(error, stack);
@@ -219,7 +221,7 @@ extension AsyncValueErrorHandling<T> on AsyncValue<T> {
 class RetryHelper {
   static const int maxRetries = 3;
   static const Duration initialDelay = Duration(seconds: 1);
-  
+
   static Future<T> withRetry<T>({
     required Future<T> Function() operation,
     required ContentErrorHandler errorHandler,
@@ -228,34 +230,34 @@ class RetryHelper {
   }) async {
     int attempt = 0;
     Duration delay = initialDelay;
-    
+
     while (attempt < maxAttempts) {
       try {
         return await operation();
       } catch (e, stack) {
         attempt++;
-        
+
         final error = ContentError.fromException(e, stack);
-        
+
         // Check if we should retry
         final shouldRetry = retryIf?.call(e) ?? error.isRetryable;
-        
+
         if (attempt >= maxAttempts || !shouldRetry) {
           errorHandler.logError(error);
           rethrow;
         }
-        
+
         // Log retry attempt
         if (kDebugMode) {
           print('Retry attempt $attempt/$maxAttempts after ${delay.inSeconds}s');
         }
-        
+
         // Wait before retrying with exponential backoff
         await Future.delayed(delay);
         delay *= 2; // Exponential backoff
       }
     }
-    
+
     throw Exception('Max retries exceeded');
   }
 }
