@@ -15,19 +15,22 @@ class EmailVerificationScreen extends ConsumerStatefulWidget {
 
 class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScreen> {
   Timer? _verificationCheckTimer;
-  Timer? _resendCooldownTimer; // Store the resend timer
+  Timer? _resendCooldownTimer;
   bool _isResendingEmail = false;
   int _resendCooldown = 0;
+  bool _isDisposed = false;
   
   @override
   void initState() {
     super.initState();
+    _isDisposed = false;
     // Start periodic check for email verification
     _startEmailVerificationCheck();
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
     // Cancel both timers to prevent setState() after dispose
     _verificationCheckTimer?.cancel();
     _resendCooldownTimer?.cancel();
@@ -37,8 +40,10 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
   void _startEmailVerificationCheck() {
     _verificationCheckTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       // Check if widget is still mounted before calling ref.read()
-      if (mounted) {
+      if (!_isDisposed && mounted) {
         ref.read(authProvider.notifier).checkEmailVerification();
+      } else {
+        timer.cancel();
       }
     });
   }
@@ -47,14 +52,14 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
     // Cancel existing timer if running
     _resendCooldownTimer?.cancel();
     
-    if (mounted) {
+    if (!_isDisposed && mounted) {
       setState(() {
         _resendCooldown = 60; // 60 seconds cooldown
       });
     }
     
     _resendCooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
+      if (_isDisposed || !mounted) {
         timer.cancel();
         return;
       }
@@ -71,7 +76,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
   }
 
   Future<void> _resendVerificationEmail() async {
-    if (!mounted) return;
+    if (_isDisposed || !mounted) return;
     
     setState(() {
       _isResendingEmail = true;
@@ -80,7 +85,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
     try {
       await ref.read(authProvider.notifier).sendEmailVerification();
       
-      if (mounted) {
+      if (!_isDisposed && mounted) {
         _startResendCooldown();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -90,16 +95,16 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (!_isDisposed && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to send email: $e'),
+            content: Text('Failed to send email: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
       }
     } finally {
-      if (mounted) {
+      if (!_isDisposed && mounted) {
         setState(() {
           _isResendingEmail = false;
         });
@@ -169,18 +174,18 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
         ),
         error: (error) => Center(
           child: Padding(
-            padding: EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, color: Colors.red, size: 80),
-                SizedBox(height: 16),
+                const Icon(Icons.error_outline, color: Colors.red, size: 80),
+                const SizedBox(height: 16),
                 Text(
                   'Error: $error',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.red),
+                  style: const TextStyle(color: Colors.red),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 AuthButton(
                   text: 'Try Again',
                   onPressed: () {
@@ -282,7 +287,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
               color: Colors.blue.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child:  Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 SizedBox(

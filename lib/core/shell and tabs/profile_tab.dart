@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/features/auth/presentation/application/auth_providers.dart';
+import 'package:qvise/core/theme/theme_mode_provider.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 // Provider for premium status (for testing)
 final premiumStatusProvider = StateProvider<bool>((ref) => false);
@@ -17,23 +21,23 @@ class ProfileTab extends ConsumerWidget {
       initial: () => const Center(child: CircularProgressIndicator()),
       loading: () => const Center(child: CircularProgressIndicator()),
       authenticated: (user) => SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: AppSpacing.screenPaddingAll,
         child: Column(
           children: [
             // Profile Header
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(24),
+              padding: AppSpacing.paddingAllLg,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Theme.of(context).colorScheme.primary,
-                    Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                    context.primaryColor,
+                    context.primaryColor.withOpacity(0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
               ),
               child: Column(
                 children: [
@@ -58,7 +62,7 @@ class ProfileTab extends ConsumerWidget {
                           )
                         : const Icon(Icons.person, size: 40, color: Colors.white),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
                   
                   // User name
                   Text(
@@ -69,7 +73,7 @@ class ProfileTab extends ConsumerWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   
                   // Email
                   Text(
@@ -79,14 +83,17 @@ class ProfileTab extends ConsumerWidget {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.sm),
                   
                   // Subscription status
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
                     decoration: BoxDecoration(
                       color: isPremium ? Colors.amber.withOpacity(0.2) : Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
                       border: Border.all(
                         color: isPremium ? Colors.amber.withOpacity(0.5) : Colors.white.withOpacity(0.5),
                       ),
@@ -99,7 +106,7 @@ class ProfileTab extends ConsumerWidget {
                           size: 16,
                           color: isPremium ? Colors.amber : Colors.white,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.sm),
                         Text(
                           isPremium ? 'Premium User' : 'Free User',
                           style: TextStyle(
@@ -113,26 +120,30 @@ class ProfileTab extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             
             // Email verification status
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.paddingAllMd,
               decoration: BoxDecoration(
-                color: user.isEmailVerified ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: user.isEmailVerified 
+                    ? AppColors.successLight 
+                    : AppColors.warningLight,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
                 border: Border.all(
-                  color: user.isEmailVerified ? Colors.green.withOpacity(0.3) : Colors.orange.withOpacity(0.3),
+                  color: user.isEmailVerified 
+                      ? AppColors.success.withOpacity(0.3) 
+                      : AppColors.warning.withOpacity(0.3),
                 ),
               ),
               child: Row(
                 children: [
                   Icon(
                     user.isEmailVerified ? Icons.verified : Icons.warning,
-                    color: user.isEmailVerified ? Colors.green : Colors.orange,
+                    color: user.isEmailVerified ? AppColors.success : AppColors.warning,
                     size: 24,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,7 +152,7 @@ class ProfileTab extends ConsumerWidget {
                           user.isEmailVerified ? 'Email Verified' : 'Email Not Verified',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: user.isEmailVerified ? Colors.green[700] : Colors.orange[700],
+                            color: user.isEmailVerified ? AppColors.successDark : AppColors.warningDark,
                           ),
                         ),
                         Text(
@@ -150,7 +161,7 @@ class ProfileTab extends ConsumerWidget {
                               : 'Please verify your email address',
                           style: TextStyle(
                             fontSize: 12,
-                            color: user.isEmailVerified ? Colors.green[600] : Colors.orange[600],
+                            color: user.isEmailVerified ? AppColors.successDark : AppColors.warningDark,
                           ),
                         ),
                       ],
@@ -159,17 +170,21 @@ class ProfileTab extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             
             // Settings Section
             Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                color: context.surfaceColor,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                border: Border.all(color: context.borderColor),
               ),
               child: Column(
                 children: [
+                  // Theme selector
+                  const ThemeModeListTile(),
+                  Divider(height: 1, color: context.dividerColor),
+                  
                   // Premium Toggle (for testing)
                   ListTile(
                     leading: Icon(
@@ -185,7 +200,7 @@ class ProfileTab extends ConsumerWidget {
                       },
                     ),
                   ),
-                  const Divider(height: 1),
+                  Divider(height: 1, color: context.dividerColor),
                   
                   // Account Settings
                   ListTile(
@@ -199,7 +214,7 @@ class ProfileTab extends ConsumerWidget {
                       );
                     },
                   ),
-                  const Divider(height: 1),
+                  Divider(height: 1, color: context.dividerColor),
                   
                   // Privacy
                   ListTile(
@@ -213,7 +228,7 @@ class ProfileTab extends ConsumerWidget {
                       );
                     },
                   ),
-                  const Divider(height: 1),
+                  Divider(height: 1, color: context.dividerColor),
                   
                   // Help & Support
                   ListTile(
@@ -230,30 +245,30 @@ class ProfileTab extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.xl),
             
             // Logout Button
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: AppSpacing.buttonHeight,
               child: ElevatedButton.icon(
                 onPressed: () => _handleLogout(context, ref),
                 icon: const Icon(Icons.logout),
                 label: const Text('Sign Out'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppColors.error,
                   foregroundColor: Colors.white,
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             
             // App version info
             Text(
               'Qvise v1.0.0',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: context.textTertiaryColor,
               ),
             ),
           ],
@@ -263,38 +278,41 @@ class ProfileTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.email_outlined, color: Colors.orange, size: 100),
-            const SizedBox(height: 20),
+            Icon(Icons.email_outlined, color: AppColors.warning, size: 100),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               'Email Verification Required',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Please verify your email to access your profile',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: AppSpacing.xxl),
             ElevatedButton(
               onPressed: () => _handleLogout(context, ref),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[400],
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                backgroundColor: AppColors.error,
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.md,
+                ),
               ),
               child: const Text('Sign Out', style: TextStyle(fontSize: 18)),
             ),
           ],
         ),
       ),
-      unauthenticated: () => const Center(
+      unauthenticated: () => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_off, color: Colors.grey, size: 100),
-            SizedBox(height: 20),
-            Text('Not Authenticated'),
-            SizedBox(height: 8),
-            Text('Please sign in to view your profile'),
+            Icon(Icons.person_off, color: context.textTertiaryColor, size: 100),
+            const SizedBox(height: AppSpacing.lg),
+            const Text('Not Authenticated'),
+            const SizedBox(height: AppSpacing.sm),
+            const Text('Please sign in to view your profile'),
           ],
         ),
       ),
@@ -302,19 +320,19 @@ class ProfileTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 100),
-            const SizedBox(height: 20),
+            Icon(Icons.error_outline, color: AppColors.error, size: 100),
+            const SizedBox(height: AppSpacing.lg),
             const Text('Error'),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
               child: Text(
                 error,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: AppColors.error),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             ElevatedButton(
               onPressed: () {
                 ref.read(authProvider.notifier).checkAuthStatus();
@@ -334,7 +352,7 @@ class ProfileTab extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Logged out successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
       }
@@ -343,7 +361,7 @@ class ProfileTab extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString()),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }

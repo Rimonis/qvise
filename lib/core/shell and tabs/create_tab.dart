@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/providers/network_status_provider.dart';
 import 'package:qvise/features/content/domain/entities/lesson.dart';
 import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
 import 'package:qvise/features/content/presentation/screens/subject_selection_screen.dart';
@@ -7,32 +8,80 @@ import 'package:qvise/features/content/presentation/widgets/content_loading_widg
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card.dart';
 
-
-class CreateTab extends ConsumerWidget {
+class CreateTab extends ConsumerStatefulWidget {
   const CreateTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final unlockedLessonsAsync = ref.watch(unlockedLessonsProvider);
-    final isOnline = ref.watch(networkStatusProvider).valueOrNull ?? false;
+  ConsumerState<CreateTab> createState() => _CreateTabState();
+}
+
+class _CreateTabState extends ConsumerState<CreateTab> with AutomaticKeepAliveClientMixin {
+  final ScrollController _scrollController = ScrollController();
+  bool _isRefreshing = false;
+  
+  @override
+  bool get wantKeepAlive => true;
+  
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+  
+  Future<void> _handleRefresh() async {
+    if (_isRefreshing) return;
     
+    setState(() {
+      _isRefreshing = true;
+    });
+    
+    try {
+      await ref.refresh(unlockedLessonsProvider.future);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    
+    final unlockedLessonsAsync = ref.watch(unlockedLessonsProvider);
+    final isOnline = ref.watch(networkStatusProvider);
+    
+    // Show offline message if needed
     if (!isOnline) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.wifi_off, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'Internet connection required',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Please connect to the internet to create and edit lessons.',
-              textAlign: TextAlign.center,
-            ),
-          ],
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.wifi_off, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              const Text(
+                'Internet connection required',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Please connect to the internet to create and edit lessons.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  ref.read(networkStatusProvider.notifier).checkNow();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -50,18 +99,17 @@ class CreateTab extends ConsumerWidget {
           );
         }
         
-        // Show unlocked lessons with FAB
+        // Show unlocked lessons
         return Scaffold(
           body: RefreshIndicator(
-            onRefresh: () => ref.refresh(unlockedLessonsProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: unlockedLessons.length + 1, // +1 for header
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  // Header
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 20),
+            onRefresh: _handleRefresh,
+            child: CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                // Header
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.all(16),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
@@ -111,12 +159,12 @@ class CreateTab extends ConsumerWidget {
                                 color: Colors.orange,
                               ),
                               const SizedBox(width: 8),
-                              Expanded(
+                              const Expanded(
                                 child: Text(
                                   'Add content to your lessons, then lock them to start spaced repetition',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.orange[700],
+                                    color: Colors.orange,
                                   ),
                                 ),
                               ),
@@ -125,19 +173,35 @@ class CreateTab extends ConsumerWidget {
                         ),
                       ],
                     ),
-                  );
-                }
-                
-                final lesson = unlockedLessons[index - 1];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: UnlockedLessonCard(
-                    lesson: lesson,
-                    onTap: () => _navigateToLessonEditor(context, lesson),
-                    onDelete: () => _showDeleteDialog(context, ref, lesson),
                   ),
-                );
-              },
+                ),
+                
+                // Lessons list
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final lesson = unlockedLessons[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: UnlockedLessonCard(
+                            lesson: lesson,
+                            onTap: () => _navigateToLessonEditor(context, lesson),
+                            onDelete: () => _showDeleteDialog(context, ref, lesson),
+                          ),
+                        );
+                      },
+                      childCount: unlockedLessons.length,
+                    ),
+                  ),
+                ),
+                
+                // Bottom padding for FAB
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 80),
+                ),
+              ],
             ),
           ),
           floatingActionButton: FloatingActionButton.extended(
@@ -145,28 +209,31 @@ class CreateTab extends ConsumerWidget {
             icon: const Icon(Icons.add),
             label: const Text('New Lesson'),
           ),
-          // Sticky lock button at bottom
           bottomSheet: _buildLockButton(context, ref, unlockedLessons),
         );
       },
       loading: () => const ContentLoadingWidget(message: 'Loading lessons...'),
       error: (error, stack) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Error: ${error.toString()}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => ref.invalidate(unlockedLessonsProvider),
-              child: const Text('Retry'),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                'Error: ${error.toString()}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => ref.invalidate(unlockedLessonsProvider),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -176,6 +243,10 @@ class CreateTab extends ConsumerWidget {
     if (unlockedLessons.isEmpty) return null;
     
     final readyToLock = unlockedLessons.where((lesson) => lesson.totalContentCount > 0).toList();
+    
+    if (readyToLock.isEmpty && unlockedLessons.length < 2) {
+      return null; // Don't show lock button if only one empty lesson
+    }
     
     return Container(
       width: double.infinity,
@@ -191,6 +262,7 @@ class CreateTab extends ConsumerWidget {
         ],
       ),
       child: SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -235,8 +307,8 @@ class CreateTab extends ConsumerWidget {
                       : 'Lock ${readyToLock.length} ${readyToLock.length == 1 ? 'Lesson' : 'Lessons'}',
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: readyToLock.isNotEmpty ? Colors.orange : Colors.grey,
-                  foregroundColor: Colors.white,
+                  backgroundColor: readyToLock.isNotEmpty ? Colors.orange : null,
+                  foregroundColor: readyToLock.isNotEmpty ? Colors.white : null,
                 ),
               ),
             ),
@@ -260,6 +332,7 @@ class CreateTab extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Edit "${lesson.displayTitle}" - Coming Soon'),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -289,6 +362,7 @@ class CreateTab extends ConsumerWidget {
                     const SnackBar(
                       content: Text('Lesson deleted successfully'),
                       backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
@@ -298,6 +372,7 @@ class CreateTab extends ConsumerWidget {
                     SnackBar(
                       content: Text('Failed to delete: ${e.toString()}'),
                       backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
@@ -328,17 +403,32 @@ class CreateTab extends ConsumerWidget {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
-            ...readyToLock.map((lesson) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  const Icon(Icons.book, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(lesson.displayTitle)),
-                  Text('${lesson.totalContentCount} items'),
-                ],
+            Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: readyToLock.map((lesson) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.book, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            lesson.displayTitle,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          '${lesson.totalContentCount} items',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  )).toList(),
+                ),
               ),
-            )),
+            ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
@@ -378,6 +468,7 @@ class CreateTab extends ConsumerWidget {
                 SnackBar(
                   content: Text('Locked ${readyToLock.length} lessons - Feature Coming Soon'),
                   backgroundColor: Colors.orange,
+                  behavior: SnackBarBehavior.floating,
                 ),
               );
             },

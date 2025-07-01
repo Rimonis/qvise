@@ -31,11 +31,22 @@ class GoRouterNotifier extends ChangeNotifier {
 
   final Ref _ref;
   late final ProviderSubscription<AuthState> _authSubscription;
+  bool _disposed = false;
 
   @override
   void dispose() {
-    _authSubscription.close();
-    super.dispose();
+    if (!_disposed) {
+      _disposed = true;
+      _authSubscription.close();
+      super.dispose();
+    }
+  }
+  
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
   }
 }
 
@@ -47,15 +58,42 @@ GoRouterNotifier goRouterNotifier(Ref ref) {
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(goRouterNotifierProvider);
   
+  // Keep track of last redirect to prevent loops
+  String? lastRedirect;
+  int redirectCount = 0;
+  const maxRedirects = 5;
+  
   return GoRouter(
     initialLocation: RouteNames.splash,
     debugLogDiagnostics: kDebugMode,
     refreshListenable: notifier,
     redirect: (context, state) {
-      final result = authGuard(ref, state.matchedLocation);
-      if (kDebugMode) {
-        print('🟡 Router: Location: ${state.matchedLocation} → Redirect: ${result ?? "null (stay)"}');
+      final currentLocation = state.matchedLocation;
+      
+      // Reset counter if navigating to a different route
+      if (lastRedirect != currentLocation) {
+        redirectCount = 0;
+        lastRedirect = currentLocation;
       }
+      
+      // Prevent infinite redirects
+      if (redirectCount >= maxRedirects) {
+        if (kDebugMode) {
+          print('🔴 Router: Max redirects reached, staying at $currentLocation');
+        }
+        return null;
+      }
+      
+      final result = authGuard(ref, currentLocation);
+      
+      if (result != null) {
+        redirectCount++;
+      }
+      
+      if (kDebugMode) {
+        print('🟡 Router: Location: $currentLocation → Redirect: ${result ?? "null (stay)"}');
+      }
+      
       return result;
     },
     routes: [
@@ -93,7 +131,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       
-      // Main app shell (replaces individual content routes)
+      // Main app shell
       GoRoute(
         path: RouteNames.app,
         name: 'app',
@@ -120,7 +158,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         redirect: (context, state) => RouteNames.app,
       ),
       
-      // Individual lesson detail route (opened from main app)
+      // Individual lesson detail route
       GoRoute(
         path: '${RouteNames.lessonDetail}/:lessonId',
         name: 'lesson-detail',
@@ -155,9 +193,15 @@ final routerProvider = Provider<GoRouter>((ref) {
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
               Text(
-                'Error: ${state.error}',
+                'Page not found: ${state.matchedLocation}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                state.error?.toString() ?? 'Unknown error',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red, fontSize: 14),
               ),
               const SizedBox(height: 16),
               ElevatedButton(

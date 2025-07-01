@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -9,8 +9,66 @@ import '../../../../core/providers/providers.dart';
 
 part 'auth_providers.g.dart';
 
+// Rate limiting for auth attempts
+class AuthRateLimiter {
+  static final Map<String, List<DateTime>> _attempts = {};
+  static const int maxAttempts = 5;
+  static const Duration lockoutDuration = Duration(minutes: 15);
+  static const Duration attemptWindow = Duration(minutes: 5);
+  
+  static bool canAttempt(String identifier) {
+    final now = DateTime.now();
+    final attempts = _attempts[identifier] ?? [];
+    
+    // Remove old attempts outside the window
+    attempts.removeWhere((attempt) => 
+      now.difference(attempt) > attemptWindow
+    );
+    
+    // Update the attempts list
+    _attempts[identifier] = attempts;
+    
+    // Check if user is locked out
+    if (attempts.length >= maxAttempts) {
+      final oldestAttempt = attempts.first;
+      if (now.difference(oldestAttempt) < lockoutDuration) {
+        return false;
+      }
+      // Clear attempts if lockout period has passed
+      _attempts[identifier] = [];
+    }
+    
+    return true;
+  }
+  
+  static void recordAttempt(String identifier) {
+    final attempts = _attempts[identifier] ?? [];
+    attempts.add(DateTime.now());
+    _attempts[identifier] = attempts;
+  }
+  
+  static int getRemainingAttempts(String identifier) {
+    final attempts = _attempts[identifier] ?? [];
+    return maxAttempts - attempts.length;
+  }
+  
+  static Duration? getLockoutTimeRemaining(String identifier) {
+    final attempts = _attempts[identifier] ?? [];
+    if (attempts.length >= maxAttempts) {
+      final oldestAttempt = attempts.first;
+      final lockoutEnd = oldestAttempt.add(lockoutDuration);
+      final remaining = lockoutEnd.difference(DateTime.now());
+      if (remaining.isNegative) return null;
+      return remaining;
+    }
+    return null;
+  }
+}
+
 @Riverpod(keepAlive: true)
 class Auth extends _$Auth {
+  Timer? _debounceTimer;
+  
   @override
   AuthState build() {
     if (kDebugMode) print('🔵 Auth: Initial state');
@@ -19,20 +77,24 @@ class Auth extends _$Auth {
     ref.listen(authStateChangesProvider, (previous, current) {
       current.when(
         data: (user) {
-          if (user != null) {
-            if (kDebugMode) print('🟢 Auth: Firebase user detected - ${user.email}');
-            _setUserStateFromFirebaseUser(user);
-          } else {
-            if (kDebugMode) print('🔴 Auth: No Firebase user');
-            // Only update to unauthenticated if we're not already in that state
-            final isNotUnauthenticated = state.maybeWhen(
-              unauthenticated: () => false,
-              orElse: () => true,
-            );
-            if (isNotUnauthenticated) {
-              state = const AuthState.unauthenticated();
+          // Debounce auth state changes to prevent rapid updates
+          _debounceTimer?.cancel();
+          _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+            if (user != null) {
+              if (kDebugMode) print('🟢 Auth: Firebase user detected - ${user.email}');
+              _setUserStateFromFirebaseUser(user);
+            } else {
+              if (kDebugMode) print('🔴 Auth: No Firebase user');
+              // Only update to unauthenticated if we're not already in that state
+              final isNotUnauthenticated = state.maybeWhen(
+                unauthenticated: () => false,
+                orElse: () => true,
+              );
+              if (isNotUnauthenticated) {
+                state = const AuthState.unauthenticated();
+              }
             }
-          }
+          });
         },
         error: (error, stack) {
           if (kDebugMode) print('🔴 Auth: Firebase auth error - $error');
@@ -42,6 +104,11 @@ class Auth extends _$Auth {
           if (kDebugMode) print('🟡 Auth: Firebase auth loading');
         },
       );
+    });
+    
+    // Clean up timer on dispose
+    ref.onDispose(() {
+      _debounceTimer?.cancel();
     });
     
     return const AuthState.initial();
@@ -113,6 +180,17 @@ class Auth extends _$Auth {
 
   Future<void> signInWithEmailPassword(String email, String password) async {
     if (kDebugMode) print('🔵 Auth: Starting email sign in for $email');
+    
+    // Check rate limiting
+    if (!AuthRateLimiter.canAttempt(email)) {
+      final lockoutTime = AuthRateLimiter.getLockoutTimeRemaining(email);
+      final minutes = lockoutTime?.inMinutes ?? 0;
+      state = AuthState.error(
+        'Too many failed attempts. Please try again in $minutes minutes.'
+      );
+      return;
+    }
+    
     state = const AuthState.loading();
     
     try {
@@ -127,8 +205,19 @@ class Auth extends _$Auth {
       // The auth state listener will handle setting the authenticated state
       
     } catch (e) {
+      // Record failed attempt
+      AuthRateLimiter.recordAttempt(email);
+      
       if (kDebugMode) print('🔴 Auth: Sign in error - $e');
-      state = AuthState.error(_parseFirebaseError(e));
+      
+      final remainingAttempts = AuthRateLimiter.getRemainingAttempts(email);
+      String errorMessage = _parseFirebaseError(e);
+      
+      if (remainingAttempts > 0 && remainingAttempts < AuthRateLimiter.maxAttempts) {
+        errorMessage += ' ($remainingAttempts attempts remaining)';
+      }
+      
+      state = AuthState.error(errorMessage);
     }
   }
 
@@ -276,23 +365,27 @@ class Auth extends _$Auth {
         case 'invalid-email':
           return 'The email address is not valid.';
         case 'user-disabled':
-          return 'This user has been disabled.';
+          return 'This user account has been disabled.';
         case 'user-not-found':
-          return 'No user found with this email.';
+          return 'No account found with this email address.';
         case 'wrong-password':
-          return 'The password is invalid.';
+          return 'Incorrect password. Please try again.';
         case 'email-already-in-use':
-          return 'The email address is already in use.';
+          return 'An account already exists with this email address.';
         case 'operation-not-allowed':
-          return 'This operation is not allowed.';
+          return 'This sign in method is not enabled.';
         case 'weak-password':
-          return 'The password is too weak.';
+          return 'The password is too weak. Please use a stronger password.';
         case 'too-many-requests':
-          return 'Too many attempts. Please try again later.';
+          return 'Too many failed attempts. Please try again later.';
         case 'network-request-failed':
-          return 'Network error. Please check your connection.';
+          return 'Network error. Please check your internet connection.';
+        case 'invalid-credential':
+          return 'The email or password is incorrect.';
+        case 'requires-recent-login':
+          return 'Please sign in again to complete this action.';
         default:
-          return error.message ?? 'An unknown error occurred.';
+          return error.message ?? 'An unexpected error occurred. Please try again.';
       }
     }
     return error.toString();
