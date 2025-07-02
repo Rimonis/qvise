@@ -24,10 +24,10 @@ extension ThemeExtensions on BuildContext {
   Color get secondaryContainerColor => colorScheme.secondaryContainer;
   Color get onSecondaryColor => colorScheme.onSecondary;
   
-  // Colors - Surface
+  // Colors - Surface (FIX: Use safe color access)
   Color get backgroundColor => colorScheme.surface;
   Color get surfaceColor => colorScheme.surface;
-  Color get surfaceVariantColor => colorScheme.surfaceContainerHighest;
+  Color get surfaceVariantColor => isDarkMode ? AppColors.surfaceVariantDark : AppColors.surfaceVariantLight;
   
   // Colors - Status
   Color get errorColor => colorScheme.error;
@@ -232,105 +232,6 @@ class ThemedTextField extends StatelessWidget {
         labelText: labelText,
         prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
         suffixIcon: suffix,
-      ),
-    );
-  }
-}
-
-// Usage example widget
-class ThemeUsageExample extends StatelessWidget {
-  const ThemeUsageExample({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Theme Example',
-          style: AppTypography.appBarTitle,
-        ),
-      ),
-      body: Padding(
-        padding: AppSpacing.screenPaddingAll,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Using theme colors
-            Container(
-              padding: AppSpacing.paddingAllMd,
-              decoration: BoxDecoration(
-                color: context.primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                border: Border.all(color: context.primaryColor),
-              ),
-              child: Text(
-                'Primary colored container',
-                style: AppTypography.bodyLarge.copyWith(
-                  color: context.primaryColor,
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            
-            // Using themed card
-            ThemedCard(
-              onTap: () {},
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Card Title',
-                    style: AppTypography.cardTitle,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Card subtitle with secondary text color',
-                    style: AppTypography.cardSubtitle,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            
-            // Using themed buttons
-            Row(
-              children: [
-                Expanded(
-                  child: ThemedButton(
-                    text: 'Primary',
-                    onPressed: () {},
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: ThemedButton(
-                    text: 'Secondary',
-                    onPressed: () {},
-                    isSecondary: true,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            
-            // Using spacing
-            Text(
-              'Consistent spacing throughout the app',
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: context.textSecondaryColor,
-              ),
-            ),
-            
-            // Responsive design
-            if (context.isMobile)
-              const Text('Mobile layout')
-            else if (context.isTablet)
-              const Text('Tablet layout')
-            else
-              const Text('Desktop layout'),
-          ],
-        ),
       ),
     );
   }

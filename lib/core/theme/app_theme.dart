@@ -21,7 +21,6 @@ class AppTheme {
       onSurface: AppColors.textPrimary,
       onError: Colors.white,
       brightness: Brightness.light,
-      surfaceContainerHighest: AppColors.surfaceVariantLight,
     );
 
     return ThemeData(
@@ -60,9 +59,9 @@ class AppTheme {
           disabledBackgroundColor: AppColors.dividerLight,
           textStyle: AppTypography.button,
         ).copyWith(
-          overlayColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.pressed)) {
-              return Colors.white.withValues(alpha: 0.1);
+          overlayColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.pressed)) {
+              return Colors.white.withOpacity(0.1);
             }
             return null;
           }),
@@ -205,9 +204,9 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         height: AppSpacing.bottomNavHeight,
         backgroundColor: AppColors.surfaceLight,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.2),
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
+        indicatorColor: AppColors.primary.withOpacity(0.2),
+        labelTextStyle: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
             return AppTypography.labelMedium.copyWith(
               color: AppColors.primary,
               fontWeight: FontWeight.w600,
@@ -215,8 +214,8 @@ class AppTheme {
           }
           return AppTypography.labelMedium;
         }),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
+        iconTheme: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
             return const IconThemeData(color: AppColors.primary);
           }
           return const IconThemeData(color: AppColors.iconDefault);
@@ -246,7 +245,6 @@ class AppTheme {
       onSurface: AppColors.textPrimaryDark,
       onError: Colors.white,
       brightness: Brightness.dark,
-      surfaceContainerHighest: AppColors.surfaceVariantDark,
     );
 
     return ThemeData(
@@ -287,9 +285,9 @@ class AppTheme {
           disabledBackgroundColor: AppColors.dividerDark,
           textStyle: AppTypography.button,
         ).copyWith(
-          overlayColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.pressed)) {
-              return Colors.white.withValues(alpha: 0.1);
+          overlayColor: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.pressed)) {
+              return Colors.white.withOpacity(0.1);
             }
             return null;
           }),
@@ -351,6 +349,93 @@ class AppTheme {
           borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
         ),
         clipBehavior: Clip.antiAlias,
+      ),
+      
+      // Dialog theme
+      dialogTheme: DialogTheme(
+        backgroundColor: AppColors.surfaceDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        ),
+        titleTextStyle: AppTypography.headlineSmall.copyWith(
+          color: AppColors.textPrimaryDark,
+        ),
+        contentTextStyle: AppTypography.bodyMedium.copyWith(
+          color: AppColors.textPrimaryDark,
+        ),
+      ),
+      
+      // Bottom sheet theme
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.surfaceDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.radiusLarge),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+      ),
+      
+      // Snackbar theme
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.surfaceVariantDark,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+        ),
+        contentTextStyle: AppTypography.snackbarText,
+      ),
+      
+      // Chip theme
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.surfaceVariantDark,
+        labelStyle: AppTypography.chipLabel.copyWith(color: AppColors.textPrimaryDark),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+        ),
+      ),
+      
+      // List tile theme
+      listTileTheme: ListTileThemeData(
+        contentPadding: AppSpacing.listItemPadding,
+        titleTextStyle: AppTypography.listItemTitle.copyWith(color: AppColors.textPrimaryDark),
+        subtitleTextStyle: AppTypography.listItemSubtitle.copyWith(color: AppColors.textSecondaryDark),
+      ),
+      
+      // Tab bar theme
+      tabBarTheme: TabBarTheme(
+        labelColor: AppColors.primaryDark,
+        unselectedLabelColor: AppColors.textSecondaryDark,
+        labelStyle: AppTypography.tabLabel,
+        unselectedLabelStyle: AppTypography.tabLabel,
+        indicator: const UnderlineTabIndicator(
+          borderSide: BorderSide(
+            color: AppColors.primaryDark,
+            width: 2,
+          ),
+        ),
+      ),
+      
+      // Navigation bar theme
+      navigationBarTheme: NavigationBarThemeData(
+        height: AppSpacing.bottomNavHeight,
+        backgroundColor: AppColors.surfaceDark,
+        indicatorColor: AppColors.primaryDark.withOpacity(0.2),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return AppTypography.labelMedium.copyWith(
+              color: AppColors.primaryDark,
+              fontWeight: FontWeight.w600,
+            );
+          }
+          return AppTypography.labelMedium.copyWith(color: AppColors.textSecondaryDark);
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return const IconThemeData(color: AppColors.primaryDark);
+          }
+          return const IconThemeData(color: AppColors.iconDefaultDark);
+        }),
       ),
       
       // Divider theme

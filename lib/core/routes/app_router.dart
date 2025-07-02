@@ -15,53 +15,72 @@ import 'route_names.dart';
 
 part 'app_router.g.dart';
 
+// Custom ChangeNotifier that properly manages disposal
 class GoRouterNotifier extends ChangeNotifier {
   GoRouterNotifier(this._ref) {
-    _authSubscription = _ref.listen<AuthState>(
-      authProvider,
-      (previous, current) {
-        if (kDebugMode) {
-          print('🟡 Router: Auth state changed from $previous to $current');
-        }
-        // Notify immediately for navigation
-        notifyListeners();
-      },
-    );
+    _init();
   }
 
   final Ref _ref;
-  late final ProviderSubscription<AuthState> _authSubscription;
+  ProviderSubscription<AuthState>? _authSubscription;
   bool _disposed = false;
+
+  void _init() {
+    // Use addPostFrameCallback to ensure we're not modifying providers during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_disposed) {
+        _authSubscription = _ref.listen<AuthState>(
+          authProvider,
+          (previous, current) {
+            if (kDebugMode) {
+              print('🟡 Router: Auth state changed from $previous to $current');
+            }
+            // Only notify if not disposed
+            if (!_disposed) {
+              notifyListeners();
+            }
+          },
+          // Fire immediately to get initial state
+          fireImmediately: false,
+        );
+      }
+    });
+  }
 
   @override
   void dispose() {
-    if (!_disposed) {
-      _disposed = true;
-      _authSubscription.close();
-      super.dispose();
-    }
+    _disposed = true;
+    _authSubscription?.close();
+    super.dispose();
   }
   
   @override
   void notifyListeners() {
+    // Guard against notifying after disposal
     if (!_disposed) {
       super.notifyListeners();
     }
   }
 }
 
+// Singleton router notifier provider
 @Riverpod(keepAlive: true)
 GoRouterNotifier goRouterNotifier(Ref ref) {
-  return GoRouterNotifier(ref);
+  final notifier = GoRouterNotifier(ref);
+  ref.onDispose(() => notifier.dispose());
+  return notifier;
 }
 
-final routerProvider = Provider<GoRouter>((ref) {
+// Cached router provider
+@Riverpod(keepAlive: true)
+GoRouter router(Ref ref) {
   final notifier = ref.watch(goRouterNotifierProvider);
   
   // Keep track of last redirect to prevent loops
   String? lastRedirect;
   int redirectCount = 0;
   const maxRedirects = 5;
+  DateTime? lastRedirectTime;
   
   return GoRouter(
     initialLocation: RouteNames.splash,
@@ -69,6 +88,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: notifier,
     redirect: (context, state) {
       final currentLocation = state.matchedLocation;
+      final now = DateTime.now();
+      
+      // Reset counter if it's been more than 1 second since last redirect
+      if (lastRedirectTime != null && 
+          now.difference(lastRedirectTime!).inSeconds > 1) {
+        redirectCount = 0;
+      }
+      lastRedirectTime = now;
       
       // Reset counter if navigating to a different route
       if (lastRedirect != currentLocation) {
@@ -84,50 +111,64 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
       
-      final result = authGuard(ref, currentLocation);
-      
-      if (result != null) {
-        redirectCount++;
+      try {
+        final result = authGuard(ref, currentLocation);
+        
+        if (result != null) {
+          redirectCount++;
+        }
+        
+        if (kDebugMode) {
+          print('🟡 Router: Location: $currentLocation → Redirect: ${result ?? "null (stay)"}');
+        }
+        
+        return result;
+      } catch (e, stack) {
+        // Log error and stay at current location
+        if (kDebugMode) {
+          print('🔴 Router: Error in redirect: $e');
+          print(stack);
+        }
+        return null;
       }
-      
-      if (kDebugMode) {
-        print('🟡 Router: Location: $currentLocation → Redirect: ${result ?? "null (stay)"}');
-      }
-      
-      return result;
     },
+    errorBuilder: (context, state) => _RouterErrorPage(error: state.error),
     routes: [
       // Auth routes
       GoRoute(
         path: RouteNames.splash,
         name: 'splash',
-        pageBuilder: (context, state) => MaterialPage(
+        pageBuilder: (context, state) => _buildPage(
           key: state.pageKey,
           child: const DebugSplashScreen(),
+          name: 'splash',
         ),
       ),
       GoRoute(
         path: RouteNames.login,
         name: 'login',
-        pageBuilder: (context, state) => MaterialPage(
+        pageBuilder: (context, state) => _buildPage(
           key: state.pageKey,
           child: const SignInScreen(),
+          name: 'login',
         ),
       ),
       GoRoute(
         path: RouteNames.forgotPassword,
         name: 'forgot-password',
-        pageBuilder: (context, state) => MaterialPage(
+        pageBuilder: (context, state) => _buildPage(
           key: state.pageKey,
           child: const ForgotPasswordScreen(),
+          name: 'forgot-password',
         ),
       ),
       GoRoute(
         path: RouteNames.emailVerification,
         name: 'email-verification',
-        pageBuilder: (context, state) => MaterialPage(
+        pageBuilder: (context, state) => _buildPage(
           key: state.pageKey,
           child: const EmailVerificationScreen(),
+          name: 'email-verification',
         ),
       ),
       
@@ -135,9 +176,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.app,
         name: 'app',
-        pageBuilder: (context, state) => MaterialPage(
+        pageBuilder: (context, state) => _buildPage(
           key: state.pageKey,
           child: const MainShellScreen(),
+          name: 'app',
         ),
       ),
       
@@ -145,17 +187,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.home,
         name: 'home',
-        redirect: (context, state) => RouteNames.app,
+        redirect: (_, __) => RouteNames.app,
       ),
       GoRoute(
         path: RouteNames.subjects,
         name: 'subjects',
-        redirect: (context, state) => RouteNames.app,
+        redirect: (_, __) => RouteNames.app,
       ),
       GoRoute(
         path: RouteNames.profile,
         name: 'profile',
-        redirect: (context, state) => RouteNames.app,
+        redirect: (_, __) => RouteNames.app,
       ),
       
       // Individual lesson detail route
@@ -164,7 +206,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'lesson-detail',
         pageBuilder: (context, state) {
           final lessonId = state.pathParameters['lessonId']!;
-          return MaterialPage(
+          return _buildPage(
             key: state.pageKey,
             child: Scaffold(
               appBar: AppBar(
@@ -175,35 +217,78 @@ final routerProvider = Provider<GoRouter>((ref) {
                 child: Text('Lesson Detail Screen - ID: $lessonId\nComing Soon'),
               ),
             ),
+            name: 'lesson-detail-$lessonId',
           );
         },
       ),
     ],
-    errorPageBuilder: (context, state) => MaterialPage(
-      key: state.pageKey,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Error'),
-          centerTitle: true,
-        ),
-        body: Center(
+  );
+}
+
+// Helper function to build pages with consistent transitions
+Page<dynamic> _buildPage({
+  required LocalKey key,
+  required Widget child,
+  required String name,
+}) {
+  return CustomTransitionPage(
+    key: key,
+    child: child,
+    name: name,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      // Use a fade transition for smoother navigation
+      return FadeTransition(
+        opacity: animation,
+        child: child,
+      );
+    },
+  );
+}
+
+// Error page for router errors
+class _RouterErrorPage extends StatelessWidget {
+  final Exception? error;
+
+  const _RouterErrorPage({this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Navigation Error'),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red,
+              ),
               const SizedBox(height: 16),
-              Text(
-                'Page not found: ${state.matchedLocation}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
+              const Text(
+                'Navigation Error',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
-                state.error?.toString() ?? 'Unknown error',
+                kDebugMode
+                    ? error?.toString() ?? 'Unknown navigation error'
+                    : 'Unable to navigate to the requested page',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red, fontSize: 14),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () => context.go(RouteNames.app),
                 child: const Text('Go to Home'),
@@ -212,6 +297,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ),
       ),
-    ),
-  );
-});
+    );
+  }
+}

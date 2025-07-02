@@ -37,28 +37,27 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
 
   /// Sets the new theme mode with proper error handling and persistence.
   Future<void> setThemeMode(ThemeMode mode) async {
-    // Update the state optimistically for immediate UI feedback.
-    state = AsyncValue.data(mode);
-    try {
-      // Attempt to persist the new value.
+    // FIX: Use AsyncValue.guard to prevent setState during build
+    state = await AsyncValue.guard(() async {
+      // Persist the new value first
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_key, mode.toString());
-    } catch (e, stack) {
-      // If persistence fails, set the state to an error.
-      state = AsyncValue.error('Failed to save theme preference: $e', stack);
-    }
+      
+      // Return the new theme mode
+      return mode;
+    });
   }
 
   /// Cycles through the available theme modes with improved UX logic.
-  void toggleTheme() {
-    // Ensure we have a valid current state before toggling.
-    if (!state.hasValue) return;
+  Future<void> toggleTheme() async {
+    // Ensure we have a valid current state before toggling
+    final currentMode = state.valueOrNull;
+    if (currentMode == null) return;
 
-    final currentMode = state.value!;
     final platformBrightness =
         SchedulerBinding.instance.platformDispatcher.platformBrightness;
 
-    // FIX: The switch expression syntax is corrected for clarity and correctness.
+    // Determine next mode
     final nextMode = switch (currentMode) {
       ThemeMode.light => ThemeMode.dark,
       ThemeMode.dark => ThemeMode.system,
@@ -67,13 +66,14 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
         (platformBrightness == Brightness.dark) ? ThemeMode.light : ThemeMode.dark,
     };
 
-    setThemeMode(nextMode);
+    // FIX: Use the safer setThemeMode method
+    await setThemeMode(nextMode);
   }
 
   /// Force refresh theme from SharedPreferences (useful for error recovery).
   Future<void> refreshTheme() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => build());
+    // FIX: Use ref.invalidateSelf() instead of manually setting state
+    ref.invalidateSelf();
   }
 }
 
@@ -184,12 +184,17 @@ class ThemeModeDialog extends ConsumerWidget {
               secondary: Icon(_getThemeIcon(mode)),
               value: mode,
               groupValue: currentMode,
-              onChanged: (ThemeMode? value) {
+              onChanged: (ThemeMode? value) async {
                 if (value != null) {
-                  ref
-                      .read(themeModeNotifierProvider.notifier)
-                      .setThemeMode(value);
+                  // FIX: Close dialog first, then change theme
                   Navigator.of(context).pop();
+                  
+                  // FIX: Use PostFrameCallback to ensure dialog is closed first
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ref
+                        .read(themeModeNotifierProvider.notifier)
+                        .setThemeMode(value);
+                  });
                 }
               },
             );
@@ -239,7 +244,10 @@ class ThemeToggleButton extends ConsumerWidget {
       data: (themeMode) => IconButton(
         icon: Icon(_getThemeIcon(themeMode)),
         onPressed: () {
-          ref.read(themeModeNotifierProvider.notifier).toggleTheme();
+          // FIX: Use PostFrameCallback to prevent setState during build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(themeModeNotifierProvider.notifier).toggleTheme();
+          });
         },
         tooltip: 'Toggle theme (${_getThemeName(themeMode)})',
       ),
@@ -255,7 +263,10 @@ class ThemeToggleButton extends ConsumerWidget {
       error: (error, _) => IconButton(
         icon: const Icon(Icons.error_outline),
         onPressed: () {
-          ref.read(themeModeNotifierProvider.notifier).refreshTheme();
+          // FIX: Use PostFrameCallback for error recovery too
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(themeModeNotifierProvider.notifier).refreshTheme();
+          });
         },
         tooltip: 'Theme error - tap to retry',
       ),

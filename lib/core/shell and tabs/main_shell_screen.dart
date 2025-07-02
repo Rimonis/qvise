@@ -118,6 +118,24 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> with TickerPr
 
   @override
   Widget build(BuildContext context) {
+    // Listen to tab changes from other sources (like empty state buttons)
+    ref.listen<int>(currentTabIndexProvider, (previous, next) {
+      if (_pageController.hasClients && _pageController.page?.round() != next) {
+        _pageController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+        
+        // Handle FAB animation
+        if (next == 1) {
+          _fabAnimationController.forward();
+        } else {
+          _fabAnimationController.reverse();
+        }
+      }
+    });
+    
     final currentIndex = ref.watch(currentTabIndexProvider);
 
     final List<Widget> tabs = [
@@ -237,77 +255,6 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> with TickerPr
                 ),
               )
             : null,
-      ),
-    );
-  }
-}
-
-// Alternative implementation using IndexedStack (simpler but keeps all tabs in memory)
-class MainShellScreenSimple extends ConsumerWidget {
-  const MainShellScreenSimple({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentIndex = ref.watch(currentTabIndexProvider);
-
-    final List<Widget> tabs = [
-      const BrowseTab(),
-      const CreateTab(),
-      const HomeTab(),
-      const AnalyticsTab(),
-      const ProfileTab(),
-    ];
-
-    final List<String> tabTitles = [
-      'Browse',
-      'Create', 
-      'Home',
-      'Analytics',
-      'Profile',
-    ];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(tabTitles[currentIndex]),
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-      ),
-      body: IndexedStack(
-        index: currentIndex,
-        children: tabs,
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: (index) {
-          ref.read(currentTabIndexProvider.notifier).state = index;
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            selectedIcon: Icon(Icons.explore),
-            label: 'Browse',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.edit_outlined),
-            selectedIcon: Icon(Icons.edit),
-            label: 'Create',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics),
-            label: 'Analytics',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
       ),
     );
   }

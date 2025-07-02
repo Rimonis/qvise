@@ -8,10 +8,6 @@ import 'package:qvise/features/content/presentation/widgets/content_loading_widg
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
 
 
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-
 class BrowseTab extends ConsumerStatefulWidget {
   const BrowseTab({super.key});
 
@@ -46,8 +42,11 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
             description: 'Create your first lesson to get started!',
             buttonText: 'Go to Create',
             onButtonPressed: () {
-              // Switch to Create tab
-              ref.read(currentTabIndexProvider.notifier).state = TabIndex.create;
+              // Switch to Create tab - need to find the MainShellScreen ancestor
+              // Using a callback to ensure we have the correct context
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                ref.read(currentTabIndexProvider.notifier).state = TabIndex.create;
+              });
             },
           );
         }
@@ -125,7 +124,9 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                   buttonText: 'Go to Create',
                   onButtonPressed: () {
                     // Switch to Create tab
-                    ref.read(currentTabIndexProvider.notifier).state = TabIndex.create;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      ref.read(currentTabIndexProvider.notifier).state = TabIndex.create;
+                    });
                   },
                 );
               }
@@ -365,7 +366,6 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
   }
   
   void _showDeleteSubjectDialog(Subject subject) {
-    // Same deletion logic as before
     final textController = TextEditingController();
     
     showDialog(

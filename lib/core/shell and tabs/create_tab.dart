@@ -53,7 +53,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
     super.build(context); // Required for AutomaticKeepAliveClientMixin
 
     // FIX: Get the boolean value from the AsyncValue, defaulting to false.
-    final isOnline = ref.watch(networkStatusProvider).value ?? false;
+    final isOnline = ref.watch(networkStatusProvider).valueOrNull ?? false;
     final unlockedLessonsAsync = ref.watch(unlockedLessonsProvider);
 
     // Show offline message if needed
@@ -116,11 +116,11 @@ class _CreateTabState extends ConsumerState<CreateTab>
                     margin: const EdgeInsets.all(16),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      // FIX: Replaced deprecated withOpacity with withAlpha
+                      // FIX: Use withValues instead of withOpacity
                       color: Theme.of(context)
                           .colorScheme
                           .primaryContainer
-                          .withAlpha(77), // ~0.3 opacity
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -148,23 +148,23 @@ class _CreateTabState extends ConsumerState<CreateTab>
                         Text(
                           '${unlockedLessons.length} unlocked ${unlockedLessons.length == 1 ? 'lesson' : 'lessons'} ready for editing',
                           style: TextStyle(
-                            // FIX: Replaced deprecated withOpacity with withAlpha
+                            // FIX: Use withValues instead of withOpacity
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withAlpha(179), // ~0.7 opacity
+                                .withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            // FIX: Replaced deprecated withOpacity with withAlpha
-                            color: Colors.orange.withAlpha(26), // ~0.1 opacity
+                            // FIX: Use withValues instead of withOpacity
+                            color: Colors.orange.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                                 color: Colors.orange
-                                    .withAlpha(77)), // ~0.3 opacity
+                                    .withValues(alpha: 0.3)),
                           ),
                           child: const Row(
                             children: [
@@ -274,8 +274,8 @@ class _CreateTabState extends ConsumerState<CreateTab>
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            // FIX: Replaced deprecated withOpacity with withAlpha
-            color: Colors.black.withAlpha(26), // ~0.1 opacity
+            // FIX: Use withValues instead of withOpacity
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -290,11 +290,11 @@ class _CreateTabState extends ConsumerState<CreateTab>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  // FIX: Replaced deprecated withOpacity with withAlpha
-                  color: Colors.green.withAlpha(26), // ~0.1 opacity
+                  // FIX: Use withValues instead of withOpacity
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: Colors.green.withAlpha(77)), // ~0.3 opacity
+                      color: Colors.green.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -465,11 +465,11 @@ class _CreateTabState extends ConsumerState<CreateTab>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                // FIX: Replaced deprecated withOpacity with withAlpha
-                color: Colors.red.withAlpha(26), // ~0.1 opacity
+                // FIX: Use withValues instead of withOpacity
+                color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: Colors.red.withAlpha(77)), // ~0.3 opacity
+                    color: Colors.red.withValues(alpha: 0.3)),
               ),
               child: const Row(
                 children: [

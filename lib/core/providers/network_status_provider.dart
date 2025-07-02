@@ -10,30 +10,45 @@ part 'network_status_provider.g.dart';
 // This class-based notifier generates 'networkStatusProvider'.
 @Riverpod(keepAlive: true)
 class NetworkStatus extends _$NetworkStatus {
-  final StreamController<bool> _controller = StreamController<bool>();
   StreamSubscription? _connectivitySubscription;
+  Timer? _periodicTimer;
 
   @override
   Stream<bool> build() {
+    // Create a stream controller that we'll use to emit network status updates
+    final controller = StreamController<bool>.broadcast();
+    
+    // Initial check
     _checkConnection().then((value) {
-      if (!_controller.isClosed) {
-        _controller.add(value);
+      if (!controller.isClosed) {
+        controller.add(value);
       }
     });
 
-    _connectivitySubscription =
-        Connectivity().onConnectivityChanged.listen((_) async {
-      if (!_controller.isClosed) {
-        _controller.add(await _checkConnection());
+    // Listen to connectivity changes
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((_) async {
+      if (!controller.isClosed) {
+        final isConnected = await _checkConnection();
+        controller.add(isConnected);
       }
     });
 
+    // Periodic check every 30 seconds to ensure accuracy
+    _periodicTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      if (!controller.isClosed) {
+        final isConnected = await _checkConnection();
+        controller.add(isConnected);
+      }
+    });
+
+    // Clean up on dispose
     ref.onDispose(() {
       _connectivitySubscription?.cancel();
-      _controller.close();
+      _periodicTimer?.cancel();
+      controller.close();
     });
 
-    return _controller.stream;
+    return controller.stream;
   }
 
   Future<bool> _checkConnection() async {
@@ -49,22 +64,23 @@ class NetworkStatus extends _$NetworkStatus {
   }
 
   Future<void> checkNow() async {
-    if (!_controller.isClosed) {
-      _controller.add(await _checkConnection());
-    }
+    // Force a refresh of the stream
+    ref.invalidateSelf();
   }
 }
 
-// FIX: This function was renamed from 'networkStatus' to 'currentNetworkStatus'
-// to resolve the name collision. It now correctly generates 'currentNetworkStatusProvider'.
+// FIX: Simplified the derived provider to avoid build phase issues
 @riverpod
 bool currentNetworkStatus(Ref ref) {
-  return ref.watch(networkStatusProvider).value ?? false;
+  final networkStatusAsync = ref.watch(networkStatusProvider);
+  
+  // Simply return the current value or false if not available
+  return networkStatusAsync.valueOrNull ?? false;
 }
 
 @riverpod
 bool isOfflineFeatureAvailable(Ref ref, String feature) {
-  // This now correctly watches the derived provider.
+  // Watch the simplified provider
   final isOnline = ref.watch(currentNetworkStatusProvider);
 
   const offlineFeatures = {
