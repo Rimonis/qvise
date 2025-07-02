@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import '../../../shared/domain/entities/flashcard_tag.dart';
 import '../../domain/entities/flashcard_difficulty.dart';
-import '/../../../core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
 
 class FlashcardPreviewWidget extends StatefulWidget {
   final String frontContent;

@@ -1,7 +1,7 @@
 // lib/features/flashcards/creation/presentation/widgets/hint_input_widget.dart
 
 import 'package:flutter/material.dart';
-import '/../../../core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
 
 class HintInputWidget extends StatefulWidget {
   final List<String> hints;

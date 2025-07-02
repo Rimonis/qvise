@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../../../shared/domain/entities/flashcard_tag.dart';
-import '/../../../core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
 
 class TagSelectorWidget extends StatelessWidget {
   final FlashcardTag selectedTag;

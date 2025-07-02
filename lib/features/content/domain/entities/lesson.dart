@@ -1,3 +1,5 @@
+// lib/features/content/domain/entities/lesson.dart
+
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'lesson.freezed.dart';

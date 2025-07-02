@@ -2,7 +2,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/features/flashcards/shared/domain/repositories/flashcard_repository.dart';
-import '/../../../core/providers/providers.dart';
+import 'package:qvise/core/providers/providers.dart';
 import '../../data/datasources/flashcard_local_data_source.dart';
 import '../../data/datasources/flashcard_remote_data_source.dart';
 import '../../data/repositories/flashcard_repository_impl.dart';

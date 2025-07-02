@@ -3,7 +3,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
-import '/../../../core/error/failures.dart';
+import 'package:qvise/core/error/failures.dart';
 import '../../domain/entities/flashcard.dart';
 import '../../domain/repositories/flashcard_repository.dart';
 import '../datasources/flashcard_local_data_source.dart';
@@ -26,6 +26,9 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   @override
   Future<Either<Failure, Flashcard>> createFlashcard(Flashcard flashcard) async {
     try {
+      // Initialize database first
+      await localDataSource.initDatabase();
+      
       // Always save locally first (local-first approach)
       final flashcardModel = FlashcardModel.fromEntity(flashcard);
       final createdModel = await localDataSource.createFlashcard(flashcardModel);
@@ -41,6 +44,7 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   @override
   Future<Either<Failure, Flashcard>> updateFlashcard(Flashcard flashcard) async {
     try {
+      await localDataSource.initDatabase();
       final flashcardModel = FlashcardModel.fromEntity(flashcard);
       final updatedModel = await localDataSource.updateFlashcard(flashcardModel);
       
@@ -53,6 +57,7 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   @override
   Future<Either<Failure, void>> deleteFlashcard(String id) async {
     try {
+      await localDataSource.initDatabase();
       await localDataSource.deleteFlashcard(id);
       
       // If online, also delete from remote
@@ -74,6 +79,7 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   @override
   Future<Either<Failure, Flashcard?>> getFlashcard(String id) async {
     try {
+      await localDataSource.initDatabase();
       final flashcardModel = await localDataSource.getFlashcard(id);
       return Right(flashcardModel?.toEntity());
     } catch (e) {
@@ -84,6 +90,7 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   @override
   Future<Either<Failure, List<Flashcard>>> getFlashcardsByLesson(String lessonId) async {
     try {
+      await localDataSource.initDatabase();
       final flashcardModels = await localDataSource.getFlashcardsByLesson(lessonId);
       final flashcards = flashcardModels.map((model) => model.toEntity()).toList();
       
@@ -99,6 +106,7 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
     String tagId,
   ) async {
     try {
+      await localDataSource.initDatabase();
       final flashcardModels = await localDataSource.getFlashcardsByLessonAndTag(lessonId, tagId);
       final flashcards = flashcardModels.map((model) => model.toEntity()).toList();
       
@@ -111,6 +119,7 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   @override
   Future<Either<Failure, List<Flashcard>>> getFavoriteFlashcards(String userId) async {
     try {
+      await localDataSource.initDatabase();
       final flashcardModels = await localDataSource.getFavoriteFlashcards(userId);
       final flashcards = flashcardModels.map((model) => model.toEntity()).toList();
       
@@ -123,6 +132,7 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   @override
   Future<Either<Failure, List<Flashcard>>> getFlashcardsNeedingAttention(String userId) async {
     try {
+      await localDataSource.initDatabase();
       final flashcardModels = await localDataSource.getFlashcardsNeedingAttention(userId);
       final flashcards = flashcardModels.map((model) => model.toEntity()).toList();
       
@@ -135,6 +145,7 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   @override
   Future<Either<Failure, int>> countFlashcardsByLesson(String lessonId) async {
     try {
+      await localDataSource.initDatabase();
       final count = await localDataSource.countFlashcardsByLesson(lessonId);
       return Right(count);
     } catch (e) {
@@ -148,6 +159,7 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
     String query,
   ) async {
     try {
+      await localDataSource.initDatabase();
       final flashcardModels = await localDataSource.searchFlashcards(userId, query);
       final flashcards = flashcardModels.map((model) => model.toEntity()).toList();
       
@@ -223,6 +235,7 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   @override
   Future<Either<Failure, List<Flashcard>>> getPendingSyncFlashcards() async {
     try {
+      await localDataSource.initDatabase();
       final flashcardModels = await localDataSource.getPendingSyncFlashcards();
       final flashcards = flashcardModels.map((model) => model.toEntity()).toList();
       

@@ -25,7 +25,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Definition',
     emoji: '📝',
     color: '#3B82F6',
-    description: 'Key terms and their meanings',
+    description: 'Key terms and their meanings - perfect for vocabulary building',
     category: FlashcardTagCategory.core,
   );
   
@@ -34,7 +34,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Concept',
     emoji: '🧠',
     color: '#8B5CF6',
-    description: 'Understanding relationships and ideas',
+    description: 'Understanding relationships and ideas between different topics',
     category: FlashcardTagCategory.core,
   );
   
@@ -43,7 +43,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Formula',
     emoji: '📐',
     color: '#10B981',
-    description: 'Mathematical/scientific equations',
+    description: 'Mathematical and scientific equations with variables',
     category: FlashcardTagCategory.core,
     settings: {'supportsLatex': true, 'enableMathKeyboard': true},
   );
@@ -53,7 +53,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Process',
     emoji: '📊',
     color: '#F59E0B',
-    description: 'Step-by-step procedures',
+    description: 'Step-by-step procedures and methodologies',
     category: FlashcardTagCategory.core,
   );
   
@@ -62,7 +62,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Example',
     emoji: '🎯',
     color: '#EF4444',
-    description: 'Specific instances or case studies',
+    description: 'Specific instances, case studies, and practical applications',
     category: FlashcardTagCategory.core,
   );
   
@@ -71,7 +71,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Q&A',
     emoji: '❓',
     color: '#6366F1',
-    description: 'Direct question-answer pairs',
+    description: 'Direct question and answer pairs for quick recall',
     category: FlashcardTagCategory.core,
   );
   
@@ -81,7 +81,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Connection',
     emoji: '🔗',
     color: '#06B6D4',
-    description: 'Linking different concepts',
+    description: 'Linking different concepts and showing relationships',
     category: FlashcardTagCategory.advanced,
   );
   
@@ -90,7 +90,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Scenario',
     emoji: '🎭',
     color: '#84CC16',
-    description: 'Situational problem-solving',
+    description: 'Situational problem-solving and real-world applications',
     category: FlashcardTagCategory.advanced,
   );
   
@@ -99,7 +99,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Comparison',
     emoji: '📈',
     color: '#F97316',
-    description: 'Similarities and differences',
+    description: 'Similarities, differences, and contrasting concepts',
     category: FlashcardTagCategory.advanced,
   );
   
@@ -108,7 +108,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Historical',
     emoji: '🏛️',
     color: '#A855F7',
-    description: 'Dates, events, chronology',
+    description: 'Dates, events, chronology, and historical context',
     category: FlashcardTagCategory.advanced,
   );
   
@@ -117,7 +117,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Language',
     emoji: '🗣️',
     color: '#EC4899',
-    description: 'Vocabulary, translations',
+    description: 'Vocabulary, translations, and language learning',
     category: FlashcardTagCategory.advanced,
   );
   
@@ -126,7 +126,7 @@ class FlashcardTag with _$FlashcardTag {
     name: 'Visual',
     emoji: '🎨',
     color: '#14B8A6',
-    description: 'Diagrams, charts, images',
+    description: 'Diagrams, charts, images, and visual representations',
     category: FlashcardTagCategory.advanced,
   );
   

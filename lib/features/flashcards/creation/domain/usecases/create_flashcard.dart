@@ -1,6 +1,7 @@
 // lib/features/flashcards/creation/domain/usecases/create_flashcard.dart
 
 import 'package:dartz/dartz.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:qvise/core/error/failures.dart';
 import 'package:qvise/features/flashcards/shared/domain/entities/flashcard.dart';
 import 'package:qvise/features/flashcards/shared/domain/entities/flashcard_tag.dart';
@@ -9,8 +10,9 @@ import '../entities/flashcard_difficulty.dart';
 
 class CreateFlashcard {
   final FlashcardRepository repository;
+  final firebase_auth.FirebaseAuth firebaseAuth;
 
-  CreateFlashcard(this.repository);
+  CreateFlashcard(this.repository, this.firebaseAuth);
 
   Future<Either<Failure, Flashcard>> call({
     required String lessonId,
@@ -31,6 +33,12 @@ class CreateFlashcard {
     }
 
     try {
+      // Get current user
+      final currentUserId = _getCurrentUserId();
+      if (currentUserId == null) {
+        return const Left(AuthFailure('User not authenticated'));
+      }
+
       // Get the tag
       final tag = _getSystemTag(tagId);
       if (tag == null) {
@@ -41,7 +49,7 @@ class CreateFlashcard {
       final flashcard = Flashcard(
         id: _generateId(),
         lessonId: lessonId,
-        userId: await _getCurrentUserId(),
+        userId: currentUserId,
         frontContent: frontContent.trim(),
         backContent: backContent.trim(),
         tag: tag,
@@ -60,9 +68,8 @@ class CreateFlashcard {
 
   String _generateId() => 'flashcard_${DateTime.now().millisecondsSinceEpoch}';
   
-  Future<String> _getCurrentUserId() async {
-    // TODO: Get from your auth system - replace with actual implementation
-    return 'current_user_id';
+  String? _getCurrentUserId() {
+    return firebaseAuth.currentUser?.uid;
   }
   
   FlashcardTag? _getSystemTag(String tagId) {

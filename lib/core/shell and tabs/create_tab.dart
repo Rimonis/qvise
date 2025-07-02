@@ -1,3 +1,5 @@
+// lib/core/shell and tabs/create_tab.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/core/providers/network_status_provider.dart';
@@ -7,8 +9,9 @@ import 'package:qvise/features/content/presentation/screens/subject_selection_sc
 import 'package:qvise/features/content/presentation/widgets/content_loading_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card.dart';
-// ADD THIS IMPORT FOR FLASHCARDS
-import '../../features/flashcards/creation/presentation/screens/flashcard_creation_screen.dart';
+// Flashcard imports
+import 'package:qvise/features/flashcards/creation/presentation/screens/flashcard_creation_screen.dart';
+import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_providers.dart';
 
 class CreateTab extends ConsumerStatefulWidget {
   const CreateTab({super.key});
@@ -39,7 +42,9 @@ class _CreateTabState extends ConsumerState<CreateTab>
     });
 
     try {
+      // Refresh both lessons and flashcard counts
       await ref.refresh(unlockedLessonsProvider);
+      // Note: Flashcard counts will be updated when lessons refresh
     } finally {
       if (mounted) {
         setState(() {
@@ -47,6 +52,13 @@ class _CreateTabState extends ConsumerState<CreateTab>
         });
       }
     }
+  }
+
+  // Helper method to get flashcard count for a lesson
+  Future<int> _getFlashcardCount(String lessonId) async {
+    final flashcardRepo = ref.read(flashcardRepositoryProvider);
+    final result = await flashcardRepo.countFlashcardsByLesson(lessonId);
+    return result.fold((failure) => 0, (count) => count);
   }
 
   @override
@@ -260,7 +272,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
             onDelete: () => _showDeleteDialog(context, ref, lesson),
           ),
           
-          // NEW: Flashcard actions section
+          // Flashcard actions section
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -290,13 +302,19 @@ class _CreateTabState extends ConsumerState<CreateTab>
                       ),
                     ),
                     const Spacer(),
-                    // Show flashcard count (you'll need to add this field to Lesson)
-                    Text(
-                      '${lesson.flashcardCount ?? 0} cards',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                    // Show flashcard count using FutureBuilder
+                    FutureBuilder<int>(
+                      future: _getFlashcardCount(lesson.id),
+                      builder: (context, snapshot) {
+                        final count = snapshot.data ?? 0;
+                        return Text(
+                          '$count cards',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -317,23 +335,29 @@ class _CreateTabState extends ConsumerState<CreateTab>
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: (lesson.flashcardCount ?? 0) > 0 
-                          ? () => _previewFlashcards(lesson)
-                          : null,
-                        icon: const Icon(Icons.visibility, size: 16),
-                        label: const Text('Preview'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          side: BorderSide(
-                            color: (lesson.flashcardCount ?? 0) > 0 
-                              ? Colors.blue[300]! 
-                              : Colors.grey[300]!,
-                          ),
-                          foregroundColor: (lesson.flashcardCount ?? 0) > 0 
-                            ? Colors.blue[700] 
-                            : Colors.grey[500],
-                        ),
+                      child: FutureBuilder<int>(
+                        future: _getFlashcardCount(lesson.id),
+                        builder: (context, snapshot) {
+                          final count = snapshot.data ?? 0;
+                          return OutlinedButton.icon(
+                            onPressed: count > 0 
+                              ? () => _previewFlashcards(lesson)
+                              : null,
+                            icon: const Icon(Icons.visibility, size: 16),
+                            label: const Text('Preview'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              side: BorderSide(
+                                color: count > 0 
+                                  ? Colors.blue[300]! 
+                                  : Colors.grey[300]!,
+                              ),
+                              foregroundColor: count > 0 
+                                ? Colors.blue[700] 
+                                : Colors.grey[500],
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -346,7 +370,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
     );
   }
 
-  // NEW: Flashcard creation method
+  // Flashcard creation method
   void _createFlashcard(Lesson lesson) {
     Navigator.push(
       context,
@@ -365,13 +389,37 @@ class _CreateTabState extends ConsumerState<CreateTab>
     });
   }
 
-  // NEW: Flashcard preview method (placeholder)
-  void _previewFlashcards(Lesson lesson) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Preview flashcards for "${lesson.displayTitle}" - Coming Soon'),
-        behavior: SnackBarBehavior.floating,
-      ),
+  // Flashcard preview method
+  void _previewFlashcards(Lesson lesson) async {
+    final flashcardRepo = ref.read(flashcardRepositoryProvider);
+    final result = await flashcardRepo.getFlashcardsByLesson(lesson.id);
+    
+    result.fold(
+      (failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load flashcards: ${failure.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      },
+      (flashcards) {
+        if (flashcards.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No flashcards found for this lesson'),
+            ),
+          );
+        } else {
+          // TODO: Navigate to flashcard preview/study screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Found ${flashcards.length} flashcards - Preview coming soon!'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
     );
   }
 
@@ -400,6 +448,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
         title: const Text('Delete Lesson?'),
         content: Text(
           'Are you sure you want to delete "${lesson.displayTitle}"?\n\n'
+          'This will also delete all flashcards in this lesson.\n\n'
           'This action cannot be undone.',
         ),
         actions: [
@@ -411,15 +460,33 @@ class _CreateTabState extends ConsumerState<CreateTab>
             onPressed: () async {
               Navigator.pop(dialogContext);
               try {
+                // First delete all flashcards for this lesson
+                final flashcardRepo = ref.read(flashcardRepositoryProvider);
+                final flashcardsResult = await flashcardRepo.getFlashcardsByLesson(lesson.id);
+                
+                await flashcardsResult.fold(
+                  (failure) async {
+                    // Continue even if we can't get flashcards
+                  },
+                  (flashcards) async {
+                    // Delete all flashcards
+                    for (final flashcard in flashcards) {
+                      await flashcardRepo.deleteFlashcard(flashcard.id);
+                    }
+                  },
+                );
+                
+                // Then delete the lesson
                 await ref
                     .read(lessonsNotifierProvider(
                             lesson.subjectName, lesson.topicName)
                         .notifier)
                     .deleteLesson(lesson.id);
+                    
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Lesson deleted successfully'),
+                      content: Text('Lesson and flashcards deleted successfully'),
                       backgroundColor: Colors.green,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -563,10 +630,17 @@ class _CreateTabState extends ConsumerState<CreateTab>
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                Text(
-                                  '${lesson.totalContentCount} items',
-                                  style: const TextStyle(
-                                      fontSize: 12, color: Colors.grey),
+                                FutureBuilder<int>(
+                                  future: _getFlashcardCount(lesson.id),
+                                  builder: (context, snapshot) {
+                                    final flashcardCount = snapshot.data ?? 0;
+                                    final totalCount = lesson.totalContentCount + flashcardCount;
+                                    return Text(
+                                      '$totalCount items',
+                                      style: const TextStyle(
+                                          fontSize: 12, color: Colors.grey),
+                                    );
+                                  },
                                 ),
                               ],
                             ),

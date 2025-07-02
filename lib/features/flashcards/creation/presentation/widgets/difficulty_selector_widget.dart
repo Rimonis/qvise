@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../../domain/entities/flashcard_difficulty.dart';
-import '/../../../core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
 
 class DifficultySelectororWidget extends StatelessWidget {
   final FlashcardDifficulty selectedDifficulty;
