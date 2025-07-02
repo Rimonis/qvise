@@ -1,3 +1,5 @@
+// lib/core/shell and tabs/main_shell_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/features/content/presentation/providers/tab_navigation_provider.dart';
@@ -17,8 +19,6 @@ class MainShellScreen extends ConsumerStatefulWidget {
 class _MainShellScreenState extends ConsumerState<MainShellScreen> with TickerProviderStateMixin {
   late final List<GlobalKey<NavigatorState>> _navigatorKeys;
   late final PageController _pageController;
-  late final AnimationController _fabAnimationController;
-  late final Animation<double> _fabAnimation;
   
   @override
   void initState() {
@@ -30,27 +30,11 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> with TickerPr
     // Initialize page controller
     final initialIndex = ref.read(currentTabIndexProvider);
     _pageController = PageController(initialPage: initialIndex);
-    
-    // Initialize FAB animation
-    _fabAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-    _fabAnimation = CurvedAnimation(
-      parent: _fabAnimationController,
-      curve: Curves.easeInOut,
-    );
-    
-    // Show FAB for create tab
-    if (initialIndex == 1) {
-      _fabAnimationController.forward();
-    }
   }
   
   @override
   void dispose() {
     _pageController.dispose();
-    _fabAnimationController.dispose();
     super.dispose();
   }
 
@@ -107,13 +91,6 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> with TickerPr
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
-    
-    // Handle FAB animation
-    if (index == 1) {
-      _fabAnimationController.forward();
-    } else {
-      _fabAnimationController.reverse();
-    }
   }
 
   @override
@@ -126,13 +103,6 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> with TickerPr
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
-        
-        // Handle FAB animation
-        if (next == 1) {
-          _fabAnimationController.forward();
-        } else {
-          _fabAnimationController.reverse();
-        }
       }
     });
     
@@ -231,30 +201,7 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> with TickerPr
             ),
           ],
         ),
-        // Floating action button for create tab
-        floatingActionButton: currentIndex == 1
-            ? ScaleTransition(
-                scale: _fabAnimation,
-                child: FloatingActionButton.extended(
-                  onPressed: () {
-                    // Navigate to subject selection
-                    final navigator = _navigatorKeys[1].currentState;
-                    if (navigator != null) {
-                      // This would push the subject selection screen
-                      // For now, just show a snackbar
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Navigate to subject selection'),
-                        ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('New Lesson'),
-                  tooltip: 'Create new lesson',
-                ),
-              )
-            : null,
+        // REMOVED: Floating action button for create tab - now handled within CreateTab itself
       ),
     );
   }

@@ -41,7 +41,26 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
   bool _isCreating = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Add listeners to text controllers to trigger UI updates
+    _frontController.addListener(_onTextChanged);
+    _backController.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    // Force UI update when text content changes
+    if (mounted) {
+      setState(() {
+        // This will trigger rebuild and update button states
+      });
+    }
+  }
+
+  @override
   void dispose() {
+    _frontController.removeListener(_onTextChanged);
+    _backController.removeListener(_onTextChanged);
     _frontController.dispose();
     _backController.dispose();
     _notesController.dispose();
@@ -63,7 +82,19 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
   }
 
   Future<void> _createFlashcard() async {
-    if (!_formKey.currentState!.validate()) return;
+    // In preview mode, we don't have access to the form, so validate manually
+    if (_frontController.text.trim().isEmpty || _backController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in both front and back content'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // If not in preview mode, validate the form
+    if (!_showPreview && !_formKey.currentState!.validate()) return;
 
     setState(() {
       _isCreating = true;
@@ -327,7 +358,7 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
             Expanded(
               flex: 2,
               child: ElevatedButton.icon(
-                onPressed: _isCreating ? null : _createFlashcard,
+                onPressed: _canCreateFlashcard() ? _createFlashcard : null,
                 icon: _isCreating
                   ? const SizedBox(
                       width: 16,
@@ -342,6 +373,12 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
         ),
       ),
     );
+  }
+
+  bool _canCreateFlashcard() {
+    return _frontController.text.trim().isNotEmpty && 
+           _backController.text.trim().isNotEmpty &&
+           !_isCreating;
   }
 
   bool _canPreview() {

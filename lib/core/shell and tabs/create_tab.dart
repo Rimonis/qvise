@@ -380,6 +380,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
           subjectName: lesson.subjectName,
           topicName: lesson.topicName,
         ),
+        fullscreenDialog: true, // This ensures proper overlay and hides parent FABs
       ),
     ).then((result) {
       // Refresh if flashcard was created
