@@ -12,6 +12,7 @@ import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card
 // Flashcard imports
 import 'package:qvise/features/flashcards/creation/presentation/screens/flashcard_creation_screen.dart';
 import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_providers.dart';
+import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_count_provider.dart';
 
 class CreateTab extends ConsumerStatefulWidget {
   const CreateTab({super.key});
@@ -42,9 +43,10 @@ class _CreateTabState extends ConsumerState<CreateTab>
     });
 
     try {
-      // Refresh both lessons and flashcard counts
+      // Refresh lessons
       await ref.refresh(unlockedLessonsProvider);
-      // Note: Flashcard counts will be updated when lessons refresh
+      // Invalidate all flashcard count providers to refresh them
+      ref.invalidate(flashcardCountProvider);
     } finally {
       if (mounted) {
         setState(() {
@@ -60,6 +62,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
     final result = await flashcardRepo.countFlashcardsByLesson(lessonId);
     return result.fold((failure) => 0, (count) => count);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -214,17 +217,29 @@ class _CreateTabState extends ConsumerState<CreateTab>
                   ),
                 ),
 
-                // Bottom padding for FAB
+                // Add lesson button at the end of the list
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: OutlinedButton.icon(
+                      onPressed: () => _navigateToSubjectSelection(context),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Create New Lesson'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                        foregroundColor: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Bottom padding for lock button
                 const SliverToBoxAdapter(
-                  child: SizedBox(height: 80),
+                  child: SizedBox(height: 100),
                 ),
               ],
             ),
-          ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _navigateToSubjectSelection(context),
-            icon: const Icon(Icons.add),
-            label: const Text('New Lesson'),
           ),
           bottomSheet: _buildLockButton(context, ref, unlockedLessons),
         );
@@ -255,8 +270,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
       ),
     );
   }
-
-  // ENHANCED LESSON CARD WITH FLASHCARD INTEGRATION
   Widget _buildEnhancedLessonCard(Lesson lesson) {
     return Card(
       elevation: 2,
@@ -631,15 +644,28 @@ class _CreateTabState extends ConsumerState<CreateTab>
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                FutureBuilder<int>(
-                                  future: _getFlashcardCount(lesson.id),
-                                  builder: (context, snapshot) {
-                                    final flashcardCount = snapshot.data ?? 0;
-                                    final totalCount = lesson.totalContentCount + flashcardCount;
-                                    return Text(
-                                      '$totalCount items',
-                                      style: const TextStyle(
-                                          fontSize: 12, color: Colors.grey),
+                                Consumer(
+                                  builder: (context, ref, child) {
+                                    final flashcardCountAsync = ref.watch(flashcardCountProvider(lesson.id));
+                                    return flashcardCountAsync.when(
+                                      data: (flashcardCount) {
+                                        final totalCount = lesson.totalContentCount + flashcardCount;
+                                        return Text(
+                                          '$totalCount items',
+                                          style: const TextStyle(
+                                              fontSize: 12, color: Colors.grey),
+                                        );
+                                      },
+                                      loading: () => Text(
+                                        '${lesson.totalContentCount}+ items',
+                                        style: const TextStyle(
+                                            fontSize: 12, color: Colors.grey),
+                                      ),
+                                      error: (_, __) => Text(
+                                        '${lesson.totalContentCount} items',
+                                        style: const TextStyle(
+                                            fontSize: 12, color: Colors.grey),
+                                      ),
                                     );
                                   },
                                 ),

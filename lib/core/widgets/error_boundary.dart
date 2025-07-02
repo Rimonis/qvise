@@ -1,3 +1,5 @@
+// lib/core/widgets/error_boundary.dart
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -19,11 +21,15 @@ class ErrorBoundary extends StatefulWidget {
 
 class _ErrorBoundaryState extends State<ErrorBoundary> {
   FlutterErrorDetails? _errorDetails;
+  late final FlutterExceptionHandler? _previousErrorHandler;
 
   @override
   void initState() {
     super.initState();
-    // Set up error handling
+    // Store the previous error handler
+    _previousErrorHandler = FlutterError.onError;
+    
+    // Set up error handling - but don't call setState during build
     FlutterError.onError = (FlutterErrorDetails details) {
       // Log error in debug mode
       if (kDebugMode) {
@@ -33,13 +39,22 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
       // Call custom error handler if provided
       widget.onError?.call(details);
       
-      // Update state to show error UI
-      if (mounted) {
-        setState(() {
-          _errorDetails = details;
-        });
-      }
+      // Schedule setState for next frame to avoid build-time setState
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _errorDetails = details;
+          });
+        }
+      });
     };
+  }
+
+  @override
+  void dispose() {
+    // Restore the previous error handler
+    FlutterError.onError = _previousErrorHandler;
+    super.dispose();
   }
 
   void _resetError() {
@@ -170,13 +185,15 @@ class _AsyncErrorBoundaryState extends State<AsyncErrorBoundary> {
     // Call custom error handler if provided
     widget.onError?.call(error, stack);
     
-    // Update state to show error UI
-    if (mounted) {
-      setState(() {
-        _error = error;
-        _stackTrace = stack;
-      });
-    }
+    // Schedule setState for next frame to avoid build-time setState
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _error = error;
+          _stackTrace = stack;
+        });
+      }
+    });
   }
 
   void _resetError() {
@@ -261,11 +278,6 @@ class ErrorBoundaryZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    ErrorWidget.builder = (FlutterErrorDetails details) {
-      onError(details.exception, details.stack);
-      return const SizedBox.shrink();
-    };
-    
     return child;
   }
 }
