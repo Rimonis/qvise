@@ -82,67 +82,81 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
   }
 
   Future<void> _createFlashcard() async {
-    // In preview mode, we don't have access to the form, so validate manually
-    if (_frontController.text.trim().isEmpty || _backController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill in both front and back content'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
+  // In preview mode, we don't have access to the form, so validate manually
+  if (_frontController.text.trim().isEmpty || _backController.text.trim().isEmpty) {
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please fill in both front and back content'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      });
     }
+    return;
+  }
 
     // If not in preview mode, validate the form
     if (!_showPreview && !_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isCreating = true;
-    });
+  setState(() {
+    _isCreating = true;
+  });
 
-    try {
-      final createFlashcard = ref.read(createFlashcardProvider);
-      final result = await createFlashcard(
-        lessonId: widget.lessonId,
-        frontContent: _frontController.text,
-        backContent: _backController.text,
-        tagId: _selectedTag.id,
-        difficulty: _selectedDifficulty,
-        notes: _notesController.text.isEmpty ? null : _notesController.text,
-        hints: _hints.isEmpty ? null : _hints,
-      );
+  try {
+    final createFlashcard = ref.read(createFlashcardProvider);
+    final result = await createFlashcard(
+      lessonId: widget.lessonId,
+      frontContent: _frontController.text,
+      backContent: _backController.text,
+      tagId: _selectedTag.id,
+      difficulty: _selectedDifficulty,
+      notes: _notesController.text.isEmpty ? null : _notesController.text,
+      hints: _hints.isEmpty ? null : _hints,
+    );
 
-      result.fold(
-        (failure) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to create flashcard: ${failure.message}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        (flashcard) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Flashcard created successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            Navigator.of(context).pop(true); // Return true to indicate success
-          }
-        },
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isCreating = false;
-        });
-      }
+    result.fold(
+      (failure) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to create flashcard: ${failure.message}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          });
+        }
+      },
+      (flashcard) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Flashcard created successfully!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              Navigator.of(context).pop(true); // Return true to indicate success
+            }
+          });
+        }
+      },
+    );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isCreating = false;
+      });
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {

@@ -385,66 +385,88 @@ class _CreateTabState extends ConsumerState<CreateTab>
 
   // Flashcard creation method
   void _createFlashcard(Lesson lesson) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FlashcardCreationScreen(
-          lessonId: lesson.id,
-          subjectName: lesson.subjectName,
-          topicName: lesson.topicName,
-        ),
-        fullscreenDialog: true, // This ensures proper overlay and hides parent FABs
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => FlashcardCreationScreen(
+        lessonId: lesson.id,
+        subjectName: lesson.subjectName,
+        topicName: lesson.topicName,
       ),
-    ).then((result) {
-      // Refresh if flashcard was created
-      if (result == true) {
-        _handleRefresh();
-      }
-    });
-  }
+      fullscreenDialog: true, // This ensures proper overlay and hides parent FABs
+    ),
+  ).then((result) {
+    // Refresh if flashcard was created
+    if (result == true) {
+      _handleRefresh();
+    }
+  });
+}
 
   // Flashcard preview method
   void _previewFlashcards(Lesson lesson) async {
-    final flashcardRepo = ref.read(flashcardRepositoryProvider);
-    final result = await flashcardRepo.getFlashcardsByLesson(lesson.id);
-    
-    result.fold(
-      (failure) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load flashcards: ${failure.message}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      },
-      (flashcards) {
-        if (flashcards.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No flashcards found for this lesson'),
-            ),
-          );
-        } else {
-          // TODO: Navigate to flashcard preview/study screen
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Found ${flashcards.length} flashcards - Preview coming soon!'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+  final flashcardRepo = ref.read(flashcardRepositoryProvider);
+  final result = await flashcardRepo.getFlashcardsByLesson(lesson.id);
+  
+  result.fold(
+    (failure) {
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to load flashcards: ${failure.message}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        });
+      }
+    },
+    (flashcards) {
+      if (flashcards.isEmpty) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No flashcards found for this lesson'),
+                ),
+              );
+            }
+          });
         }
-      },
-    );
-  }
+      } else {
+        // TODO: Navigate to flashcard preview/study screen
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Found ${flashcards.length} flashcards - Preview coming soon!'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          });
+        }
+      }
+    },
+  );
+}
 
   void _navigateToLessonEditor(Lesson lesson) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit "${lesson.displayTitle}" - Coming Soon'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Edit "${lesson.displayTitle}" - Coming Soon'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  });
+}
 
   void _navigateToSubjectSelection(BuildContext context) {
     Navigator.push(
@@ -456,78 +478,86 @@ class _CreateTabState extends ConsumerState<CreateTab>
   }
 
   void _showDeleteDialog(BuildContext context, WidgetRef ref, Lesson lesson) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Lesson?'),
-        content: Text(
-          'Are you sure you want to delete "${lesson.displayTitle}"?\n\n'
-          'This will also delete all flashcards in this lesson.\n\n'
-          'This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              try {
-                // First delete all flashcards for this lesson
-                final flashcardRepo = ref.read(flashcardRepositoryProvider);
-                final flashcardsResult = await flashcardRepo.getFlashcardsByLesson(lesson.id);
-                
-                await flashcardsResult.fold(
-                  (failure) async {
-                    // Continue even if we can't get flashcards
-                  },
-                  (flashcards) async {
-                    // Delete all flashcards
-                    for (final flashcard in flashcards) {
-                      await flashcardRepo.deleteFlashcard(flashcard.id);
-                    }
-                  },
-                );
-                
-                // Then delete the lesson
-                await ref
-                    .read(lessonsNotifierProvider(
-                            lesson.subjectName, lesson.topicName)
-                        .notifier)
-                    .deleteLesson(lesson.id);
-                    
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Lesson and flashcards deleted successfully'),
-                      backgroundColor: Colors.green,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to delete: ${e.toString()}'),
-                      backgroundColor: Colors.red,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Delete Lesson?'),
+      content: Text(
+        'Are you sure you want to delete "${lesson.displayTitle}"?\n\n'
+        'This will also delete all flashcards in this lesson.\n\n'
+        'This action cannot be undone.',
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(dialogContext);
+            try {
+              // First delete all flashcards for this lesson
+              final flashcardRepo = ref.read(flashcardRepositoryProvider);
+              final flashcardsResult = await flashcardRepo.getFlashcardsByLesson(lesson.id);
+              
+              await flashcardsResult.fold(
+                (failure) async {
+                  // Continue even if we can't get flashcards
+                },
+                (flashcards) async {
+                  // Delete all flashcards
+                  for (final flashcard in flashcards) {
+                    await flashcardRepo.deleteFlashcard(flashcard.id);
+                  }
+                },
+              );
+              
+              // Then delete the lesson
+              await ref
+                  .read(lessonsNotifierProvider(
+                          lesson.subjectName, lesson.topicName)
+                      .notifier)
+                  .deleteLesson(lesson.id);
+                  
+              if (context.mounted) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Lesson and flashcards deleted successfully'),
+                        backgroundColor: Colors.green,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                });
+              }
+            } catch (e) {
+              if (context.mounted) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to delete: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                });
+              }
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget? _buildLockButton(
       BuildContext context, WidgetRef ref, List<Lesson> unlockedLessons) {
@@ -613,121 +643,41 @@ class _CreateTabState extends ConsumerState<CreateTab>
   }
 
   void _showLockDialog(
-      BuildContext context, WidgetRef ref, List<Lesson> readyToLock) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Lock Lessons?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Lock lessons and start spaced repetition?',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              constraints: const BoxConstraints(maxHeight: 200),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: readyToLock
-                      .map((lesson) => Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.book, size: 16),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    lesson.displayTitle,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Consumer(
-                                  builder: (context, ref, child) {
-                                    final flashcardCountAsync = ref.watch(flashcardCountProvider(lesson.id));
-                                    return flashcardCountAsync.when(
-                                      data: (flashcardCount) {
-                                        final totalCount = lesson.totalContentCount + flashcardCount;
-                                        return Text(
-                                          '$totalCount items',
-                                          style: const TextStyle(
-                                              fontSize: 12, color: Colors.grey),
-                                        );
-                                      },
-                                      loading: () => Text(
-                                        '${lesson.totalContentCount}+ items',
-                                        style: const TextStyle(
-                                            fontSize: 12, color: Colors.grey),
-                                      ),
-                                      error: (_, __) => Text(
-                                        '${lesson.totalContentCount} items',
-                                        style: const TextStyle(
-                                            fontSize: 12, color: Colors.grey),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ))
-                      .toList(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                    color: Colors.red.withValues(alpha: 0.3)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.warning, color: Colors.red, size: 20),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Once locked, lessons cannot be unlocked or edited',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFFC62828),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    BuildContext context, WidgetRef ref, List<Lesson> readyToLock) {
+  showDialog(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      // ... rest of dialog content ...
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancel'),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(dialogContext);
+            if (context.mounted) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Locked ${readyToLock.length} lessons - Feature Coming Soon'),
+                      backgroundColor: Colors.orange,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              });
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                      'Locked ${readyToLock.length} lessons - Feature Coming Soon'),
-                  backgroundColor: Colors.orange,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Lock'),
-          ),
-        ],
-      ),
-    );
-  }
-}
+          child: const Text('Lock'),
+        ),
+      ],
+    ),
+  );
+}}

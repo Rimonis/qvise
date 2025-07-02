@@ -183,39 +183,45 @@ class ProfileTab extends ConsumerWidget {
                 children: [
                   // Theme selector - Using simple ListTile since ThemeModeListTile needs to be generated
                   Consumer(
-                    builder: (context, ref, child) {
-                      final themeModeAsync = ref.watch(themeModeNotifierProvider);
-                      
-                      return themeModeAsync.when(
-                        data: (themeMode) => ListTile(
-                          leading: Icon(_getThemeIcon(themeMode)),
-                          title: const Text('Theme'),
-                          subtitle: Text(_getThemeName(themeMode)),
-                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onTap: () => _showThemeDialog(context, ref, themeMode),
-                        ),
-                        loading: () => const ListTile(
-                          leading: Icon(Icons.brightness_auto),
-                          title: Text('Theme'),
-                          subtitle: Text('Loading...'),
-                          trailing: SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                        error: (error, _) => ListTile(
-                          leading: const Icon(Icons.error_outline),
-                          title: const Text('Theme'),
-                          subtitle: const Text('Error loading theme'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.refresh),
-                            onPressed: () => ref.read(themeModeNotifierProvider.notifier).refreshTheme(),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+  builder: (context, ref, child) {
+    final themeModeAsync = ref.watch(themeModeNotifierProvider);
+    
+    return themeModeAsync.when(
+      data: (themeMode) => IconButton(
+        icon: Icon(_getThemeIcon(themeMode)),
+        onPressed: () async {
+          // Clear any existing snackbars before toggling theme
+          ScaffoldMessenger.of(context).clearSnackBars();
+          
+          // Add a small delay to ensure UI is stable
+          await Future.delayed(const Duration(milliseconds: 50));
+          
+          // Toggle theme
+          if (context.mounted) {
+            ref.read(themeModeNotifierProvider.notifier).toggleTheme();
+          }
+        },
+        tooltip: 'Toggle theme (${_getThemeName(themeMode)})',
+      ),
+      loading: () => const IconButton(
+        icon: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        onPressed: null,
+        tooltip: 'Loading theme...',
+      ),
+      error: (error, _) => IconButton(
+        icon: const Icon(Icons.error_outline),
+        onPressed: () {
+          ref.read(themeModeNotifierProvider.notifier).refreshTheme();
+        },
+        tooltip: 'Theme error - tap to retry',
+      ),
+    );
+  },
+),
                   Divider(height: 1, color: context.dividerColor),
                   
                   // Premium Toggle (for testing)
@@ -451,36 +457,15 @@ class ProfileTab extends ConsumerWidget {
   }
 
   void _showThemeDialog(BuildContext context, WidgetRef ref, ThemeMode currentMode) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Choose Theme'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ThemeMode.values.map((mode) {
-            return RadioListTile<ThemeMode>(
-              title: Text(_getThemeName(mode)),
-              secondary: Icon(_getThemeIcon(mode)),
-              value: mode,
-              groupValue: currentMode,
-              onChanged: (ThemeMode? value) {
-                if (value != null) {
-                  ref.read(themeModeNotifierProvider.notifier).setThemeMode(value);
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-  }
+  // Clear any existing snackbars before showing dialog
+  ScaffoldMessenger.of(context).clearSnackBars();
+  
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => const ThemeModeDialog(),
+  );
+}
 
   Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
     try {

@@ -107,63 +107,79 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
     });
   }
   
-  Future<void> _createLesson() async {
-    if (!_formKey.currentState!.validate()) return;
+  // In create_lesson_screen.dart, update the _createLesson method:
+
+Future<void> _createLesson() async {
+  if (!_formKey.currentState!.validate()) return;
+  
+  // Check if widget is still mounted
+  if (!mounted) return;
+  
+  setState(() {
+    _isLoading = true;
+  });
+  
+  try {
+    final params = CreateLessonParams(
+      subjectName: _subjectController.text.trim(),
+      topicName: _topicController.text.trim(),
+      lessonTitle: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
+      isNewSubject: _isNewSubject,
+      isNewTopic: _isNewTopic,
+    );
     
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      final params = CreateLessonParams(
-        subjectName: _subjectController.text.trim(),
-        topicName: _topicController.text.trim(),
-        lessonTitle: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
-        isNewSubject: _isNewSubject,
-        isNewTopic: _isNewTopic,
-      );
-      
-      // Show ad dialog for free users (placeholder - implement actual ad logic)
-      final shouldProceed = await _showAdDialog();
-      if (!shouldProceed) {
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
-      
-      // Create the lesson
-      await ref.read(lessonsNotifierProvider(params.subjectName, params.topicName).notifier)
-          .createNewLesson(params);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lesson created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // Navigate to the lessons screen
-        context.go('${RouteNames.subjects}/${params.subjectName}/${params.topicName}');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create lesson: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
+    // Show ad dialog for free users (placeholder - implement actual ad logic)
+    final shouldProceed = await _showAdDialog();
+    if (!shouldProceed || !mounted) {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
+      return;
+    }
+    
+    // Create the lesson
+    await ref.read(lessonsNotifierProvider(params.subjectName, params.topicName).notifier)
+        .createNewLesson(params);
+    
+    if (mounted) {
+      // Use addPostFrameCallback to ensure we're not in build phase
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Lesson created successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+          // Navigate to the lessons screen
+          context.go('${RouteNames.subjects}/${params.subjectName}/${params.topicName}');
+        }
+      });
+    }
+  } catch (e) {
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to create lesson: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      });
+    }
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
+}
   
   Future<bool> _showAdDialog() async {
     // TODO: Implement actual ad logic here

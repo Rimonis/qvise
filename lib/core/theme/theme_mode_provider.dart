@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -37,8 +38,15 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
 
   /// Sets the new theme mode with proper error handling and persistence.
   Future<void> setThemeMode(ThemeMode mode) async {
+    // Don't change if already changing or if same mode
+    final currentMode = state.valueOrNull;
+    if (currentMode == mode) return;
+    
     // FIX: Use AsyncValue.guard to prevent setState during build
     state = await AsyncValue.guard(() async {
+      // Add a small delay to ensure UI is stable
+      await Future.delayed(const Duration(milliseconds: 50));
+      
       // Persist the new value first
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_key, mode.toString());
@@ -66,7 +74,8 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
         (platformBrightness == Brightness.dark) ? ThemeMode.light : ThemeMode.dark,
     };
 
-    // FIX: Use the safer setThemeMode method
+    // FIX: Use the safer setThemeMode method with a small delay
+    await Future.delayed(const Duration(milliseconds: 50));
     await setThemeMode(nextMode);
   }
 
@@ -166,68 +175,105 @@ class ThemeModeListTile extends ConsumerWidget {
 }
 
 // Dialog for selecting theme mode
-class ThemeModeDialog extends ConsumerWidget {
+class ThemeModeDialog extends ConsumerStatefulWidget {
   const ThemeModeDialog({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ThemeModeDialog> createState() => _ThemeModeDialogState();
+}
+
+class _ThemeModeDialogState extends ConsumerState<ThemeModeDialog> {
+  bool _isChangingTheme = false;
+
+  Future<void> _changeTheme(ThemeMode value) async {
+    if (_isChangingTheme) return;
+    
+    setState(() {
+      _isChangingTheme = true;
+    });
+    
+    // Clear any open snackbars before changing theme
+    ScaffoldMessenger.of(context).clearSnackBars();
+    
+    // Close the dialog first
+    if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+    
+    // Wait a frame to ensure dialog is closed and UI is stable
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    // Change the theme
+    if (mounted) {
+      try {
+        await ref.read(themeModeNotifierProvider.notifier).setThemeMode(value);
+      } catch (e) {
+        // Handle any errors silently
+        if (kDebugMode) {
+          print('Error changing theme: $e');
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeModeAsync = ref.watch(themeModeNotifierProvider);
 
-    return AlertDialog(
-      title: const Text('Choose Theme'),
-      content: themeModeAsync.when(
-        data: (currentMode) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ThemeMode.values.map((mode) {
-            return RadioListTile<ThemeMode>(
-              title: Text(_getThemeName(mode)),
-              secondary: Icon(_getThemeIcon(mode)),
-              value: mode,
-              groupValue: currentMode,
-              onChanged: (ThemeMode? value) async {
-                if (value != null) {
-                  // FIX: Close dialog first, then change theme
-                  Navigator.of(context).pop();
-                  
-                  // FIX: Use PostFrameCallback to ensure dialog is closed first
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    ref
-                        .read(themeModeNotifierProvider.notifier)
-                        .setThemeMode(value);
-                  });
-                }
-              },
-            );
-          }).toList(),
-        ),
-        loading: () => const Center(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: CircularProgressIndicator(),
+    return WillPopScope(
+      onWillPop: () async => !_isChangingTheme,
+      child: AlertDialog(
+        title: const Text('Choose Theme'),
+        content: themeModeAsync.when(
+          data: (currentMode) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: ThemeMode.values.map((mode) {
+              return RadioListTile<ThemeMode>(
+                title: Text(_getThemeName(mode)),
+                secondary: Icon(_getThemeIcon(mode)),
+                value: mode,
+                groupValue: currentMode,
+                onChanged: _isChangingTheme 
+                  ? null 
+                  : (ThemeMode? value) {
+                      if (value != null) {
+                        _changeTheme(value);
+                      }
+                    },
+              );
+            }).toList(),
+          ),
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (error, _) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error: $error'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  ref.read(themeModeNotifierProvider.notifier).refreshTheme();
+                },
+                child: const Text('Retry'),
+              ),
+            ],
           ),
         ),
-        error: (error, _) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('Error: $error'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                ref.read(themeModeNotifierProvider.notifier).refreshTheme();
-              },
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+        actions: [
+          TextButton(
+            onPressed: _isChangingTheme 
+              ? null 
+              : () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-      ],
     );
   }
 }
@@ -243,11 +289,17 @@ class ThemeToggleButton extends ConsumerWidget {
     return themeModeAsync.when(
       data: (themeMode) => IconButton(
         icon: Icon(_getThemeIcon(themeMode)),
-        onPressed: () {
-          // FIX: Use PostFrameCallback to prevent setState during build
-          WidgetsBinding.instance.addPostFrameCallback((_) {
+        onPressed: () async {
+          // Clear any existing snackbars before toggling theme
+          ScaffoldMessenger.of(context).clearSnackBars();
+          
+          // Add a small delay to ensure UI is stable
+          await Future.delayed(const Duration(milliseconds: 50));
+          
+          // Toggle theme
+          if (context.mounted) {
             ref.read(themeModeNotifierProvider.notifier).toggleTheme();
-          });
+          }
         },
         tooltip: 'Toggle theme (${_getThemeName(themeMode)})',
       ),
@@ -263,10 +315,7 @@ class ThemeToggleButton extends ConsumerWidget {
       error: (error, _) => IconButton(
         icon: const Icon(Icons.error_outline),
         onPressed: () {
-          // FIX: Use PostFrameCallback for error recovery too
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(themeModeNotifierProvider.notifier).refreshTheme();
-          });
+          ref.read(themeModeNotifierProvider.notifier).refreshTheme();
         },
         tooltip: 'Theme error - tap to retry',
       ),
