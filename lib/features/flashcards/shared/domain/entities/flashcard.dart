@@ -1,4 +1,7 @@
+// lib/features/flashcards/shared/domain/entities/flashcard.dart
+
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'flashcard_tag.dart';
 
 part 'flashcard.freezed.dart';
 
