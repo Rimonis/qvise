@@ -7,6 +7,8 @@ import 'package:qvise/features/content/presentation/screens/subject_selection_sc
 import 'package:qvise/features/content/presentation/widgets/content_loading_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card.dart';
+// ADD THIS IMPORT FOR FLASHCARDS
+import '../../features/flashcards/creation/presentation/screens/flashcard_creation_screen.dart';
 
 class CreateTab extends ConsumerStatefulWidget {
   const CreateTab({super.key});
@@ -37,7 +39,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
     });
 
     try {
-      // FIX: Call ref.refresh on the provider itself, not its .future property.
       await ref.refresh(unlockedLessonsProvider);
     } finally {
       if (mounted) {
@@ -50,13 +51,11 @@ class _CreateTabState extends ConsumerState<CreateTab>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    super.build(context);
 
-    // FIX: Get the boolean value from the AsyncValue, defaulting to false.
     final isOnline = ref.watch(networkStatusProvider).valueOrNull ?? false;
     final unlockedLessonsAsync = ref.watch(unlockedLessonsProvider);
 
-    // Show offline message if needed
     if (!isOnline) {
       return Center(
         child: Padding(
@@ -92,7 +91,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
     return unlockedLessonsAsync.when(
       data: (unlockedLessons) {
         if (unlockedLessons.isEmpty) {
-          // Show centered create button when empty
           return EmptyContentWidget(
             icon: Icons.edit,
             title: 'Start Creating',
@@ -103,7 +101,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
           );
         }
 
-        // Show unlocked lessons
         return Scaffold(
           body: RefreshIndicator(
             onRefresh: _handleRefresh,
@@ -116,7 +113,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
                     margin: const EdgeInsets.all(16),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      // FIX: Use withValues instead of withOpacity
                       color: Theme.of(context)
                           .colorScheme
                           .primaryContainer
@@ -148,7 +144,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
                         Text(
                           '${unlockedLessons.length} unlocked ${unlockedLessons.length == 1 ? 'lesson' : 'lessons'} ready for editing',
                           style: TextStyle(
-                            // FIX: Use withValues instead of withOpacity
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
@@ -159,7 +154,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            // FIX: Use withValues instead of withOpacity
                             color: Colors.orange.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
@@ -191,7 +185,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
                   ),
                 ),
 
-                // Lessons list
+                // Lessons list with flashcard integration
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverList(
@@ -200,13 +194,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
                         final lesson = unlockedLessons[index];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: UnlockedLessonCard(
-                            lesson: lesson,
-                            onTap: () =>
-                                _navigateToLessonEditor(context, lesson),
-                            onDelete: () =>
-                                _showDeleteDialog(context, ref, lesson),
-                          ),
+                          child: _buildEnhancedLessonCard(lesson),
                         );
                       },
                       childCount: unlockedLessons.length,
@@ -256,6 +244,210 @@ class _CreateTabState extends ConsumerState<CreateTab>
     );
   }
 
+  // ENHANCED LESSON CARD WITH FLASHCARD INTEGRATION
+  Widget _buildEnhancedLessonCard(Lesson lesson) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          // Original lesson card content
+          UnlockedLessonCard(
+            lesson: lesson,
+            onTap: () => _navigateToLessonEditor(lesson),
+            onDelete: () => _showDeleteDialog(context, ref, lesson),
+          ),
+          
+          // NEW: Flashcard actions section
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.05),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.style,
+                      size: 16,
+                      color: Colors.blue[700],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Flashcards',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                    const Spacer(),
+                    // Show flashcard count (you'll need to add this field to Lesson)
+                    Text(
+                      '${lesson.flashcardCount ?? 0} cards',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _createFlashcard(lesson),
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Create'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          side: BorderSide(color: Colors.blue[300]!),
+                          foregroundColor: Colors.blue[700],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: (lesson.flashcardCount ?? 0) > 0 
+                          ? () => _previewFlashcards(lesson)
+                          : null,
+                        icon: const Icon(Icons.visibility, size: 16),
+                        label: const Text('Preview'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          side: BorderSide(
+                            color: (lesson.flashcardCount ?? 0) > 0 
+                              ? Colors.blue[300]! 
+                              : Colors.grey[300]!,
+                          ),
+                          foregroundColor: (lesson.flashcardCount ?? 0) > 0 
+                            ? Colors.blue[700] 
+                            : Colors.grey[500],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // NEW: Flashcard creation method
+  void _createFlashcard(Lesson lesson) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FlashcardCreationScreen(
+          lessonId: lesson.id,
+          subjectName: lesson.subjectName,
+          topicName: lesson.topicName,
+        ),
+      ),
+    ).then((result) {
+      // Refresh if flashcard was created
+      if (result == true) {
+        _handleRefresh();
+      }
+    });
+  }
+
+  // NEW: Flashcard preview method (placeholder)
+  void _previewFlashcards(Lesson lesson) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Preview flashcards for "${lesson.displayTitle}" - Coming Soon'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _navigateToLessonEditor(Lesson lesson) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Edit "${lesson.displayTitle}" - Coming Soon'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _navigateToSubjectSelection(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SubjectSelectionScreen(),
+      ),
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context, WidgetRef ref, Lesson lesson) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Lesson?'),
+        content: Text(
+          'Are you sure you want to delete "${lesson.displayTitle}"?\n\n'
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              try {
+                await ref
+                    .read(lessonsNotifierProvider(
+                            lesson.subjectName, lesson.topicName)
+                        .notifier)
+                    .deleteLesson(lesson.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Lesson deleted successfully'),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget? _buildLockButton(
       BuildContext context, WidgetRef ref, List<Lesson> unlockedLessons) {
     if (unlockedLessons.isEmpty) return null;
@@ -264,7 +456,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
         unlockedLessons.where((lesson) => lesson.totalContentCount > 0).toList();
 
     if (readyToLock.isEmpty && unlockedLessons.length < 2) {
-      return null; // Don't show lock button if only one empty lesson
+      return null;
     }
 
     return Container(
@@ -274,7 +466,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            // FIX: Use withValues instead of withOpacity
             color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
@@ -290,7 +481,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  // FIX: Use withValues instead of withOpacity
                   color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
@@ -337,82 +527,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _navigateToSubjectSelection(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const SubjectSelectionScreen(),
-      ),
-    );
-  }
-
-  void _navigateToLessonEditor(BuildContext context, Lesson lesson) {
-    // TODO: Navigate to lesson editor screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit "${lesson.displayTitle}" - Coming Soon'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, Lesson lesson) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Lesson?'),
-        content: Text(
-          'Are you sure you want to delete "${lesson.displayTitle}"?\n\n'
-          'This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              try {
-                // This assumes `lessonsNotifierProvider` is an AutoDisposeFamilyAsyncNotifier
-                // or similar that takes these parameters.
-                await ref
-                    .read(lessonsNotifierProvider(
-                            lesson.subjectName, lesson.topicName)
-                        .notifier)
-                    .deleteLesson(lesson.id);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Lesson deleted successfully'),
-                      backgroundColor: Colors.green,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to delete: ${e.toString()}'),
-                      backgroundColor: Colors.red,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
       ),
     );
   }
@@ -465,7 +579,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                // FIX: Use withValues instead of withOpacity
                 color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
@@ -480,7 +593,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
                       'Once locked, lessons cannot be unlocked or edited',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFFC62828), // Colors.red[700]
+                        color: Color(0xFFC62828),
                       ),
                     ),
                   ),
@@ -497,7 +610,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              // TODO: Implement lock functionality
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
