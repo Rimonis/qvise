@@ -7,6 +7,9 @@ import '../widgets/auth_button.dart';
 import '../widgets/auth_text_field.dart';
 import 'sign_up_screen.dart';
 import '../../../../core/routes/route_names.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/theme_extensions.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -38,7 +41,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   void _handleAuthState(AuthState state) {
     if (_isDisposed || !mounted) return;
     
-    // Schedule navigation for after the build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_isDisposed || !mounted) return;
       
@@ -47,11 +49,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(message),
-              backgroundColor: Colors.red,
+              backgroundColor: context.errorColor,
               behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
+              margin: AppSpacing.screenPaddingAll,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
               ),
             ),
           );
@@ -60,29 +62,27 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Welcome back, ${user.displayName ?? user.email.split('@')[0]}!'),
-              backgroundColor: Colors.green,
+              backgroundColor: context.successColor,
               behavior: SnackBarBehavior.floating,
-              margin: const EdgeInsets.all(16),
+              margin: AppSpacing.screenPaddingAll,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
               ),
             ),
           );
-          // Navigation is handled by the router
         },
         emailNotVerified: (user) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please verify your email to continue'),
-              backgroundColor: Colors.orange,
+            SnackBar(
+              content: const Text('Please verify your email to continue'),
+              backgroundColor: context.warningColor,
               behavior: SnackBarBehavior.floating,
-              margin: EdgeInsets.all(16),
+              margin: AppSpacing.screenPaddingAll,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
               ),
             ),
           );
-          // Navigation is handled by the router
         },
         orElse: () {},
       );
@@ -104,47 +104,34 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     });
 
     return Scaffold(
+      backgroundColor: context.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Sign In'),
+        title: Text(
+          'Sign In',
+          style: context.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         centerTitle: true,
         automaticallyImplyLeading: false,
+        backgroundColor: context.appBarBackgroundColor,
+        foregroundColor: context.textPrimaryColor,
+        elevation: 0,
       ),
       body: Stack(
         children: [
-          // Main content
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: AppSpacing.screenPaddingAll,
               child: Form(
                 key: _formKey,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(
-                      Icons.lock_outline,
-                      size: 80,
-                      color: Colors.blue,
-                    ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      'Welcome Back',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Sign in to your account',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 48),
+                    _buildHeroSection(),
+                    const SizedBox(height: AppSpacing.xxl),
+                    
                     AuthTextField(
                       controller: _emailController,
                       hintText: 'Email',
@@ -162,7 +149,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
+                    
                     AuthTextField(
                       controller: _passwordController,
                       hintText: 'Password',
@@ -177,31 +165,32 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     
-                    // Forgot Password Link
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: isLoading ? null : () {
                           context.push(RouteNames.forgotPassword);
                         },
-                        child: const Text(
+                        style: TextButton.styleFrom(
+                          foregroundColor: context.primaryColor,
+                        ),
+                        child: Text(
                           'Forgot Password?',
-                          style: TextStyle(
-                            fontSize: 14,
+                          style: context.textTheme.labelLarge?.copyWith(
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                     ),
                     
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.lg),
+                    
                     AuthButton(
                       text: 'Sign In',
                       isLoading: isLoading,
                       onPressed: isLoading ? () {} : () {
-                        // Dismiss keyboard
                         FocusScope.of(context).unfocus();
                         
                         if (_formKey.currentState!.validate()) {
@@ -212,24 +201,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         }
                       },
                     ),
-                    const SizedBox(height: 24),
-                    const Row(
-                      children: [
-                        Expanded(child: Divider()),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'OR',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        Expanded(child: Divider()),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                    
+                    const SizedBox(height: AppSpacing.lg),
+                    
+                    _buildDivider(),
+                    
+                    const SizedBox(height: AppSpacing.lg),
+                    
                     AuthButton(
                       text: 'Continue with Google',
                       icon: const Icon(Icons.g_mobiledata, size: 24),
@@ -239,60 +217,145 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         ref.read(authProvider.notifier).signInWithGoogle();
                       },
                     ),
-                    const SizedBox(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("Don't have an account? "),
-                        TextButton(
-                          onPressed: isLoading ? null : () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SignUpScreen(),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            'Sign Up',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
+                    
+                    const SizedBox(height: AppSpacing.xl),
+                    
+                    _buildSignUpLink(isLoading),
                   ],
                 ),
               ),
             ),
           ),
           
-          // Loading overlay
-          if (isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text(
-                          'Signing you in...',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+          if (isLoading) _buildLoadingOverlay(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroSection() {
+    return Column(
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            color: context.primaryColor.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.lock_outline,
+            size: 50,
+            color: context.primaryColor,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        
+        Text(
+          'Welcome Back',
+          style: context.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: context.textPrimaryColor,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        
+        Text(
+          'Sign in to your account',
+          style: context.textTheme.bodyLarge?.copyWith(
+            color: context.textSecondaryColor,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(color: context.dividerColor),
+        ),
+        Padding(
+          padding: AppSpacing.paddingHorizontalMd,
+          child: Text(
+            'OR',
+            style: context.textTheme.labelMedium?.copyWith(
+              color: context.textSecondaryColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(color: context.dividerColor),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSignUpLink(bool isLoading) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          "Don't have an account? ",
+          style: context.textTheme.bodyMedium?.copyWith(
+            color: context.textSecondaryColor,
+          ),
+        ),
+        TextButton(
+          onPressed: isLoading ? null : () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SignUpScreen(),
+              ),
+            );
+          },
+          style: TextButton.styleFrom(
+            foregroundColor: context.primaryColor,
+            padding: EdgeInsets.zero,
+          ),
+          child: Text(
+            'Sign Up',
+            style: context.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: context.primaryColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoadingOverlay() {
+    return Container(
+      color: context.backgroundColor.withValues(alpha: 0.8),
+      child: Center(
+        child: Card(
+          color: context.cardBackgroundColor,
+          child: Padding(
+            padding: AppSpacing.paddingAllXl,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Signing you in...',
+                  style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: context.textPrimaryColor,
                   ),
                 ),
-              ),
+              ],
             ),
-        ],
+          ),
+        ),
       ),
     );
   }

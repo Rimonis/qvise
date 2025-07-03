@@ -84,58 +84,55 @@ class AppColors {
   static const Color proficiencyNovice = Color(0xFFFF6F00); // Orange
   static const Color proficiencyIntermediate = Color(0xFFFDD835); // Yellow
   static const Color proficiencyAdvanced = Color(0xFF7CB342); // Light Green
-  static const Color proficiencyExpert = Color(0xFF43A047); // Green
-  static const Color proficiencyMaster = Color(0xFF1E88E5); // Blue
 
-  // Shadow colors
-  static const Color shadowLight = Color(0x1F000000); // 12% black
-  static const Color shadowDark = Color(0x3D000000); // 24% black
+  // NEW: Special UI element colors
+  static const Color topicIndicator = Color(0xFF9C27B0); // Purple
+  static const Color topicIndicatorLight = Color(0xFFE1BEE7);
+  static const Color topicIndicatorDark = Color(0xFF7B1FA2);
 
-  // Overlay colors
-  static const Color overlayLight = Color(0x0A000000); // 4% black
-  static const Color overlayDark = Color(0x1F000000); // 12% black
+  static const Color hintIndicator = Color(0xFFFFC107); // Amber
+  static const Color hintIndicatorLight = Color(0xFFFFF8E1);
+  static const Color hintIndicatorDark = Color(0xFFFFA000);
 
-  // Gradient definitions
-  static const LinearGradient primaryGradient = LinearGradient(
-    colors: [primary, primaryDark],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  static const Color contentPlaceholder = Color(0xFF9E9E9E); // Grey
+  static const Color contentPlaceholderLight = Color(0xFFF5F5F5);
+  static const Color contentPlaceholderDark = Color(0xFF616161);
 
-  static const LinearGradient successGradient = LinearGradient(
-    colors: [success, successDark],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  // Splash screen colors
+  static const Color splashBackground = primary;
+  static const Color splashBackgroundDark = primaryDark;
+  static const Color splashForeground = Colors.white;
 
-  static const LinearGradient warningGradient = LinearGradient(
-    colors: [warning, warningDark],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  static const LinearGradient errorGradient = LinearGradient(
-    colors: [error, errorDark],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  // Helper methods
-  static Color getProficiencyColor(double proficiency) {
-    if (proficiency < 0.17) return proficiencyBeginner;
-    if (proficiency < 0.34) return proficiencyNovice;
-    if (proficiency < 0.50) return proficiencyIntermediate;
-    if (proficiency < 0.67) return proficiencyAdvanced;
-    if (proficiency < 0.84) return proficiencyExpert;
-    return proficiencyMaster;
+  // NEW: Helper methods to get theme-aware colors
+  static Color getTopicIndicator(bool isDarkMode) {
+    return isDarkMode ? topicIndicatorDark : topicIndicator;
   }
 
-  static String getProficiencyLabel(double proficiency) {
-    if (proficiency < 0.17) return 'Beginner';
-    if (proficiency < 0.34) return 'Novice';
-    if (proficiency < 0.50) return 'Intermediate';
-    if (proficiency < 0.67) return 'Advanced';
-    if (proficiency < 0.84) return 'Expert';
-    return 'Master';
+  static Color getTopicIndicatorLight(bool isDarkMode) {
+    return isDarkMode ? topicIndicatorDark.withOpacity(0.3) : topicIndicatorLight;
+  }
+
+  static Color getHintIndicator(bool isDarkMode) {
+    return isDarkMode ? hintIndicatorDark : hintIndicator;
+  }
+
+  static Color getHintIndicatorLight(bool isDarkMode) {
+    return isDarkMode ? hintIndicatorDark.withOpacity(0.3) : hintIndicatorLight;
+  }
+
+  static Color getContentPlaceholder(bool isDarkMode) {
+    return isDarkMode ? contentPlaceholderDark : contentPlaceholder;
+  }
+
+  static Color getContentPlaceholderLight(bool isDarkMode) {
+    return isDarkMode ? contentPlaceholderDark.withOpacity(0.3) : contentPlaceholderLight;
+  }
+
+  static Color getSplashBackground(bool isDarkMode) {
+    return isDarkMode ? splashBackgroundDark : splashBackground;
+  }
+
+  static Color getSplashForeground(bool isDarkMode) {
+    return splashForeground; // White works for both themes
   }
 }

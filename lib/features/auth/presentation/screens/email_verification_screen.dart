@@ -5,6 +5,9 @@ import '../application/auth_providers.dart';
 import '../application/auth_state.dart';
 import '../widgets/auth_button.dart';
 import '../../domain/entities/user.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/theme_extensions.dart';
 
 class EmailVerificationScreen extends ConsumerStatefulWidget {
   const EmailVerificationScreen({super.key});
@@ -24,14 +27,12 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
   void initState() {
     super.initState();
     _isDisposed = false;
-    // Start periodic check for email verification
     _startEmailVerificationCheck();
   }
 
   @override
   void dispose() {
     _isDisposed = true;
-    // Cancel both timers to prevent setState() after dispose
     _verificationCheckTimer?.cancel();
     _resendCooldownTimer?.cancel();
     super.dispose();
@@ -39,7 +40,6 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
 
   void _startEmailVerificationCheck() {
     _verificationCheckTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      // Check if widget is still mounted before calling ref.read()
       if (!_isDisposed && mounted) {
         ref.read(authProvider.notifier).checkEmailVerification();
       } else {
@@ -49,12 +49,11 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
   }
 
   void _startResendCooldown() {
-    // Cancel existing timer if running
     _resendCooldownTimer?.cancel();
     
     if (!_isDisposed && mounted) {
       setState(() {
-        _resendCooldown = 60; // 60 seconds cooldown
+        _resendCooldown = 60;
       });
     }
     
@@ -88,9 +87,14 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
       if (!_isDisposed && mounted) {
         _startResendCooldown();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification email sent!'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Verification email sent!'),
+            backgroundColor: context.successColor,
+            behavior: SnackBarBehavior.floating,
+            margin: AppSpacing.screenPaddingAll,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+            ),
           ),
         );
       }
@@ -99,7 +103,12 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to send email: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: context.errorColor,
+            behavior: SnackBarBehavior.floating,
+            margin: AppSpacing.screenPaddingAll,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+            ),
           ),
         );
       }
@@ -117,84 +126,173 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
     final authState = ref.watch(authProvider);
     
     return Scaffold(
+      backgroundColor: context.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Verify Email'),
+        title: Text(
+          'Verify Email',
+          style: context.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         centerTitle: true,
+        backgroundColor: context.appBarBackgroundColor,
+        foregroundColor: context.textPrimaryColor,
+        elevation: 0,
         actions: [
           TextButton(
             onPressed: () {
               ref.read(authProvider.notifier).signOut();
             },
+            style: TextButton.styleFrom(
+              foregroundColor: context.primaryColor,
+            ),
             child: const Text('Sign Out'),
           ),
         ],
       ),
       body: authState.when(
-        initial: () => const Center(child: CircularProgressIndicator()),
-        loading: () => const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Checking verification status...'),
-            ],
-          ),
-        ),
+        initial: () => _buildLoadingState(),
+        loading: () => _buildLoadingState(),
         emailNotVerified: (user) => _buildVerificationContent(user),
-        authenticated: (user) => const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 80),
-              SizedBox(height: 16),
-              Text(
-                'Email Verified!',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text('Redirecting to home...'),
-            ],
+        authenticated: (user) => _buildSuccessState(),
+        unauthenticated: () => _buildSessionExpiredState(),
+        error: (error) => _buildErrorState(error),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
           ),
-        ),
-        unauthenticated: () => const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, color: Colors.orange, size: 80),
-              SizedBox(height: 16),
-              Text(
-                'Session Expired',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text('Please sign in again.'),
-            ],
-          ),
-        ),
-        error: (error) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 80),
-                const SizedBox(height: 16),
-                Text(
-                  'Error: $error',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
-                ),
-                const SizedBox(height: 16),
-                AuthButton(
-                  text: 'Try Again',
-                  onPressed: () {
-                    ref.read(authProvider.notifier).checkEmailVerification();
-                  },
-                ),
-              ],
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Checking verification status...',
+            style: context.textTheme.bodyLarge?.copyWith(
+              color: context.textSecondaryColor,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuccessState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: context.successColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.check_circle,
+              color: context.successColor,
+              size: 50,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Email Verified!',
+            style: context.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: context.textPrimaryColor,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Redirecting to home...',
+            style: context.textTheme.bodyLarge?.copyWith(
+              color: context.textSecondaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSessionExpiredState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: context.warningColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.error_outline,
+              color: context.warningColor,
+              size: 50,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Session Expired',
+            style: context.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: context.textPrimaryColor,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Please sign in again.',
+            style: context.textTheme.bodyLarge?.copyWith(
+              color: context.textSecondaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Padding(
+        padding: AppSpacing.screenPaddingAll,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: context.errorColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline,
+                color: context.errorColor,
+                size: 50,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Error: $error',
+              textAlign: TextAlign.center,
+              style: context.textTheme.titleMedium?.copyWith(
+                color: context.errorColor,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AuthButton(
+              text: 'Try Again',
+              onPressed: () {
+                ref.read(authProvider.notifier).checkEmailVerification();
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -202,90 +300,82 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
 
   Widget _buildVerificationContent(User user) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: AppSpacing.screenPaddingAll,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 40),
+          const SizedBox(height: AppSpacing.xxl),
           
-          // Email icon
           Container(
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
+              color: context.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(60),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.email_outlined,
               size: 60,
-              color: Colors.blue,
+              color: context.primaryColor,
             ),
           ),
           
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.xl),
           
-          // Title
-          const Text(
+          Text(
             'Verify Your Email',
-            style: TextStyle(
-              fontSize: 28,
+            style: context.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
+              color: context.textPrimaryColor,
             ),
             textAlign: TextAlign.center,
           ),
           
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           
-          // Description
           Text(
             'We sent a verification email to:',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
+            style: context.textTheme.bodyLarge?.copyWith(
+              color: context.textSecondaryColor,
             ),
             textAlign: TextAlign.center,
           ),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           
-          // Email address
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: AppSpacing.paddingSymmetricMd,
             decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(8),
+              color: context.surfaceVariantColor,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
             ),
             child: Text(
               user.email,
-              style: const TextStyle(
-                fontSize: 16,
+              style: context.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w600,
+                color: context.textPrimaryColor,
               ),
               textAlign: TextAlign.center,
             ),
           ),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.lg),
           
-          // Instructions
           Text(
             'Please check your email and click the verification link to continue.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
+            style: context.textTheme.bodyMedium?.copyWith(
+              color: context.textSecondaryColor,
             ),
             textAlign: TextAlign.center,
           ),
           
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.xl),
           
-          // Auto-checking indicator
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.paddingAllMd,
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: context.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -295,21 +385,23 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                    valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
                   ),
                 ),
-                const SizedBox(width: 12),
-                const Text(
+                const SizedBox(width: AppSpacing.sm),
+                Text(
                   'Checking verification status...',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: context.textPrimaryColor,
+                  ),
                 ),
               ],
             ),
           ),
           
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.xl),
           
-          // Resend email button
           AuthButton(
             text: _resendCooldown > 0 
                 ? 'Resend in ${_resendCooldown}s' 
@@ -321,9 +413,8 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
             isSecondary: true,
           ),
           
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           
-          // Manual check button
           AuthButton(
             text: 'I\'ve Verified - Check Now',
             onPressed: () {
@@ -331,19 +422,17 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
             },
           ),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.lg),
           
-          // Help text
           Text(
             'Didn\'t receive the email? Check your spam folder or try resending.',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[500],
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.textTertiaryColor,
             ),
             textAlign: TextAlign.center,
           ),
           
-          const SizedBox(height: 40),
+          const SizedBox(height: AppSpacing.xxl),
         ],
       ),
     );

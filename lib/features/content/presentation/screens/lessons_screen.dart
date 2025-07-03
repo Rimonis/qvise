@@ -8,6 +8,9 @@ import '../providers/content_state_providers.dart';
 import '../widgets/lesson_card.dart';
 import '../widgets/empty_content_widget.dart';
 import '../widgets/content_loading_widget.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/theme_extensions.dart';
 
 class LessonsScreen extends ConsumerWidget {
   final String subjectName;
@@ -26,39 +29,22 @@ class LessonsScreen extends ConsumerWidget {
     final isOnline = ref.watch(networkStatusProvider).valueOrNull ?? false;
     
     return Scaffold(
+      backgroundColor: context.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(topicName),
+        title: Text(
+          topicName,
+          style: context.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         centerTitle: true,
+        backgroundColor: context.appBarBackgroundColor,
+        foregroundColor: context.textPrimaryColor,
+        elevation: 0,
         bottom: selectedTopic != null
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(48),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStatItem(
-                        context,
-                        'Subject',
-                        subjectName,
-                      ),
-                      _buildStatItem(
-                        context,
-                        'Lessons',
-                        selectedTopic.lessonCount.toString(),
-                      ),
-                      _buildStatItem(
-                        context,
-                        'Proficiency',
-                        '${(selectedTopic.proficiency * 100).toInt()}%',
-                        color: Color(int.parse(selectedTopic.proficiencyColor.replaceAll('#', '0xFF'))),
-                      ),
-                    ],
-                  ),
-                ),
+                child: _buildStatsHeader(context, selectedTopic),
               )
             : null,
       ),
@@ -89,17 +75,18 @@ class LessonsScreen extends ConsumerWidget {
           
           return RefreshIndicator(
             onRefresh: () => ref.read(lessonsNotifierProvider(subjectName, topicName).notifier).refresh(),
+            color: context.primaryColor,
+            backgroundColor: context.surfaceColor,
             child: ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.screenPaddingAll,
               itemCount: sortedLessons.length,
               itemBuilder: (context, index) {
                 final lesson = sortedLessons[index];
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: LessonCard(
                     lesson: lesson,
                     onTap: () {
-                      // Navigate to lesson detail/study screen
                       context.push('${RouteNames.lessonDetail}/${lesson.id}');
                     },
                     onDelete: isOnline ? () => _showDeleteDialog(context, ref, lesson) : null,
@@ -110,39 +97,45 @@ class LessonsScreen extends ConsumerWidget {
           );
         },
         loading: () => const ContentLoadingWidget(message: 'Loading lessons...'),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'Error: ${error.toString()}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(lessonsNotifierProvider(subjectName, topicName)),
-                child: const Text('Retry'),
-              ),
-            ],
+        error: (error, stack) => _buildErrorState(context, ref, error),
+      ),
+      floatingActionButton: isOnline ? _buildFloatingActionButton(context) : null,
+    );
+  }
+
+  Widget _buildStatsHeader(BuildContext context, selectedTopic) {
+    return Container(
+      padding: AppSpacing.paddingSymmetricMd,
+      decoration: BoxDecoration(
+        color: context.primaryColor.withValues(alpha: 0.1),
+        border: Border(
+          bottom: BorderSide(
+            color: context.primaryColor.withValues(alpha: 0.3),
+            width: 1,
           ),
         ),
       ),
-      floatingActionButton: isOnline
-          ? FloatingActionButton.extended(
-              onPressed: () => context.push(
-                RouteNames.createLesson,
-                extra: {
-                  'subjectName': subjectName,
-                  'topicName': topicName,
-                },
-              ),
-              icon: const Icon(Icons.add),
-              label: const Text('New Lesson'),
-            )
-          : null,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildStatItem(
+            context,
+            'Subject',
+            subjectName,
+          ),
+          _buildStatItem(
+            context,
+            'Lessons',
+            selectedTopic.lessonCount.toString(),
+          ),
+          _buildStatItem(
+            context,
+            'Proficiency',
+            '${(selectedTopic.proficiency * 100).toInt()}%',
+            color: Color(int.parse(selectedTopic.proficiencyColor.replaceAll('#', '0xFF'))),
+          ),
+        ],
+      ),
     );
   }
   
@@ -151,20 +144,94 @@ class LessonsScreen extends ConsumerWidget {
       children: [
         Text(
           value,
-          style: TextStyle(
-            fontSize: 16,
+          style: context.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            color: color,
+            color: color ?? context.textPrimaryColor,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).textTheme.bodySmall?.color,
+          style: context.textTheme.bodySmall?.copyWith(
+            color: context.textSecondaryColor,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
+    return Center(
+      child: Padding(
+        padding: AppSpacing.screenPaddingAll,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: context.errorColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline,
+                size: 40,
+                color: context.errorColor,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Error',
+              style: context.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: context.textPrimaryColor,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Error: ${error.toString()}',
+              textAlign: TextAlign.center,
+              style: context.textTheme.bodyLarge?.copyWith(
+                color: context.errorColor,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            ElevatedButton.icon(
+              onPressed: () => ref.invalidate(lessonsNotifierProvider(subjectName, topicName)),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingActionButton(BuildContext context) {
+    return FloatingActionButton.extended(
+      onPressed: () => context.push(
+        RouteNames.createLesson,
+        extra: {
+          'subjectName': subjectName,
+          'topicName': topicName,
+        },
+      ),
+      icon: const Icon(Icons.add),
+      label: const Text('New Lesson'),
+      backgroundColor: context.primaryColor,
+      foregroundColor: Colors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+      ),
     );
   }
   
@@ -175,37 +242,112 @@ class LessonsScreen extends ConsumerWidget {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Lesson?'),
+        backgroundColor: context.surfaceColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        ),
+        title: Text(
+          'Delete Lesson?',
+          style: context.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: context.textPrimaryColor,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              padding: AppSpacing.paddingAllSm,
+              decoration: BoxDecoration(
+                color: context.infoColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                border: Border.all(
+                  color: context.infoColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Title: ${lesson.displayTitle}',
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: context.textPrimaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Created: ${_formatDate(lesson.createdAt)}',
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.textSecondaryColor,
+                    ),
+                  ),
+                  Text(
+                    'Proficiency: ${(lesson.proficiency * 100).toInt()}%',
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.textSecondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: AppSpacing.paddingAllSm,
+              decoration: BoxDecoration(
+                color: context.errorColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                border: Border.all(
+                  color: context.errorColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                'This will also delete all flashcards in this lesson.\n\nThis action cannot be undone.',
+                style: context.textTheme.bodyMedium?.copyWith(
+                  color: AppColors.errorDark,
+                  height: 1.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
             Text(
-              'Title: ${lesson.displayTitle}\n'
-              'Created: ${_formatDate(lesson.createdAt)}\n'
-              'Proficiency: ${(lesson.proficiency * 100).toInt()}%\n\n'
-              'This action cannot be undone.',
-              style: const TextStyle(height: 1.5),
-            ),
-            const SizedBox(height: 16),
-            const Text(
               'Type CONFIRM to delete:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: context.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: context.textPrimaryColor,
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: textController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'CONFIRM',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                hintStyle: context.textTheme.bodyMedium?.copyWith(
+                  color: context.textTertiaryColor,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                  borderSide: BorderSide(color: context.borderColor),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                  borderSide: BorderSide(color: context.primaryColor, width: 2),
+                ),
+                contentPadding: AppSpacing.paddingSymmetricSm,
+                filled: true,
+                fillColor: context.surfaceVariantColor.withValues(alpha: 0.5),
               ),
+              style: context.textTheme.bodyMedium,
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
+            style: TextButton.styleFrom(
+              foregroundColor: context.textSecondaryColor,
+            ),
             child: const Text('Cancel'),
           ),
           ValueListenableBuilder(
@@ -221,9 +363,14 @@ class LessonsScreen extends ConsumerWidget {
                               .deleteLesson(lesson.id);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Lesson deleted successfully'),
-                                backgroundColor: Colors.green,
+                              SnackBar(
+                                content: const Text('Lesson deleted successfully'),
+                                backgroundColor: context.successColor,
+                                behavior: SnackBarBehavior.floating,
+                                margin: AppSpacing.screenPaddingAll,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                                ),
                               ),
                             );
                           }
@@ -232,7 +379,12 @@ class LessonsScreen extends ConsumerWidget {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Failed to delete: ${e.toString()}'),
-                                backgroundColor: Colors.red,
+                                backgroundColor: context.errorColor,
+                                behavior: SnackBarBehavior.floating,
+                                margin: AppSpacing.screenPaddingAll,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                                ),
                               ),
                             );
                           }
@@ -240,14 +392,19 @@ class LessonsScreen extends ConsumerWidget {
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: context.errorColor,
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor: context.textDisabledColor.withValues(alpha: 0.12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                  ),
                 ),
                 child: const Text('Delete'),
               );
             },
           ),
         ],
+        actionsPadding: AppSpacing.paddingAllMd,
       ),
     );
   }
