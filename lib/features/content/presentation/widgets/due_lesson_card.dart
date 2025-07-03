@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 import '../../domain/entities/lesson.dart';
 
 class DueLessonCard extends StatelessWidget {
   final Lesson lesson;
   final VoidCallback onTap;
-  
+
   const DueLessonCard({
     super.key,
     required this.lesson,
@@ -14,14 +15,15 @@ class DueLessonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDue = lesson.isReviewDue;
-    final proficiencyColor = Color(int.parse(lesson.proficiencyColor.replaceAll('#', '0xFF')));
-    
+    final proficiencyColor =
+        Color(int.parse(lesson.proficiencyColor.replaceAll('#', '0xFF')));
+
     return Card(
       elevation: isDue ? 4 : 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: isDue
-            ? BorderSide(color: Colors.orange.withOpacity(0.6), width: 2)
+            ? BorderSide(color: context.warningColor.withOpacity(0.6), width: 2)
             : BorderSide.none,
       ),
       child: InkWell(
@@ -37,75 +39,68 @@ class DueLessonCard extends StatelessWidget {
                 children: [
                   // Subject tag
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      color: context.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                        color: context.primaryColor.withOpacity(0.3),
                       ),
                     ),
                     child: Text(
                       lesson.subjectName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.primary,
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.primaryColor,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   // Topic tag
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.purple.withOpacity(0.1),
+                      color: context.secondaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: Colors.purple.withOpacity(0.3),
+                        color: context.secondaryColor.withOpacity(0.3),
                       ),
                     ),
                     child: Text(
                       lesson.topicName,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.purple[700],
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.secondaryColor,
                       ),
                     ),
                   ),
                   const Spacer(),
                   // Day created
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: context.surfaceVariantColor,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       lesson.dayCreated,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                      ),
+                      style: context.textTheme.bodySmall,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Lesson title
               Text(
                 lesson.displayTitle,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: context.textTheme.titleLarge,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
-              
+
               // Review stage bar
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,16 +110,11 @@ class DueLessonCard extends StatelessWidget {
                     children: [
                       Text(
                         'Review Stage ${lesson.reviewStage}/5',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey[700],
-                        ),
+                        style: context.textTheme.bodyMedium,
                       ),
                       Text(
                         '${(lesson.reviewStageProgress * 100).toInt()}%',
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: context.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: proficiencyColor,
                         ),
@@ -137,55 +127,64 @@ class DueLessonCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: lesson.reviewStageProgress,
                       minHeight: 6,
-                      backgroundColor: Colors.grey[300],
-                      valueColor: AlwaysStoppedAnimation<Color>(proficiencyColor),
+                      backgroundColor: context.dividerColor,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(proficiencyColor),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Content counts and review status
               Row(
                 children: [
                   // Content indicators
                   if (lesson.flashcardCount > 0) ...[
                     _buildContentIndicator(
+                      context,
                       Icons.style,
                       lesson.flashcardCount.toString(),
                       'Flashcards',
-                      Colors.blue,
+                      context.primaryColor,
                     ),
                     const SizedBox(width: 12),
                   ],
                   if (lesson.fileCount > 0) ...[
                     _buildContentIndicator(
+                      context,
                       Icons.attachment,
                       lesson.fileCount.toString(),
                       'Files',
-                      Colors.green,
+                      context.successColor,
                     ),
                     const SizedBox(width: 12),
                   ],
                   if (lesson.noteCount > 0) ...[
                     _buildContentIndicator(
+                      context,
                       Icons.note,
                       lesson.noteCount.toString(),
                       'Notes',
-                      Colors.orange,
+                      context.warningColor,
                     ),
                     const SizedBox(width: 12),
                   ],
                   const Spacer(),
-                  
+
                   // Review status
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isDue ? Colors.orange.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
+                      color: isDue
+                          ? context.warningColor.withOpacity(0.1)
+                          : context.infoColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isDue ? Colors.orange.withOpacity(0.3) : Colors.blue.withOpacity(0.3),
+                        color: isDue
+                            ? context.warningColor.withOpacity(0.3)
+                            : context.infoColor.withOpacity(0.3),
                       ),
                     ),
                     child: Row(
@@ -194,15 +193,18 @@ class DueLessonCard extends StatelessWidget {
                         Icon(
                           isDue ? Icons.alarm : Icons.schedule,
                           size: 14,
-                          color: isDue ? Colors.orange[700] : Colors.blue[700],
+                          color: isDue
+                              ? context.warningColor
+                              : context.infoColor,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           lesson.reviewStatus,
-                          style: TextStyle(
-                            fontSize: 12,
+                          style: context.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: isDue ? Colors.orange[700] : Colors.blue[700],
+                            color: isDue
+                                ? context.warningColor
+                                : context.infoColor,
                           ),
                         ),
                       ],
@@ -216,8 +218,9 @@ class DueLessonCard extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildContentIndicator(IconData icon, String count, String label, Color color) {
+
+  Widget _buildContentIndicator(BuildContext context, IconData icon,
+      String count, String label, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -229,8 +232,7 @@ class DueLessonCard extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           count,
-          style: TextStyle(
-            fontSize: 12,
+          style: context.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.bold,
             color: color,
           ),

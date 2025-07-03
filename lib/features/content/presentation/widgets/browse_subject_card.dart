@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 import '../../domain/entities/subject.dart';
 
 class BrowseSubjectCard extends StatelessWidget {
   final Subject subject;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
-  
+
   const BrowseSubjectCard({
     super.key,
     required this.subject,
@@ -15,8 +16,9 @@ class BrowseSubjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final proficiencyColor = Color(int.parse(subject.proficiencyColor.replaceAll('#', '0xFF')));
-    
+    final proficiencyColor =
+        Color(int.parse(subject.proficiencyColor.replaceAll('#', '0xFF')));
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -53,18 +55,12 @@ class BrowseSubjectCard extends StatelessWidget {
                       children: [
                         Text(
                           subject.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: context.textTheme.titleLarge,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${subject.topicCount} topics • ${subject.lessonCount} lessons',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
+                          style: context.textTheme.bodyMedium,
                         ),
                       ],
                     ),
@@ -77,23 +73,25 @@ class BrowseSubjectCard extends StatelessWidget {
                         }
                       },
                       itemBuilder: (context) => [
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(Icons.delete, color: Colors.red, size: 20),
-                              SizedBox(width: 8),
-                              Text('Delete', style: TextStyle(color: Colors.red)),
+                              Icon(Icons.delete,
+                                  color: context.errorColor, size: 20),
+                              const SizedBox(width: 8),
+                              Text('Delete',
+                                  style: TextStyle(color: context.errorColor)),
                             ],
                           ),
                         ),
                       ],
-                      icon: const Icon(Icons.more_vert, color: Colors.grey),
+                      icon: Icon(Icons.more_vert, color: context.iconColor),
                     ),
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Proficiency indicator
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,15 +101,11 @@ class BrowseSubjectCard extends StatelessWidget {
                     children: [
                       Text(
                         'Proficiency',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: context.textTheme.bodySmall,
                       ),
                       Text(
                         '${(subject.proficiency * 100).toInt()}%',
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: context.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: proficiencyColor,
                         ),
@@ -124,15 +118,15 @@ class BrowseSubjectCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: subject.proficiency,
                       minHeight: 8,
-                      backgroundColor: Colors.grey[300],
-                      valueColor: AlwaysStoppedAnimation<Color>(proficiencyColor),
+                      backgroundColor: context.dividerColor,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(proficiencyColor),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subject.proficiencyLabel,
-                    style: TextStyle(
-                      fontSize: 11,
+                    style: context.textTheme.bodySmall?.copyWith(
                       color: proficiencyColor,
                       fontWeight: FontWeight.w500,
                     ),
@@ -140,28 +134,25 @@ class BrowseSubjectCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Last studied
               Row(
                 children: [
                   Icon(
                     Icons.access_time,
                     size: 16,
-                    color: Colors.grey[600],
+                    color: context.textSecondaryColor,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     'Last studied: ${_formatLastStudied(subject.lastStudied)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                    style: context.textTheme.bodySmall,
                   ),
                   const Spacer(),
                   Icon(
                     Icons.arrow_forward_ios,
                     size: 16,
-                    color: Colors.grey[400],
+                    color: context.textTertiaryColor,
                   ),
                 ],
               ),
@@ -171,11 +162,11 @@ class BrowseSubjectCard extends StatelessWidget {
       ),
     );
   }
-  
+
   String _formatLastStudied(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays == 0) {
       return 'Today';
     } else if (difference.inDays == 1) {

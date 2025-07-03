@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class HintInputWidget extends StatefulWidget {
   final List<String> hints;
@@ -45,32 +46,27 @@ class _HintInputWidgetState extends State<HintInputWidget> {
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               'Hints (Optional)',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: context.textTheme.titleMedium,
             ),
             const SizedBox(width: AppSpacing.sm),
             Icon(
               Icons.lightbulb_outline,
               size: 18,
-              color: Colors.amber[700],
+              color: context.warningColor,
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           'Add helpful hints to guide learning',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
+          style: context.textTheme.bodySmall?.copyWith(
             fontStyle: FontStyle.italic,
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        
+
         // Add hint input
         Row(
           children: [
@@ -97,13 +93,13 @@ class _HintInputWidgetState extends State<HintInputWidget> {
               onPressed: _addHint,
               icon: const Icon(Icons.add_circle),
               style: IconButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
+                backgroundColor: context.primaryColor,
+                foregroundColor: context.onPrimaryColor,
               ),
             ),
           ],
         ),
-        
+
         // Display existing hints
         if (widget.hints.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
@@ -111,10 +107,10 @@ class _HintInputWidgetState extends State<HintInputWidget> {
             width: double.infinity,
             padding: AppSpacing.paddingAllMd,
             decoration: BoxDecoration(
-              color: Colors.amber.withValues(alpha: 0.1),
+              color: context.warningColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
               border: Border.all(
-                color: Colors.amber.withValues(alpha: 0.3),
+                color: context.warningColor.withOpacity(0.3),
               ),
             ),
             child: Column(
@@ -125,15 +121,14 @@ class _HintInputWidgetState extends State<HintInputWidget> {
                     Icon(
                       Icons.lightbulb,
                       size: 16,
-                      color: Colors.amber[700],
+                      color: context.warningColor,
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Text(
                       'Hints (${widget.hints.length})',
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: context.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: Colors.amber[700],
+                        color: context.warningColor,
                       ),
                     ),
                   ],
@@ -142,7 +137,7 @@ class _HintInputWidgetState extends State<HintInputWidget> {
                 ...widget.hints.asMap().entries.map((entry) {
                   final index = entry.key;
                   final hint = entry.value;
-                  
+
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.xs),
                     child: Row(
@@ -152,15 +147,14 @@ class _HintInputWidgetState extends State<HintInputWidget> {
                           width: 20,
                           height: 20,
                           decoration: BoxDecoration(
-                            color: Colors.amber[700],
+                            color: context.warningColor,
                             shape: BoxShape.circle,
                           ),
                           child: Center(
                             child: Text(
                               '${index + 1}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
+                              style: context.textTheme.labelSmall?.copyWith(
+                                color: context.onPrimaryColor,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -170,9 +164,8 @@ class _HintInputWidgetState extends State<HintInputWidget> {
                         Expanded(
                           child: Text(
                             hint,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.amber[800],
+                            style: context.textTheme.bodyMedium?.copyWith(
+                              color: context.warningColor,
                             ),
                           ),
                         ),
@@ -184,7 +177,7 @@ class _HintInputWidgetState extends State<HintInputWidget> {
                             minimumSize: const Size(24, 24),
                             padding: EdgeInsets.zero,
                           ),
-                          color: Colors.grey[600],
+                          color: context.textSecondaryColor,
                         ),
                       ],
                     ),

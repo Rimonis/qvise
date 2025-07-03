@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/flashcard_difficulty.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class DifficultySelectororWidget extends StatelessWidget {
   final FlashcardDifficulty selectedDifficulty;
@@ -19,37 +20,37 @@ class DifficultySelectororWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Difficulty Level',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          style: context.textTheme.titleMedium,
         ),
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: FlashcardDifficulty.values.map((difficulty) {
             final isSelected = difficulty == selectedDifficulty;
-            
+            final color = _getDifficultyColor(context, difficulty);
+
             return Expanded(
               child: Padding(
                 padding: EdgeInsets.only(
-                  right: difficulty != FlashcardDifficulty.values.last ? AppSpacing.sm : 0,
+                  right: difficulty != FlashcardDifficulty.values.last
+                      ? AppSpacing.sm
+                      : 0,
                 ),
                 child: GestureDetector(
                   onTap: () => onDifficultySelected(difficulty),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: isSelected 
-                        ? _getDifficultyColor(difficulty).withValues(alpha: 0.15)
-                        : Colors.grey.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                      color: isSelected
+                          ? color.withOpacity(0.15)
+                          : context.surfaceVariantColor,
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.radiusMedium),
                       border: Border.all(
-                        color: isSelected 
-                          ? _getDifficultyColor(difficulty) 
-                          : Colors.grey.withValues(alpha: 0.3),
+                        color: isSelected ? color : context.borderColor,
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -57,27 +58,24 @@ class DifficultySelectororWidget extends StatelessWidget {
                       children: [
                         Text(
                           difficulty.emoji,
-                          style: const TextStyle(fontSize: 24),
+                          style: context.textTheme.headlineSmall,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           difficulty.label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected 
-                              ? _getDifficultyColor(difficulty) 
-                              : Colors.grey[700],
+                          style: context.textTheme.bodyMedium?.copyWith(
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? color : context.textSecondaryColor,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           difficulty.description,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: isSelected 
-                              ? _getDifficultyColor(difficulty).withValues(alpha: 0.8)
-                              : Colors.grey[600],
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: isSelected
+                                ? color.withOpacity(0.8)
+                                : context.textTertiaryColor,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -93,14 +91,15 @@ class DifficultySelectororWidget extends StatelessWidget {
     );
   }
 
-  Color _getDifficultyColor(FlashcardDifficulty difficulty) {
+  Color _getDifficultyColor(
+      BuildContext context, FlashcardDifficulty difficulty) {
     switch (difficulty) {
       case FlashcardDifficulty.easy:
-        return Colors.green;
+        return context.successColor;
       case FlashcardDifficulty.medium:
-        return Colors.orange;
+        return context.warningColor;
       case FlashcardDifficulty.hard:
-        return Colors.red;
+        return context.errorColor;
     }
   }
 }
