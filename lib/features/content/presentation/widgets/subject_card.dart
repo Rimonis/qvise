@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 import '../../domain/entities/subject.dart';
 
 class SubjectCard extends StatelessWidget {
@@ -20,13 +23,13 @@ class SubjectCard extends StatelessWidget {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.paddingAllMd,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -37,33 +40,31 @@ class SubjectCard extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: proficiencyColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      color: proficiencyColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
                     ),
                     child: Icon(
                       Icons.school,
                       color: proficiencyColor,
-                      size: 24,
+                      size: AppSpacing.iconLg,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           subject.name,
-                          style: const TextStyle(
-                            fontSize: 18,
+                          style: context.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xs),
                         Text(
                           '${subject.topicCount} topics • ${subject.lessonCount} lessons',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
+                          style: context.textTheme.bodyMedium?.copyWith(
+                            color: context.textSecondaryColor,
                           ),
                         ),
                       ],
@@ -81,18 +82,18 @@ class SubjectCard extends StatelessWidget {
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(Icons.delete, color: Colors.red, size: 20),
-                              SizedBox(width: 8),
-                              Text('Delete', style: TextStyle(color: Colors.red)),
+                              Icon(Icons.delete, color: AppColors.error, size: AppSpacing.iconSm),
+                              SizedBox(width: AppSpacing.sm),
+                              Text('Delete', style: TextStyle(color: AppColors.error)),
                             ],
                           ),
                         ),
                       ],
-                      icon: const Icon(Icons.more_vert, color: Colors.grey),
+                      icon: Icon(Icons.more_vert, color: context.iconColor),
                     ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               
               // Proficiency indicator
               Column(
@@ -103,58 +104,54 @@ class SubjectCard extends StatelessWidget {
                     children: [
                       Text(
                         'Proficiency',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.textSecondaryColor,
                         ),
                       ),
                       Text(
                         '${(subject.proficiency * 100).toInt()}%',
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: context.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: proficiencyColor,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.xs),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusXs),
                     child: LinearProgressIndicator(
                       value: subject.proficiency,
                       minHeight: 8,
-                      backgroundColor: Colors.grey[300],
+                      backgroundColor: context.surfaceVariantColor,
                       valueColor: AlwaysStoppedAnimation<Color>(proficiencyColor),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     subject.proficiencyLabel,
-                    style: TextStyle(
-                      fontSize: 11,
+                    style: context.textTheme.labelSmall?.copyWith(
                       color: proficiencyColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               
               // Last studied
               Row(
                 children: [
                   Icon(
                     Icons.access_time,
-                    size: 16,
-                    color: Colors.grey[600],
+                    size: AppSpacing.iconSm,
+                    color: context.textSecondaryColor,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: AppSpacing.xs),
                   Text(
                     'Last studied: ${_formatLastStudied(subject.lastStudied)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.textSecondaryColor,
                     ),
                   ),
                 ],

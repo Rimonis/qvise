@@ -1,4 +1,8 @@
+// lib/core/shell and tabs/analytics_tab.dart
 import 'package:flutter/material.dart';
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class AnalyticsTab extends StatelessWidget {
   const AnalyticsTab({super.key});
@@ -7,7 +11,7 @@ class AnalyticsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: AppSpacing.screenPaddingAll,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -15,37 +19,37 @@ class AnalyticsTab extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                color: context.primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.analytics,
                 size: 64,
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                color: context.primaryColor.withValues(alpha: 0.7),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               'Analytics Coming Soon',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              style: context.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'Track your learning progress, review patterns, and performance metrics.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey[600],
+              style: context.textTheme.bodyLarge?.copyWith(
+                color: context.textSecondaryColor,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.xl),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.paddingAllMd,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(12),
+                color: context.surfaceVariantColor.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
               ),
               child: Column(
                 children: [
@@ -53,25 +57,27 @@ class AnalyticsTab extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.trending_up,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 20,
+                        color: context.primaryColor,
+                        size: AppSpacing.iconSm,
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
                         'Planned Features:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: context.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  const Column(
+                  const SizedBox(height: AppSpacing.md),
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('• Learning streaks and study time'),
-                      Text('• Review success rates'),
-                      Text('• Subject proficiency trends'),
-                      Text('• Weekly and monthly reports'),
-                      Text('• Performance comparisons'),
+                      _buildFeatureItem(context, 'Learning streaks and study time'),
+                      _buildFeatureItem(context, 'Review success rates'),
+                      _buildFeatureItem(context, 'Subject proficiency trends'),
+                      _buildFeatureItem(context, 'Weekly and monthly reports'),
+                      _buildFeatureItem(context, 'Performance comparisons'),
                     ],
                   ),
                 ],
@@ -79,6 +85,28 @@ class AnalyticsTab extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(BuildContext context, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: Row(
+        children: [
+          Icon(
+            Icons.check_circle_outline,
+            size: AppSpacing.iconXs,
+            color: context.primaryColor,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              text,
+              style: context.textTheme.bodyMedium,
+            ),
+          ),
+        ],
       ),
     );
   }

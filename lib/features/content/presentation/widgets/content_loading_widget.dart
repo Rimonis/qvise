@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class ContentLoadingWidget extends StatelessWidget {
   final String message;
@@ -14,13 +16,14 @@ class ContentLoadingWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
+          CircularProgressIndicator(
+            color: context.primaryColor,
+          ),
+          const SizedBox(height: AppSpacing.md),
           Text(
             message,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
+            style: context.textTheme.bodyLarge?.copyWith(
+              color: context.textSecondaryColor,
             ),
           ),
         ],

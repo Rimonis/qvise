@@ -13,6 +13,10 @@ import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card
 import 'package:qvise/features/flashcards/creation/presentation/screens/flashcard_creation_screen.dart';
 import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_providers.dart';
 import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_count_provider.dart';
+// Theme imports
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class CreateTab extends ConsumerStatefulWidget {
   const CreateTab({super.key});
@@ -63,7 +67,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
     return result.fold((failure) => 0, (count) => count);
   }
 
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -74,22 +77,25 @@ class _CreateTabState extends ConsumerState<CreateTab>
     if (!isOnline) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: AppSpacing.screenPaddingAll,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.wifi_off, size: 64, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text(
+              Icon(Icons.wifi_off, size: 64, color: context.textTertiaryColor),
+              const SizedBox(height: AppSpacing.md),
+              Text(
                 'Internet connection required',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: context.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              const SizedBox(height: 8),
-              const Text(
+              const SizedBox(height: AppSpacing.sm),
+              Text(
                 'Please connect to the internet to create and edit lessons.',
                 textAlign: TextAlign.center,
+                style: context.textTheme.bodyLarge,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               ElevatedButton.icon(
                 onPressed: () {
                   ref.read(networkStatusProvider.notifier).checkNow();
@@ -125,14 +131,14 @@ class _CreateTabState extends ConsumerState<CreateTab>
                 // Header
                 SliverToBoxAdapter(
                   child: Container(
-                    margin: const EdgeInsets.all(16),
-                    padding: const EdgeInsets.all(16),
+                    margin: AppSpacing.screenPaddingAll,
+                    padding: AppSpacing.paddingAllMd,
                     decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primaryContainer
-                          .withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
+                      color: context.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                      border: Border.all(
+                        color: context.primaryColor.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,54 +147,49 @@ class _CreateTabState extends ConsumerState<CreateTab>
                           children: [
                             Icon(
                               Icons.edit_note,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 24,
+                              color: context.primaryColor,
+                              size: AppSpacing.iconLg,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: AppSpacing.sm),
                             Text(
                               'Work in Progress',
-                              style: TextStyle(
-                                fontSize: 18,
+                              style: context.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
+                                color: context.primaryColor,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         Text(
                           '${unlockedLessons.length} unlocked ${unlockedLessons.length == 1 ? 'lesson' : 'lessons'} ready for editing',
-                          style: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
+                          style: context.textTheme.bodyMedium?.copyWith(
+                            color: context.textSecondaryColor,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: AppSpacing.sm),
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: AppSpacing.paddingAllSm,
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            color: AppColors.warning.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
                             border: Border.all(
-                                color: Colors.orange
-                                    .withValues(alpha: 0.3)),
+                              color: AppColors.warning.withValues(alpha: 0.3),
+                            ),
                           ),
-                          child: const Row(
+                          child: Row(
                             children: [
                               Icon(
                                 Icons.info_outline,
-                                size: 16,
-                                color: Colors.orange,
+                                size: AppSpacing.iconSm,
+                                color: AppColors.warningDark,
                               ),
-                              SizedBox(width: 8),
+                              const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Text(
                                   'Add content to your lessons, then lock them to start spaced repetition',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.orange,
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.warningDark,
                                   ),
                                 ),
                               ),
@@ -202,13 +203,13 @@ class _CreateTabState extends ConsumerState<CreateTab>
 
                 // Lessons list with flashcard integration
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: AppSpacing.paddingHorizontalMd,
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final lesson = unlockedLessons[index];
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
                           child: _buildEnhancedLessonCard(lesson),
                         );
                       },
@@ -220,15 +221,15 @@ class _CreateTabState extends ConsumerState<CreateTab>
                 // Add lesson button at the end of the list
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: AppSpacing.screenPaddingAll,
                     child: OutlinedButton.icon(
                       onPressed: () => _navigateToSubjectSelection(context),
                       icon: const Icon(Icons.add),
                       label: const Text('Create New Lesson'),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                        foregroundColor: Theme.of(context).colorScheme.primary,
+                        padding: AppSpacing.paddingVerticalMd,
+                        side: BorderSide(color: context.primaryColor),
+                        foregroundColor: context.primaryColor,
                       ),
                     ),
                   ),
@@ -247,18 +248,18 @@ class _CreateTabState extends ConsumerState<CreateTab>
       loading: () => const ContentLoadingWidget(message: 'Loading lessons...'),
       error: (error, stack) => Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: AppSpacing.screenPaddingAll,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
+              Icon(Icons.error_outline, size: 64, color: AppColors.error),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 'Error: ${error.toString()}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
+                style: context.textTheme.titleMedium?.copyWith(color: AppColors.error),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               ElevatedButton.icon(
                 onPressed: () => ref.invalidate(unlockedLessonsProvider),
                 icon: const Icon(Icons.refresh),
@@ -270,11 +271,12 @@ class _CreateTabState extends ConsumerState<CreateTab>
       ),
     );
   }
+
   Widget _buildEnhancedLessonCard(Lesson lesson) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
       ),
       child: Column(
         children: [
@@ -287,12 +289,12 @@ class _CreateTabState extends ConsumerState<CreateTab>
           
           // Flashcard actions section
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.paddingAllMd,
             decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.05),
+              color: AppColors.info.withValues(alpha: 0.05),
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(12),
+                bottomLeft: Radius.circular(AppSpacing.radiusMedium),
+                bottomRight: Radius.circular(AppSpacing.radiusMedium),
               ),
             ),
             child: Column(
@@ -302,16 +304,15 @@ class _CreateTabState extends ConsumerState<CreateTab>
                   children: [
                     Icon(
                       Icons.style,
-                      size: 16,
-                      color: Colors.blue[700],
+                      size: AppSpacing.iconSm,
+                      color: AppColors.infoDark,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     Text(
                       'Flashcards',
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: context.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: Colors.blue[700],
+                        color: AppColors.infoDark,
                       ),
                     ),
                     const Spacer(),
@@ -322,31 +323,30 @@ class _CreateTabState extends ConsumerState<CreateTab>
                         final count = snapshot.data ?? 0;
                         return Text(
                           '$count cards',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: context.textTertiaryColor,
                           ),
                         );
                       },
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => _createFlashcard(lesson),
-                        icon: const Icon(Icons.add, size: 16),
+                        icon: const Icon(Icons.add, size: AppSpacing.iconSm),
                         label: const Text('Create'),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          side: BorderSide(color: Colors.blue[300]!),
-                          foregroundColor: Colors.blue[700],
+                          padding: AppSpacing.paddingVerticalSm,
+                          side: BorderSide(color: AppColors.info),
+                          foregroundColor: AppColors.infoDark,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: FutureBuilder<int>(
                         future: _getFlashcardCount(lesson.id),
@@ -356,18 +356,18 @@ class _CreateTabState extends ConsumerState<CreateTab>
                             onPressed: count > 0 
                               ? () => _previewFlashcards(lesson)
                               : null,
-                            icon: const Icon(Icons.visibility, size: 16),
+                            icon: const Icon(Icons.visibility, size: AppSpacing.iconSm),
                             label: const Text('Preview'),
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              padding: AppSpacing.paddingVerticalSm,
                               side: BorderSide(
                                 color: count > 0 
-                                  ? Colors.blue[300]! 
-                                  : Colors.grey[300]!,
+                                  ? AppColors.info 
+                                  : context.borderColor,
                               ),
                               foregroundColor: count > 0 
-                                ? Colors.blue[700] 
-                                : Colors.grey[500],
+                                ? AppColors.infoDark 
+                                : context.textDisabledColor,
                             ),
                           );
                         },
@@ -385,88 +385,88 @@ class _CreateTabState extends ConsumerState<CreateTab>
 
   // Flashcard creation method
   void _createFlashcard(Lesson lesson) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => FlashcardCreationScreen(
-        lessonId: lesson.id,
-        subjectName: lesson.subjectName,
-        topicName: lesson.topicName,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FlashcardCreationScreen(
+          lessonId: lesson.id,
+          subjectName: lesson.subjectName,
+          topicName: lesson.topicName,
+        ),
+        fullscreenDialog: true, // This ensures proper overlay and hides parent FABs
       ),
-      fullscreenDialog: true, // This ensures proper overlay and hides parent FABs
-    ),
-  ).then((result) {
-    // Refresh if flashcard was created
-    if (result == true) {
-      _handleRefresh();
-    }
-  });
-}
+    ).then((result) {
+      // Refresh if flashcard was created
+      if (result == true) {
+        _handleRefresh();
+      }
+    });
+  }
 
   // Flashcard preview method
   void _previewFlashcards(Lesson lesson) async {
-  final flashcardRepo = ref.read(flashcardRepositoryProvider);
-  final result = await flashcardRepo.getFlashcardsByLesson(lesson.id);
-  
-  result.fold(
-    (failure) {
-      if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to load flashcards: ${failure.message}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        });
-      }
-    },
-    (flashcards) {
-      if (flashcards.isEmpty) {
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('No flashcards found for this lesson'),
-                ),
-              );
-            }
-          });
-        }
-      } else {
-        // TODO: Navigate to flashcard preview/study screen
+    final flashcardRepo = ref.read(flashcardRepositoryProvider);
+    final result = await flashcardRepo.getFlashcardsByLesson(lesson.id);
+    
+    result.fold(
+      (failure) {
         if (mounted) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Found ${flashcards.length} flashcards - Preview coming soon!'),
-                  behavior: SnackBarBehavior.floating,
+                  content: Text('Failed to load flashcards: ${failure.message}'),
+                  backgroundColor: AppColors.error,
                 ),
               );
             }
           });
         }
-      }
-    },
-  );
-}
+      },
+      (flashcards) {
+        if (flashcards.isEmpty) {
+          if (mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('No flashcards found for this lesson'),
+                  ),
+                );
+              }
+            });
+          }
+        } else {
+          // TODO: Navigate to flashcard preview/study screen
+          if (mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Found ${flashcards.length} flashcards - Preview coming soon!'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            });
+          }
+        }
+      },
+    );
+  }
 
   void _navigateToLessonEditor(Lesson lesson) {
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Edit "${lesson.displayTitle}" - Coming Soon'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  });
-}
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Edit "${lesson.displayTitle}" - Coming Soon'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+  }
 
   void _navigateToSubjectSelection(BuildContext context) {
     Navigator.push(
@@ -478,86 +478,87 @@ class _CreateTabState extends ConsumerState<CreateTab>
   }
 
   void _showDeleteDialog(BuildContext context, WidgetRef ref, Lesson lesson) {
-  showDialog(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Delete Lesson?'),
-      content: Text(
-        'Are you sure you want to delete "${lesson.displayTitle}"?\n\n'
-        'This will also delete all flashcards in this lesson.\n\n'
-        'This action cannot be undone.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('Cancel'),
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Lesson?'),
+        content: Text(
+          'Are you sure you want to delete "${lesson.displayTitle}"?\n\n'
+          'This will also delete all flashcards in this lesson.\n\n'
+          'This action cannot be undone.',
+          style: context.textTheme.bodyMedium,
         ),
-        ElevatedButton(
-          onPressed: () async {
-            Navigator.pop(dialogContext);
-            try {
-              // First delete all flashcards for this lesson
-              final flashcardRepo = ref.read(flashcardRepositoryProvider);
-              final flashcardsResult = await flashcardRepo.getFlashcardsByLesson(lesson.id);
-              
-              await flashcardsResult.fold(
-                (failure) async {
-                  // Continue even if we can't get flashcards
-                },
-                (flashcards) async {
-                  // Delete all flashcards
-                  for (final flashcard in flashcards) {
-                    await flashcardRepo.deleteFlashcard(flashcard.id);
-                  }
-                },
-              );
-              
-              // Then delete the lesson
-              await ref
-                  .read(lessonsNotifierProvider(
-                          lesson.subjectName, lesson.topicName)
-                      .notifier)
-                  .deleteLesson(lesson.id);
-                  
-              if (context.mounted) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Lesson and flashcards deleted successfully'),
-                        backgroundColor: Colors.green,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                });
-              }
-            } catch (e) {
-              if (context.mounted) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Failed to delete: ${e.toString()}'),
-                        backgroundColor: Colors.red,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                });
-              }
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
           ),
-          child: const Text('Delete'),
-        ),
-      ],
-    ),
-  );
-}
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              try {
+                // First delete all flashcards for this lesson
+                final flashcardRepo = ref.read(flashcardRepositoryProvider);
+                final flashcardsResult = await flashcardRepo.getFlashcardsByLesson(lesson.id);
+                
+                await flashcardsResult.fold(
+                  (failure) async {
+                    // Continue even if we can't get flashcards
+                  },
+                  (flashcards) async {
+                    // Delete all flashcards
+                    for (final flashcard in flashcards) {
+                      await flashcardRepo.deleteFlashcard(flashcard.id);
+                    }
+                  },
+                );
+                
+                // Then delete the lesson
+                await ref
+                    .read(lessonsNotifierProvider(
+                            lesson.subjectName, lesson.topicName)
+                        .notifier)
+                    .deleteLesson(lesson.id);
+                    
+                if (context.mounted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Lesson and flashcards deleted successfully'),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  });
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to delete: ${e.toString()}'),
+                          backgroundColor: AppColors.error,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  });
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget? _buildLockButton(
       BuildContext context, WidgetRef ref, List<Lesson> unlockedLessons) {
@@ -572,9 +573,9 @@ class _CreateTabState extends ConsumerState<CreateTab>
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.paddingAllMd,
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: context.backgroundColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -590,36 +591,39 @@ class _CreateTabState extends ConsumerState<CreateTab>
           children: [
             if (readyToLock.isNotEmpty) ...[
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: AppSpacing.paddingAllMd,
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
                   border: Border.all(
-                      color: Colors.green.withValues(alpha: 0.3)),
+                    color: AppColors.success.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle,
-                        color: Colors.green, size: 20),
-                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.check_circle,
+                      color: AppColors.success,
+                      size: AppSpacing.iconSm,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         '${readyToLock.length} ${readyToLock.length == 1 ? 'lesson' : 'lessons'} ready to lock',
-                        style: TextStyle(
-                          fontSize: 14,
+                        style: context.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w500,
-                          color: Colors.green[700],
+                          color: AppColors.successDark,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
             ],
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: AppSpacing.buttonHeight,
               child: ElevatedButton.icon(
                 onPressed: readyToLock.isNotEmpty
                     ? () => _showLockDialog(context, ref, readyToLock)
@@ -631,7 +635,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
                       : 'Lock ${readyToLock.length} ${readyToLock.length == 1 ? 'Lesson' : 'Lessons'}',
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: readyToLock.isNotEmpty ? Colors.orange : null,
+                  backgroundColor: readyToLock.isNotEmpty ? AppColors.warning : null,
                   foregroundColor: readyToLock.isNotEmpty ? Colors.white : null,
                 ),
               ),
@@ -644,40 +648,45 @@ class _CreateTabState extends ConsumerState<CreateTab>
 
   void _showLockDialog(
     BuildContext context, WidgetRef ref, List<Lesson> readyToLock) {
-  showDialog(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      // ... rest of dialog content ...
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('Cancel'),
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Lock ${readyToLock.length} Lessons?'),
+        content: Text(
+          'This will lock the selected lessons and start spaced repetition scheduling.',
+          style: context.textTheme.bodyMedium,
         ),
-        ElevatedButton(
-          onPressed: () async {
-            Navigator.pop(dialogContext);
-            if (context.mounted) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          'Locked ${readyToLock.length} lessons - Feature Coming Soon'),
-                      backgroundColor: Colors.orange,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              });
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
           ),
-          child: const Text('Lock'),
-        ),
-      ],
-    ),
-  );
-}}
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              if (context.mounted) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            'Locked ${readyToLock.length} lessons - Feature Coming Soon'),
+                        backgroundColor: AppColors.warning,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                });
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.warning,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Lock'),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class AuthTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -155,32 +158,43 @@ class _AuthTextFieldState extends State<AuthTextField> {
       validator: widget.validator,
       inputFormatters: _getInputFormatters(),
       onChanged: widget.onChanged,
+      style: context.textTheme.bodyLarge,
       decoration: InputDecoration(
         hintText: widget.hintText,
-        prefixIcon: widget.prefixIcon != null ? Icon(widget.prefixIcon) : null,
+        hintStyle: context.textTheme.bodyLarge?.copyWith(
+          color: context.textTertiaryColor,
+        ),
+        prefixIcon: widget.prefixIcon != null 
+          ? Icon(
+              widget.prefixIcon,
+              color: context.iconColor,
+            ) 
+          : null,
         suffixIcon: _buildSuffixIcons(),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.grey),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+          borderSide: BorderSide(color: context.borderColor),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.grey),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+          borderSide: BorderSide(color: context.borderColor),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.blue, width: 2),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+          borderSide: BorderSide(color: context.primaryColor, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+          borderSide: const BorderSide(color: AppColors.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+          borderSide: const BorderSide(color: AppColors.error, width: 2),
         ),
-        contentPadding: const EdgeInsets.all(16),
+        contentPadding: AppSpacing.paddingAllMd,
         counterText: '', // Hide counter for maxLength
+        filled: true,
+        fillColor: context.surfaceColor,
       ),
     );
   }
@@ -191,7 +205,11 @@ class _AuthTextFieldState extends State<AuthTextField> {
     if (widget.showClearButton && _hasText) {
       icons.add(
         IconButton(
-          icon: const Icon(Icons.clear, size: 20),
+          icon: Icon(
+            Icons.clear, 
+            size: AppSpacing.iconSm,
+            color: context.iconColor,
+          ),
           onPressed: () {
             widget.controller.clear();
             // Notify parent of change
@@ -207,7 +225,8 @@ class _AuthTextFieldState extends State<AuthTextField> {
         IconButton(
           icon: Icon(
             _obscured ? Icons.visibility : Icons.visibility_off,
-            size: 20,
+            size: AppSpacing.iconSm,
+            color: context.iconColor,
           ),
           onPressed: () {
             setState(() {

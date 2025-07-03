@@ -1,3 +1,4 @@
+// lib/core/shell and tabs/home_tab.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/features/content/domain/entities/lesson.dart';
@@ -5,6 +6,10 @@ import 'package:qvise/features/content/presentation/providers/content_state_prov
 import 'package:qvise/features/content/presentation/widgets/content_loading_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/due_lesson_card.dart';
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
+// Theme imports
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class HomeTab extends ConsumerWidget {
   const HomeTab({super.key});
@@ -37,7 +42,7 @@ class HomeTab extends ConsumerWidget {
         return RefreshIndicator(
           onRefresh: () => ref.refresh(dueLessonsProvider.future),
           child: ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.screenPaddingAll,
             itemCount: sortedLessons.length + 1, // +1 for header
             itemBuilder: (context, index) {
               if (index == 0) {
@@ -47,7 +52,7 @@ class HomeTab extends ConsumerWidget {
               
               final lesson = sortedLessons[index - 1];
               return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
                 child: DueLessonCard(
                   lesson: lesson,
                   onTap: () {
@@ -56,6 +61,7 @@ class HomeTab extends ConsumerWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Study "${lesson.displayTitle}" - Coming Soon'),
+                        behavior: SnackBarBehavior.floating,
                       ),
                     );
                   },
@@ -70,14 +76,14 @@ class HomeTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
+            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'Error loading lessons: ${error.toString()}',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
+              style: context.textTheme.titleMedium?.copyWith(color: AppColors.error),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             ElevatedButton(
               onPressed: () => ref.invalidate(dueLessonsProvider),
               child: const Text('Retry'),
@@ -94,21 +100,21 @@ class HomeTab extends ConsumerWidget {
     final dueSoonCount = dueLessons.length - dueNowCount - dueTodayCount;
     
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+      padding: AppSpacing.paddingAllLg,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.primary.withOpacity(0.8),
+            context.primaryColor,
+            context.primaryColor.withValues(alpha: 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            color: context.primaryColor.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -122,45 +128,47 @@ class HomeTab extends ConsumerWidget {
               const Icon(
                 Icons.today,
                 color: Colors.white,
-                size: 28,
+                size: AppSpacing.iconLg,
               ),
-              const SizedBox(width: 12),
-              const Text(
+              const SizedBox(width: AppSpacing.md),
+              Text(
                 'Today\'s Review',
-                style: TextStyle(
+                style: context.textTheme.headlineSmall?.copyWith(
                   color: Colors.white,
-                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           Row(
             children: [
               Expanded(
                 child: _buildStatItem(
+                  context,
                   'Due Now',
                   dueNowCount.toString(),
-                  Colors.orange[300]!,
+                  AppColors.accent,
                   Icons.alarm,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _buildStatItem(
+                  context,
                   'Due Today',
                   dueTodayCount.toString(),
-                  Colors.yellow[300]!,
+                  AppColors.warning,
                   Icons.schedule,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _buildStatItem(
+                  context,
                   'Due Soon',
                   dueSoonCount.toString(),
-                  Colors.blue[300]!,
+                  AppColors.info,
                   Icons.upcoming,
                 ),
               ),
@@ -171,34 +179,38 @@ class HomeTab extends ConsumerWidget {
     );
   }
   
-  Widget _buildStatItem(String label, String value, Color color, IconData icon) {
+  Widget _buildStatItem(
+    BuildContext context,
+    String label, 
+    String value, 
+    Color color, 
+    IconData icon
+  ) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: AppSpacing.paddingAllMd,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
       ),
       child: Column(
         children: [
           Icon(
             icon,
             color: color,
-            size: 24,
+            size: AppSpacing.iconLg,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             value,
-            style: const TextStyle(
+            style: context.textTheme.headlineSmall?.copyWith(
               color: Colors.white,
-              fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
           Text(
             label,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 12,
+            style: context.textTheme.bodySmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.9),
             ),
             textAlign: TextAlign.center,
           ),

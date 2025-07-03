@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 import '../../domain/entities/topic.dart';
 
 class TopicTile extends StatelessWidget {
@@ -18,20 +21,20 @@ class TopicTile extends StatelessWidget {
     final proficiencyColor = Color(int.parse(topic.proficiencyColor.replaceAll('#', '0xFF')));
     
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: AppSpacing.paddingSymmetricSm,
       elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
       ),
       child: ListTile(
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: AppSpacing.paddingSymmetricMd,
         leading: Container(
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: proficiencyColor.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(8),
+            color: proficiencyColor.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
           ),
           child: Stack(
             alignment: Alignment.center,
@@ -39,7 +42,7 @@ class TopicTile extends StatelessWidget {
               Icon(
                 Icons.topic,
                 color: proficiencyColor,
-                size: 24,
+                size: AppSpacing.iconLg,
               ),
               Positioned(
                 bottom: 0,
@@ -47,21 +50,21 @@ class TopicTile extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
+                    color: context.surfaceColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: AppSpacing.paddingSymmetricSm,
                     decoration: BoxDecoration(
                       color: proficiencyColor,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
                     ),
                     child: Text(
                       '${(topic.proficiency * 100).toInt()}%',
-                      style: const TextStyle(
-                        fontSize: 10,
+                      style: context.textTheme.labelSmall?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 10,
                       ),
                     ),
                   ),
@@ -72,27 +75,24 @@ class TopicTile extends StatelessWidget {
         ),
         title: Text(
           topic.name,
-          style: const TextStyle(
-            fontSize: 16,
+          style: context.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               '${topic.lessonCount} ${topic.lessonCount == 1 ? 'lesson' : 'lessons'}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
+              style: context.textTheme.bodyMedium?.copyWith(
+                color: context.textSecondaryColor,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               topic.proficiencyLabel,
-              style: TextStyle(
-                fontSize: 12,
+              style: context.textTheme.bodySmall?.copyWith(
                 color: proficiencyColor,
                 fontWeight: FontWeight.w500,
               ),
@@ -108,21 +108,20 @@ class TopicTile extends StatelessWidget {
               children: [
                 Icon(
                   Icons.access_time,
-                  size: 14,
-                  color: Colors.grey[500],
+                  size: AppSpacing.iconSm,
+                  color: context.textTertiaryColor,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   _formatLastStudied(topic.lastStudied),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[500],
+                  style: context.textTheme.labelSmall?.copyWith(
+                    color: context.textTertiaryColor,
                   ),
                 ),
               ],
             ),
             if (onDelete != null) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               PopupMenuButton<String>(
                 onSelected: (value) {
                   if (value == 'delete') {
@@ -134,19 +133,19 @@ class TopicTile extends StatelessWidget {
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete, color: Colors.red, size: 20),
-                        SizedBox(width: 8),
-                        Text('Delete', style: TextStyle(color: Colors.red)),
+                        Icon(Icons.delete, color: AppColors.error, size: AppSpacing.iconSm),
+                        SizedBox(width: AppSpacing.sm),
+                        Text('Delete', style: TextStyle(color: AppColors.error)),
                       ],
                     ),
                   ),
                 ],
-                icon: const Icon(Icons.more_vert, size: 20),
+                icon: const Icon(Icons.more_vert, size: AppSpacing.iconSm),
               ),
             ] else
               Icon(
                 Icons.chevron_right,
-                color: Colors.grey[400],
+                color: context.iconColor.withValues(alpha: 0.5),
               ),
           ],
         ),

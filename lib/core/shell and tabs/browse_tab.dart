@@ -10,6 +10,10 @@ import 'package:qvise/features/content/presentation/widgets/content_loading_widg
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
 // Add flashcard provider import
 import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_providers.dart';
+// Add theme imports
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class BrowseTab extends ConsumerStatefulWidget {
   const BrowseTab({super.key});
@@ -64,12 +68,12 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
         return RefreshIndicator(
           onRefresh: () => ref.read(subjectsNotifierProvider.notifier).refresh(),
           child: ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.screenPaddingAll,
             itemCount: subjects.length,
             itemBuilder: (context, index) {
               final subject = subjects[index];
               return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
                 child: BrowseSubjectCard(
                   subject: subject,
                   onTap: () {
@@ -97,8 +101,8 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
         // Breadcrumb
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+          padding: AppSpacing.paddingAllMd,
+          color: context.surfaceVariantColor.withValues(alpha: 0.5),
           child: Row(
             children: [
               GestureDetector(
@@ -109,16 +113,21 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                 },
                 child: Text(
                   'Subjects',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    color: context.primaryColor,
                     decoration: TextDecoration.underline,
                   ),
                 ),
               ),
-              const Text(' > '),
+              Text(
+                ' > ',
+                style: context.textTheme.bodyMedium,
+              ),
               Text(
                 subjectName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: context.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -144,28 +153,34 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
               return RefreshIndicator(
                 onRefresh: () => ref.read(topicsNotifierProvider(subjectName).notifier).refresh(),
                 child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: AppSpacing.screenPaddingAll,
                   itemCount: topics.length,
                   itemBuilder: (context, index) {
                     final topic = topics[index];
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: Card(
                         child: ListTile(
                           leading: Container(
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: Color(int.parse(topic.proficiencyColor.replaceAll('#', '0xFF'))).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8),
+                              color: Color(int.parse(topic.proficiencyColor.replaceAll('#', '0xFF'))).withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
                             ),
                             child: Icon(
                               Icons.topic,
                               color: Color(int.parse(topic.proficiencyColor.replaceAll('#', '0xFF'))),
                             ),
                           ),
-                          title: Text(topic.name),
-                          subtitle: Text('${topic.lessonCount} lessons • ${topic.proficiencyLabel}'),
+                          title: Text(
+                            topic.name,
+                            style: context.textTheme.titleMedium,
+                          ),
+                          subtitle: Text(
+                            '${topic.lessonCount} lessons • ${topic.proficiencyLabel}',
+                            style: context.textTheme.bodySmall,
+                          ),
                           trailing: PopupMenuButton<String>(
                             onSelected: (value) {
                               if (value == 'delete') {
@@ -173,13 +188,13 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                               }
                             },
                             itemBuilder: (context) => [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'delete',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.delete, color: Colors.red, size: 20),
-                                    SizedBox(width: 8),
-                                    Text('Delete', style: TextStyle(color: Colors.red)),
+                                    Icon(Icons.delete, color: AppColors.error, size: AppSpacing.iconSm),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Text('Delete', style: TextStyle(color: AppColors.error)),
                                   ],
                                 ),
                               ),
@@ -213,8 +228,8 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
         // Breadcrumb
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+          padding: AppSpacing.paddingAllMd,
+          color: context.surfaceVariantColor.withValues(alpha: 0.5),
           child: Row(
             children: [
               GestureDetector(
@@ -226,13 +241,13 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                 },
                 child: Text(
                   'Subjects',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    color: context.primaryColor,
                     decoration: TextDecoration.underline,
                   ),
                 ),
               ),
-              const Text(' > '),
+              Text(' > ', style: context.textTheme.bodyMedium),
               GestureDetector(
                 onTap: () {
                   setState(() {
@@ -241,16 +256,18 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                 },
                 child: Text(
                   subjectName,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    color: context.primaryColor,
                     decoration: TextDecoration.underline,
                   ),
                 ),
               ),
-              const Text(' > '),
+              Text(' > ', style: context.textTheme.bodyMedium),
               Text(
                 topicName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: context.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -272,20 +289,20 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
               return RefreshIndicator(
                 onRefresh: () => ref.read(lessonsNotifierProvider(subjectName, topicName).notifier).refresh(),
                 child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: AppSpacing.screenPaddingAll,
                   itemCount: lockedLessons.length,
                   itemBuilder: (context, index) {
                     final lesson = lockedLessons[index];
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
                       child: Card(
                         child: ListTile(
                           leading: Container(
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: Color(int.parse(lesson.proficiencyColor.replaceAll('#', '0xFF'))).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8),
+                              color: Color(int.parse(lesson.proficiencyColor.replaceAll('#', '0xFF'))).withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
                             ),
                             child: Stack(
                               alignment: Alignment.center,
@@ -295,19 +312,22 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                                   color: Color(int.parse(lesson.proficiencyColor.replaceAll('#', '0xFF'))),
                                 ),
                                 if (lesson.isLocked)
-                                  const Positioned(
+                                  Positioned(
                                     bottom: 0,
                                     right: 0,
                                     child: Icon(
                                       Icons.lock,
-                                      size: 12,
-                                      color: Colors.grey,
+                                      size: AppSpacing.iconXs,
+                                      color: context.textTertiaryColor,
                                     ),
                                   ),
                               ],
                             ),
                           ),
-                          title: Text(lesson.displayTitle),
+                          title: Text(
+                            lesson.displayTitle,
+                            style: context.textTheme.titleMedium,
+                          ),
                           subtitle: FutureBuilder<int>(
                             future: _getFlashcardCount(lesson.id),
                             builder: (context, snapshot) {
@@ -315,6 +335,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                               final totalItems = lesson.totalContentCount + flashcardCount;
                               return Text(
                                 '${lesson.reviewStatus} • Stage ${lesson.reviewStage}/5 • $totalItems items${flashcardCount > 0 ? ' (${flashcardCount} flashcards)' : ''}',
+                                style: context.textTheme.bodySmall,
                               );
                             },
                           ),
@@ -325,13 +346,13 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                               }
                             },
                             itemBuilder: (context) => [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'delete',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.delete, color: Colors.red, size: 20),
-                                    SizedBox(width: 8),
-                                    Text('Delete', style: TextStyle(color: Colors.red)),
+                                    Icon(Icons.delete, color: AppColors.error, size: AppSpacing.iconSm),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Text('Delete', style: TextStyle(color: AppColors.error)),
                                   ],
                                 ),
                               ),
@@ -365,14 +386,14 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          const Text(
+          Icon(Icons.error_outline, size: 64, color: AppColors.error),
+          const SizedBox(height: AppSpacing.md),
+          Text(
             'Error loading content',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.red),
+            style: context.textTheme.titleMedium?.copyWith(color: AppColors.error),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           ElevatedButton(
             onPressed: onRetry,
             child: const Text('Retry'),
@@ -400,20 +421,22 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
               '• ${subject.lessonCount} lessons\n'
               '• All flashcards in these lessons\n\n'
               'This action cannot be undone.',
-              style: const TextStyle(height: 1.5),
+              style: context.textTheme.bodyMedium?.copyWith(height: 1.5),
             ),
-            const SizedBox(height: 16),
-            const Text(
+            const SizedBox(height: AppSpacing.md),
+            Text(
               'Type CONFIRM to delete:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: textController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'CONFIRM',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                ),
+                contentPadding: AppSpacing.paddingSymmetricSm,
               ),
             ),
           ],
@@ -447,7 +470,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('"${subject.name}" deleted successfully'),
-                                backgroundColor: Colors.green,
+                                backgroundColor: AppColors.success,
                               ),
                             );
                           }
@@ -456,7 +479,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Failed to delete: ${e.toString()}'),
-                                backgroundColor: Colors.red,
+                                backgroundColor: AppColors.error,
                               ),
                             );
                           }
@@ -464,7 +487,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppColors.error,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Delete'),
@@ -477,13 +500,14 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
   }
   
   void _showDeleteTopicDialog(String topicName) {
-    // Similar implementation for topic deletion
-    // Implementation omitted for brevity - similar to subject deletion
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Delete "$topicName"?'),
-        content: const Text('This will delete the topic and all its lessons and flashcards.'),
+        content: Text(
+          'This will delete the topic and all its lessons and flashcards.',
+          style: context.textTheme.bodyMedium,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -496,7 +520,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                 const SnackBar(content: Text('Topic deletion - Coming Soon')),
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Delete'),
           ),
         ],
@@ -505,12 +529,14 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
   }
   
   void _showDeleteLessonDialog(String lessonId, String lessonTitle) {
-    // Similar implementation for lesson deletion
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Delete "$lessonTitle"?'),
-        content: const Text('This will delete the lesson and all its flashcards.'),
+        content: Text(
+          'This will delete the lesson and all its flashcards.',
+          style: context.textTheme.bodyMedium,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -537,21 +563,21 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                 );
                 
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Lesson and flashcards deleted successfully'),
-                    backgroundColor: Colors.green,
+                  SnackBar(
+                    content: const Text('Lesson and flashcards deleted successfully'),
+                    backgroundColor: AppColors.success,
                   ),
                 );
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Failed to delete: ${e.toString()}'),
-                    backgroundColor: Colors.red,
+                    backgroundColor: AppColors.error,
                   ),
                 );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Delete'),
           ),
         ],

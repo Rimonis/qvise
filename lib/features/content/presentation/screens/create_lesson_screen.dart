@@ -1,3 +1,4 @@
+// lib/features/content/presentation/screens/create_lesson_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,10 @@ import '../../../../core/routes/route_names.dart';
 import '../../domain/entities/create_lesson_params.dart';
 import '../providers/content_state_providers.dart';
 import '../widgets/content_form_field.dart';
+// Theme imports
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class CreateLessonScreen extends ConsumerStatefulWidget {
   final String? initialSubjectName;
@@ -106,80 +111,80 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
       _isNewTopic = !isExisting;
     });
   }
-  
-  // In create_lesson_screen.dart, update the _createLesson method:
 
-Future<void> _createLesson() async {
-  if (!_formKey.currentState!.validate()) return;
-  
-  // Check if widget is still mounted
-  if (!mounted) return;
-  
-  setState(() {
-    _isLoading = true;
-  });
-  
-  try {
-    final params = CreateLessonParams(
-      subjectName: _subjectController.text.trim(),
-      topicName: _topicController.text.trim(),
-      lessonTitle: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
-      isNewSubject: _isNewSubject,
-      isNewTopic: _isNewTopic,
-    );
+  Future<void> _createLesson() async {
+    if (!_formKey.currentState!.validate()) return;
     
-    // Show ad dialog for free users (placeholder - implement actual ad logic)
-    final shouldProceed = await _showAdDialog();
-    if (!shouldProceed || !mounted) {
+    // Check if widget is still mounted
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final params = CreateLessonParams(
+        subjectName: _subjectController.text.trim(),
+        topicName: _topicController.text.trim(),
+        lessonTitle: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
+        isNewSubject: _isNewSubject,
+        isNewTopic: _isNewTopic,
+      );
+      
+      // Show ad dialog for free users (placeholder - implement actual ad logic)
+      final shouldProceed = await _showAdDialog();
+      if (!shouldProceed || !mounted) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+      
+      // Create the lesson
+      await ref.read(lessonsNotifierProvider(params.subjectName, params.topicName).notifier)
+          .createNewLesson(params);
+      
+      if (mounted) {
+        // Use addPostFrameCallback to ensure we're not in build phase
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Lesson created successfully!'),
+                backgroundColor: AppColors.success,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            
+            // Navigate to the lessons screen
+            context.go('${RouteNames.subjects}/${params.subjectName}/${params.topicName}');
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to create lesson: ${e.toString()}'),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        });
+      }
+    } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-      return;
-    }
-    
-    // Create the lesson
-    await ref.read(lessonsNotifierProvider(params.subjectName, params.topicName).notifier)
-        .createNewLesson(params);
-    
-    if (mounted) {
-      // Use addPostFrameCallback to ensure we're not in build phase
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Lesson created successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          
-          // Navigate to the lessons screen
-          context.go('${RouteNames.subjects}/${params.subjectName}/${params.topicName}');
-        }
-      });
-    }
-  } catch (e) {
-    if (mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to create lesson: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      });
-    }
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
-}
   
   Future<bool> _showAdDialog() async {
     // TODO: Implement actual ad logic here
@@ -188,14 +193,26 @@ Future<void> _createLesson() async {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Watch Ad to Continue'),
-        content: const Text(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
+        ),
+        title: Text(
+          'Watch Ad to Continue',
+          style: context.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
           'As a free user, you need to watch a short ad to create a new lesson.\n\n'
           'This helps us keep the app free for everyone!',
+          style: context.textTheme.bodyMedium,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
+            style: TextButton.styleFrom(
+              foregroundColor: context.textSecondaryColor,
+            ),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -203,9 +220,16 @@ Future<void> _createLesson() async {
               // Simulate ad watching
               Navigator.pop(dialogContext, true);
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: context.primaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+              ),
+            ),
             child: const Text('Watch Ad'),
           ),
         ],
+        actionsPadding: AppSpacing.paddingAllMd,
       ),
     );
     
@@ -218,37 +242,55 @@ Future<void> _createLesson() async {
     
     if (!isOnline) {
       return Scaffold(
+        backgroundColor: context.backgroundColor,
         appBar: AppBar(
-          title: const Text('Create Lesson'),
+          title: Text(
+            'Create Lesson',
+            style: context.textTheme.headlineSmall,
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.wifi_off, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
-              Text(
-                'Internet connection required',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Please connect to the internet to create new lessons.',
-                textAlign: TextAlign.center,
-              ),
-            ],
+        body: Center(
+          child: Padding(
+            padding: AppSpacing.screenPaddingAll,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.wifi_off, size: 64, color: context.textTertiaryColor),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Internet connection required',
+                  style: context.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Please connect to the internet to create new lessons.',
+                  textAlign: TextAlign.center,
+                  style: context.textTheme.bodyLarge,
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
     
     return Scaffold(
+      backgroundColor: context.backgroundColor,
       appBar: AppBar(
-        title: const Text('Create Lesson'),
+        title: Text(
+          'Create Lesson',
+          style: context.textTheme.headlineSmall,
+        ),
         centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.screenPaddingAll,
         child: Form(
           key: _formKey,
           child: Column(
@@ -272,22 +314,25 @@ Future<void> _createLesson() async {
               ),
               if (_isNewSubject && _subjectController.text.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(left: 16, top: 4, bottom: 16),
+                  padding: const EdgeInsets.only(left: AppSpacing.md, top: AppSpacing.xs, bottom: AppSpacing.md),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, size: 16, color: Colors.blue),
-                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.info_outline, 
+                        size: AppSpacing.iconSm, 
+                        color: AppColors.info,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
                       Text(
                         'This will create a new subject',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue[700],
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: AppColors.infoDark,
                         ),
                       ),
                     ],
                   ),
                 ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               
               // Topic field
               ContentFormField(
@@ -307,22 +352,25 @@ Future<void> _createLesson() async {
               ),
               if (_isNewTopic && _topicController.text.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(left: 16, top: 4, bottom: 16),
+                  padding: const EdgeInsets.only(left: AppSpacing.md, top: AppSpacing.xs, bottom: AppSpacing.md),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, size: 16, color: Colors.blue),
-                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.info_outline, 
+                        size: AppSpacing.iconSm, 
+                        color: AppColors.info,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
                       Text(
                         'This will create a new topic',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue[700],
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: AppColors.infoDark,
                         ),
                       ),
                     ],
                   ),
                 ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               
               // Title field (optional)
               ContentFormField(
@@ -332,73 +380,87 @@ Future<void> _createLesson() async {
                 icon: Icons.book,
                 maxLines: 2,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'If no title is provided, the lesson will be identified by its creation date.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: context.textTertiaryColor,
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xl),
               
               // Info box
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: AppSpacing.paddingAllMd,
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  color: AppColors.info.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                  border: Border.all(
+                    color: AppColors.info.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.info, size: 20, color: Colors.blue),
-                        SizedBox(width: 8),
+                        const Icon(
+                          Icons.info, 
+                          size: AppSpacing.iconSm, 
+                          color: AppColors.info,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
                         Text(
                           'Lesson Information',
-                          style: TextStyle(
+                          style: context.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Colors.blue,
+                            color: AppColors.info,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       '• First review will be scheduled for tomorrow\n'
                       '• You can add flashcards and study materials after creation\n'
                       '• Free users need to watch an ad to create lessons',
-                      style: TextStyle(
-                        fontSize: 14,
+                      style: context.textTheme.bodyMedium?.copyWith(
                         height: 1.5,
-                        color: Colors.blue[700],
+                        color: AppColors.infoDark,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xl),
               
               // Create button
               SizedBox(
-                height: 48,
+                height: AppSpacing.buttonHeight,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _createLesson,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.primaryColor,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: context.textDisabledColor.withValues(alpha: 0.12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                    ),
+                  ),
                   child: _isLoading
                       ? const SizedBox(
-                          height: 20,
-                          width: 20,
+                          height: AppSpacing.iconSm,
+                          width: AppSpacing.iconSm,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text(
+                      : Text(
                           'Create Lesson',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: context.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
               ),

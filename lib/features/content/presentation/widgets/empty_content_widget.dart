@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class EmptyContentWidget extends StatelessWidget {
   final IconData icon;
@@ -22,7 +25,7 @@ class EmptyContentWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: AppSpacing.screenPaddingAll,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -30,56 +33,55 @@ class EmptyContentWidget extends StatelessWidget {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                color: context.primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 64,
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                color: context.primaryColor.withValues(alpha: 0.7),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 24,
+              style: context.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Text(
               description,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+              style: context.textTheme.bodyLarge?.copyWith(
+                color: context.textSecondaryColor,
               ),
               textAlign: TextAlign.center,
             ),
             if (showOfflineMessage) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: AppSpacing.paddingSymmetricSm,
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  color: AppColors.warning.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                  border: Border.all(
+                    color: AppColors.warning.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.wifi_off,
-                      size: 16,
-                      color: Colors.orange[700],
+                      size: AppSpacing.iconSm,
+                      color: AppColors.warningDark,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     Text(
                       'Internet connection required',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.orange[700],
+                      style: context.textTheme.bodyMedium?.copyWith(
+                        color: AppColors.warningDark,
                       ),
                     ),
                   ],
@@ -87,16 +89,16 @@ class EmptyContentWidget extends StatelessWidget {
               ),
             ],
             if (buttonText != null && onButtonPressed != null) ...[
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xl),
               ElevatedButton.icon(
                 onPressed: onButtonPressed,
                 icon: const Icon(Icons.add),
                 label: Text(
                   buttonText!,
-                  style: const TextStyle(fontSize: 16),
+                  style: context.textTheme.labelLarge,
                 ),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: AppSpacing.paddingSymmetricMd,
                 ),
               ),
             ],

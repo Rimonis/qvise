@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class ContentFormField extends StatefulWidget {
   final TextEditingController controller;
@@ -95,33 +98,33 @@ class _ContentFormFieldState extends State<ContentFormField> {
             hintText: widget.hint,
             prefixIcon: widget.icon != null ? Icon(widget.icon) : null,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[400]!),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+              borderSide: BorderSide(color: context.borderColor),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
               borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.primary,
+                color: context.primaryColor,
                 width: 2,
               ),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.red),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+              borderSide: const BorderSide(color: AppColors.error),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Colors.red, width: 2),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+              borderSide: const BorderSide(color: AppColors.error, width: 2),
             ),
             disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+              borderSide: BorderSide(color: context.borderColor.withValues(alpha: 0.5)),
             ),
             filled: !widget.enabled,
-            fillColor: widget.enabled ? null : Colors.grey[100],
+            fillColor: widget.enabled ? null : context.surfaceVariantColor.withValues(alpha: 0.3),
           ),
           onTap: () {
             _onTextChanged();
@@ -129,18 +132,19 @@ class _ContentFormFieldState extends State<ContentFormField> {
         ),
         if (_showSuggestions && _filteredSuggestions.isNotEmpty)
           Container(
-            margin: const EdgeInsets.only(top: 4),
+            margin: const EdgeInsets.only(top: AppSpacing.xs),
             constraints: const BoxConstraints(maxHeight: 150),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(8),
+              color: context.surfaceColor,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
               ],
+              border: Border.all(color: context.borderColor),
             ),
             child: ListView.builder(
               shrinkWrap: true,
@@ -154,15 +158,15 @@ class _ContentFormFieldState extends State<ContentFormField> {
                   dense: true,
                   title: Text(
                     suggestion,
-                    style: TextStyle(
+                    style: context.textTheme.bodyMedium?.copyWith(
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                   trailing: isSelected
                       ? Icon(
                           Icons.check,
-                          size: 18,
-                          color: Theme.of(context).colorScheme.primary,
+                          size: AppSpacing.iconSm,
+                          color: context.primaryColor,
                         )
                       : null,
                   onTap: () {

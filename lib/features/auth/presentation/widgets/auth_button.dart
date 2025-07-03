@@ -1,5 +1,7 @@
-// lib/features/auth/presentation/widgets/auth_button.dart
 import 'package:flutter/material.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class AuthButton extends StatelessWidget {
   final String text;
@@ -20,35 +22,41 @@ class AuthButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 56,
+      height: AppSpacing.buttonHeight,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: isSecondary ? Colors.white : null,
-          foregroundColor: isSecondary ? Colors.black87 : null,
-          side: isSecondary ? const BorderSide(color: Colors.grey) : null,
+          backgroundColor: isSecondary ? context.surfaceColor : context.primaryColor,
+          foregroundColor: isSecondary ? context.textPrimaryColor : Colors.white,
+          side: isSecondary ? BorderSide(color: context.borderColor) : null,
           elevation: isSecondary ? 0 : null,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
           ),
+          disabledBackgroundColor: context.textDisabledColor.withValues(alpha: 0.12),
+          disabledForegroundColor: context.textDisabledColor,
         ),
         child: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            ? SizedBox(
+                height: AppSpacing.iconSm,
+                width: AppSpacing.iconSm,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isSecondary ? context.primaryColor : Colors.white,
+                  ),
+                ),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (icon != null) ...[
                     icon!,
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.md),
                   ],
                   Text(
                     text,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: context.textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),

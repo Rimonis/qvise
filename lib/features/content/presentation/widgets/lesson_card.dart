@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 import '../../domain/entities/lesson.dart';
 
 class LessonCard extends StatelessWidget {
@@ -21,16 +24,16 @@ class LessonCard extends StatelessWidget {
     return Card(
       elevation: isDue ? 3 : 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
         side: isDue
-            ? BorderSide(color: Colors.orange.withOpacity(0.5), width: 2)
+            ? BorderSide(color: AppColors.warning.withValues(alpha: 0.5), width: 2)
             : BorderSide.none,
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.paddingAllMd,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -43,42 +46,39 @@ class LessonCard extends StatelessWidget {
                       children: [
                         Text(
                           lesson.displayTitle,
-                          style: const TextStyle(
-                            fontSize: 16,
+                          style: context.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: AppSpacing.xs),
                         Row(
                           children: [
                             Icon(
                               Icons.layers,
-                              size: 14,
-                              color: Colors.grey[600],
+                              size: AppSpacing.iconSm,
+                              color: context.textSecondaryColor,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: AppSpacing.xs),
                             Text(
                               'Stage ${lesson.reviewStage}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: context.textSecondaryColor,
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: AppSpacing.md),
                             if (!lesson.isSynced) ...[
-                              Icon(
+                              const Icon(
                                 Icons.cloud_off,
-                                size: 14,
-                                color: Colors.orange[700],
+                                size: AppSpacing.iconSm,
+                                color: AppColors.warningDark,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: AppSpacing.xs),
                               Text(
                                 'Not synced',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange[700],
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: AppColors.warningDark,
                                 ),
                               ),
                             ],
@@ -99,27 +99,31 @@ class LessonCard extends StatelessWidget {
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(Icons.delete, color: Colors.red, size: 20),
-                              SizedBox(width: 8),
-                              Text('Delete', style: TextStyle(color: Colors.red)),
+                              Icon(Icons.delete, color: AppColors.error, size: AppSpacing.iconSm),
+                              SizedBox(width: AppSpacing.sm),
+                              Text('Delete', style: TextStyle(color: AppColors.error)),
                             ],
                           ),
                         ),
                       ],
-                      icon: const Icon(Icons.more_vert, color: Colors.grey),
+                      icon: Icon(Icons.more_vert, color: context.iconColor),
                     ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               
               // Review status
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: AppSpacing.paddingSymmetricMd,
                 decoration: BoxDecoration(
-                  color: isDue ? Colors.orange.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: isDue 
+                    ? AppColors.warning.withValues(alpha: 0.1) 
+                    : context.surfaceVariantColor.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
                   border: Border.all(
-                    color: isDue ? Colors.orange.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+                    color: isDue 
+                      ? AppColors.warning.withValues(alpha: 0.3) 
+                      : context.borderColor,
                   ),
                 ),
                 child: Row(
@@ -129,30 +133,28 @@ class LessonCard extends StatelessWidget {
                       children: [
                         Icon(
                           isDue ? Icons.alarm : Icons.schedule,
-                          size: 16,
-                          color: isDue ? Colors.orange[700] : Colors.grey[700],
+                          size: AppSpacing.iconSm,
+                          color: isDue ? AppColors.warningDark : context.textSecondaryColor,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.sm),
                         Text(
                           lesson.reviewStatus,
-                          style: TextStyle(
-                            fontSize: 14,
+                          style: context.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
-                            color: isDue ? Colors.orange[700] : Colors.grey[700],
+                            color: isDue ? AppColors.warningDark : context.textSecondaryColor,
                           ),
                         ),
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: AppSpacing.paddingSymmetricSm,
                       decoration: BoxDecoration(
-                        color: proficiencyColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
+                        color: proficiencyColor.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
                       ),
                       child: Text(
                         '${(lesson.proficiency * 100).toInt()}%',
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: context.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: proficiencyColor,
                         ),
@@ -164,20 +166,19 @@ class LessonCard extends StatelessWidget {
               
               // Last reviewed
               if (lesson.lastReviewedAt != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Row(
                   children: [
                     Icon(
                       Icons.history,
-                      size: 14,
-                      color: Colors.grey[500],
+                      size: AppSpacing.iconSm,
+                      color: context.textTertiaryColor,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: AppSpacing.xs),
                     Text(
                       'Last reviewed: ${_formatDate(lesson.lastReviewedAt!)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.textTertiaryColor,
                       ),
                     ),
                   ],
