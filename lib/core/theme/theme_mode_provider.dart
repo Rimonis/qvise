@@ -42,17 +42,26 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
     final currentMode = state.valueOrNull;
     if (currentMode == mode) return;
     
-    // FIX: Use AsyncValue.guard to prevent setState during build
-    state = await AsyncValue.guard(() async {
-      // Add a small delay to ensure UI is stable
-      await Future.delayed(const Duration(milliseconds: 50));
-      
-      // Persist the new value first
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_key, mode.toString());
-      
-      // Return the new theme mode
-      return mode;
+    // Set loading state first to prevent concurrent changes
+    state = const AsyncValue.loading();
+    
+    // Defer the actual theme change to the next frame
+    await Future.delayed(Duration.zero);
+    
+    // Use SchedulerBinding to ensure we're not in a build phase
+    SchedulerBinding.instance.addPostFrameCallback((_) async {
+      // FIX: Use AsyncValue.guard to prevent setState during build
+      state = await AsyncValue.guard(() async {
+        // Add additional delay to ensure all animations complete
+        await Future.delayed(const Duration(milliseconds: 150));
+        
+        // Persist the new value first
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_key, mode.toString());
+        
+        // Return the new theme mode
+        return mode;
+      });
     });
   }
 
@@ -74,8 +83,7 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
         (platformBrightness == Brightness.dark) ? ThemeMode.light : ThemeMode.dark,
     };
 
-    // FIX: Use the safer setThemeMode method with a small delay
-    await Future.delayed(const Duration(milliseconds: 50));
+    // Use the safer setThemeMode method
     await setThemeMode(nextMode);
   }
 
@@ -192,26 +200,30 @@ class _ThemeModeDialogState extends ConsumerState<ThemeModeDialog> {
       _isChangingTheme = true;
     });
     
-    // Clear any open snackbars before changing theme
-    ScaffoldMessenger.of(context).clearSnackBars();
-    
-    // Close the dialog first
-    if (mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-    
-    // Wait a frame to ensure dialog is closed and UI is stable
-    await Future.delayed(const Duration(milliseconds: 100));
-    
-    // Change the theme
-    if (mounted) {
-      try {
-        await ref.read(themeModeNotifierProvider.notifier).setThemeMode(value);
-      } catch (e) {
-        // Handle any errors silently
-        if (kDebugMode) {
-          print('Error changing theme: $e');
-        }
+    try {
+      // Clear any open snackbars before changing theme
+      ScaffoldMessenger.of(context).clearSnackBars();
+      
+      // Close the dialog first
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      
+      // Wait for dialog to fully close and any animations to complete
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      // Ensure we're in the next frame before changing theme
+      if (mounted) {
+        SchedulerBinding.instance.scheduleFrameCallback((_) {
+          if (mounted) {
+            ref.read(themeModeNotifierProvider.notifier).setThemeMode(value);
+          }
+        });
+      }
+    } catch (e) {
+      // Handle any errors silently
+      if (kDebugMode) {
+        print('Error changing theme: $e');
       }
     }
   }
@@ -293,13 +305,12 @@ class ThemeToggleButton extends ConsumerWidget {
           // Clear any existing snackbars before toggling theme
           ScaffoldMessenger.of(context).clearSnackBars();
           
-          // Add a small delay to ensure UI is stable
-          await Future.delayed(const Duration(milliseconds: 50));
-          
-          // Toggle theme
-          if (context.mounted) {
-            ref.read(themeModeNotifierProvider.notifier).toggleTheme();
-          }
+          // Schedule the theme change for the next frame
+          SchedulerBinding.instance.scheduleFrameCallback((_) {
+            if (context.mounted) {
+              ref.read(themeModeNotifierProvider.notifier).toggleTheme();
+            }
+          });
         },
         tooltip: 'Toggle theme (${_getThemeName(themeMode)})',
       ),

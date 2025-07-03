@@ -5,6 +5,7 @@ import 'package:qvise/core/theme/theme_mode_provider.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/app_colors.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
+import 'package:flutter/scheduler.dart';
 
 // Provider for premium status (for testing)
 final premiumStatusProvider = StateProvider<bool>((ref) => false);
@@ -193,13 +194,12 @@ class ProfileTab extends ConsumerWidget {
           // Clear any existing snackbars before toggling theme
           ScaffoldMessenger.of(context).clearSnackBars();
           
-          // Add a small delay to ensure UI is stable
-          await Future.delayed(const Duration(milliseconds: 50));
-          
-          // Toggle theme
-          if (context.mounted) {
-            ref.read(themeModeNotifierProvider.notifier).toggleTheme();
-          }
+          // Schedule the theme change for the next frame
+          SchedulerBinding.instance.scheduleFrameCallback((_) {
+            if (context.mounted) {
+              ref.read(themeModeNotifierProvider.notifier).toggleTheme();
+            }
+          });
         },
         tooltip: 'Toggle theme (${_getThemeName(themeMode)})',
       ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
@@ -74,7 +75,16 @@ class MyApp extends ConsumerWidget {
 
     return themeModeAsync.when(
       data: (themeMode) => _AppMaterialRouter(themeMode: themeMode),
-      loading: () => _AppMaterialRouter(themeMode: ThemeMode.system),
+      loading: () => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(
+              color: AppTheme.lightTheme.colorScheme.primary,
+            ),
+          ),
+        ),
+      ),
       error: (error, stackTrace) {
         if (kDebugMode) {
           print('Theme loading error: $error');
@@ -110,13 +120,21 @@ class _AppMaterialRouterState extends ConsumerState<_AppMaterialRouter> {
 
   @override
   Widget build(BuildContext context) {
+    // Force a frame to ensure clean theme transitions
+    SchedulerBinding.instance.ensureVisualUpdate();
+    
     return MaterialApp.router(
+      // Add key to force rebuild on theme change
+      key: ValueKey(widget.themeMode),
       routerConfig: _router,
       debugShowCheckedModeBanner: false,
       title: 'Qvise',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: widget.themeMode,
+      // Add animation duration for theme transitions
+      themeAnimationDuration: const Duration(milliseconds: 300),
+      themeAnimationCurve: Curves.easeInOut,
       builder: (context, child) {
         // Wrap with error boundary for each route
         return ErrorBoundary(
