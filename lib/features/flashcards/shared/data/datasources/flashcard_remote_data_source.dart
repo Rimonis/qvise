@@ -9,8 +9,10 @@ abstract class FlashcardRemoteDataSource {
   Future<void> deleteFlashcard(String id);
   Future<FlashcardModel?> getFlashcard(String id);
   Future<List<FlashcardModel>> getFlashcardsByLesson(String lessonId);
-  Future<List<FlashcardModel>> getFlashcardsByUser(String userId, {DateTime? since});
+  Future<List<FlashcardModel>> getFlashcardsByUser(String userId,
+      {DateTime? since});
   Future<void> syncFlashcards(List<FlashcardModel> flashcards);
+  Future<void> toggleFavorite(String flashcardId, bool isFavorite);
 }
 
 class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
@@ -22,7 +24,7 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
   Future<FlashcardModel> createFlashcard(FlashcardModel flashcard) async {
     try {
       final docRef = firestore.collection('flashcards').doc(flashcard.id);
-      
+
       await docRef.set({
         'id': flashcard.id,
         'userId': flashcard.userId,
@@ -60,7 +62,7 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
   Future<FlashcardModel> updateFlashcard(FlashcardModel flashcard) async {
     try {
       final docRef = firestore.collection('flashcards').doc(flashcard.id);
-      
+
       await docRef.update({
         'frontContent': flashcard.frontContent,
         'backContent': flashcard.backContent,
@@ -106,7 +108,7 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
   Future<FlashcardModel?> getFlashcard(String id) async {
     try {
       final doc = await firestore.collection('flashcards').doc(id).get();
-      
+
       if (!doc.exists || doc.data() == null) {
         return null;
       }
@@ -147,15 +149,16 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
           .where('isActive', isEqualTo: true);
 
       if (since != null) {
-        query = query.where('updatedAt', isGreaterThan: since.toIso8601String());
+        query =
+            query.where('updatedAt', isGreaterThan: since.toIso8601String());
       }
 
-      final querySnapshot = await query
-          .orderBy('updatedAt', descending: true)
-          .get();
+      final querySnapshot =
+          await query.orderBy('updatedAt', descending: true).get();
 
       return querySnapshot.docs
-          .map((doc) => FlashcardModel.fromFirestore(doc.data() as Map<String, dynamic>))
+          .map((doc) =>
+              FlashcardModel.fromFirestore(doc.data() as Map<String, dynamic>))
           .toList();
     } catch (e) {
       throw Exception('Failed to get flashcards by user: ${e.toString()}');
@@ -169,7 +172,7 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
 
       for (final flashcard in flashcards) {
         final docRef = firestore.collection('flashcards').doc(flashcard.id);
-        
+
         batch.set(docRef, {
           'id': flashcard.id,
           'userId': flashcard.userId,
@@ -201,6 +204,18 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
       await batch.commit();
     } catch (e) {
       throw Exception('Failed to sync flashcards: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<void> toggleFavorite(String flashcardId, bool isFavorite) async {
+    try {
+      await firestore
+          .collection('flashcards')
+          .doc(flashcardId)
+          .update({'isFavorite': isFavorite});
+    } catch (e) {
+      throw Exception('Failed to toggle favorite: ${e.toString()}');
     }
   }
 }

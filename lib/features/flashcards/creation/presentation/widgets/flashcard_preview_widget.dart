@@ -1,9 +1,11 @@
 // lib/features/flashcards/creation/presentation/widgets/flashcard_preview_widget.dart
 
 import 'package:flutter/material.dart';
-import '../../../shared/domain/entities/flashcard_tag.dart';
-import '../../domain/entities/flashcard_difficulty.dart';
+import 'package:flutter/services.dart';
+import 'package:qvise/features/flashcards/shared/domain/entities/flashcard_tag.dart';
+import 'package:qvise/features/flashcards/creation/domain/entities/flashcard_difficulty.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
+import 'package:qvise/core/theme/theme_extensions.dart';
 
 class FlashcardPreviewWidget extends StatefulWidget {
   final String frontContent;
@@ -32,12 +34,13 @@ class _FlashcardPreviewWidgetState extends State<FlashcardPreviewWidget>
   late AnimationController _animationController;
   late Animation<double> _flipAnimation;
   bool _isShowingBack = false;
+  final Set<int> _revealedHints = {};
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
     _flipAnimation = Tween<double>(
@@ -68,51 +71,18 @@ class _FlashcardPreviewWidgetState extends State<FlashcardPreviewWidget>
 
   @override
   Widget build(BuildContext context) {
-    final tagColor = Color(int.parse(widget.tag.color.replaceAll('#', '0xFF')));
-    
     return Padding(
       padding: AppSpacing.screenPaddingAll,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Preview label
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-              border: Border.all(
-                color: Colors.blue.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.visibility,
-                  size: 16,
-                  color: Colors.blue[700],
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  'Preview Mode',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue[700],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          
-          // Flashcard
           GestureDetector(
-            onTap: _flipCard,
+            onHorizontalDragEnd: (details) {
+              if (details.primaryVelocity!.abs() > 300) {
+                HapticFeedback.lightImpact();
+                _flipCard();
+              }
+            },
             child: AnimatedBuilder(
               animation: _flipAnimation,
               builder: (context, child) {
@@ -122,415 +92,193 @@ class _FlashcardPreviewWidgetState extends State<FlashcardPreviewWidget>
                   transform: Matrix4.identity()
                     ..setEntry(3, 2, 0.001)
                     ..rotateY(_flipAnimation.value * 3.14159),
-                  child: isShowingFront ? _buildFrontCard(tagColor) : _buildBackCard(tagColor),
+                  child: isShowingFront ? _buildFrontCard() : _buildBackCard(),
                 );
               },
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          
-          // Tap instruction
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.touch_app,
-                size: 18,
-                color: Colors.grey[600],
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                'Tap card to flip',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-          ),
-          
-          // Card info
-          const SizedBox(height: AppSpacing.lg),
-          _buildCardInfo(tagColor),
+          _buildCardInfo(),
+          if (_isShowingBack && widget.notes != null && widget.notes!.isNotEmpty)
+            _buildNotesSection(),
         ],
       ),
     );
   }
 
-  Widget _buildFrontCard(Color tagColor) {
-    return Container(
-      width: double.infinity,
-      height: 300,
-      padding: AppSpacing.paddingAllLg,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: tagColor.withValues(alpha: 0.3),
-          width: 2,
-        ),
-      ),
-      child: Column(
-        children: [
-          // Header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: tagColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.tag.emoji,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      widget.tag.name,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: tagColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              Text(
-                widget.difficulty.emoji,
-                style: const TextStyle(fontSize: 18),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          
-          // Content
-          Expanded(
-            child: Center(
-              child: Text(
-                widget.frontContent,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  height: 1.4,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-          
-          // Front indicator
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-            ),
-            child: Text(
-              'FRONT',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[600],
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBackCard(Color tagColor) {
-    return Transform(
-      alignment: Alignment.center,
-      transform: Matrix4.identity()..rotateY(3.14159),
+  Widget _buildFrontCard() {
+    final tagColor = Color(int.parse(widget.tag.color.replaceAll('#', '0xFF')));
+    return Card(
+      elevation: 4,
       child: Container(
         width: double.infinity,
         height: 300,
         padding: AppSpacing.paddingAllLg,
-        decoration: BoxDecoration(
-          color: tagColor.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLarge),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(
-            color: tagColor.withValues(alpha: 0.3),
-            width: 2,
-          ),
-        ),
         child: Column(
           children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: tagColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.tag.emoji,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        widget.tag.name,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: tagColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  widget.difficulty.emoji,
-                  style: const TextStyle(fontSize: 18),
-                ),
-              ],
-            ),
+            _buildCardHeader(tagColor),
             const SizedBox(height: AppSpacing.lg),
-            
-            // Content
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Text(
-                      widget.backContent,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        height: 1.4,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    
-                    if (widget.hints.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      Container(
-                        padding: AppSpacing.paddingAllSm,
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.lightbulb_outline,
-                                  size: 14,
-                                  color: Colors.amber[700],
-                                ),
-                                const SizedBox(width: AppSpacing.xs),
-                                Text(
-                                  'Hints',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.amber[700],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            ...widget.hints.take(2).map((hint) => Padding(
-                              padding: const EdgeInsets.only(bottom: 2),
-                              child: Text(
-                                '• $hint',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.amber[800],
-                                ),
-                              ),
-                            )),
-                            if (widget.hints.length > 2)
-                              Text(
-                                '... and ${widget.hints.length - 2} more',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.amber[600],
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Text(
+                    widget.frontContent,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ),
-            
-            // Back indicator
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: tagColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-              ),
-              child: Text(
-                'BACK',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: tagColor,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ),
+            if (widget.hints.isNotEmpty) _buildHintsSection(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCardInfo(Color tagColor) {
-    return Container(
-      padding: AppSpacing.paddingAllMd,
-      decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-        border: Border.all(
-          color: Colors.grey.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
+  Widget _buildBackCard() {
+    final tagColor = Color(int.parse(widget.tag.color.replaceAll('#', '0xFF')));
+    return Transform(
+      alignment: Alignment.center,
+      transform: Matrix4.identity()..rotateY(3.14159),
+      child: Card(
+        elevation: 4,
+        color: context.surfaceColor,
+        child: Container(
+          width: double.infinity,
+          height: 300,
+          padding: AppSpacing.paddingAllLg,
+          child: Column(
             children: [
-              // Tag info
+              _buildCardHeader(tagColor),
+              const SizedBox(height: AppSpacing.lg),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Type',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: Text(
+                      widget.backContent,
+                      style: const TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
                     ),
-                    Row(
-                      children: [
-                        Text(
-                          widget.tag.emoji,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Text(
-                          widget.tag.name,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: tagColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Difficulty info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Difficulty',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          widget.difficulty.emoji,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Text(
-                          widget.difficulty.label,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
           ),
-          
-          if (widget.notes != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            const Divider(),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.note_outlined,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    widget.notes!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[700],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
-              ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardHeader(Color tagColor) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+          decoration: BoxDecoration(
+            color: tagColor.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+          ),
+          child: Row(
+            children: [
+              Text(widget.tag.emoji, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                widget.tag.name,
+                style: TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600, color: tagColor),
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        Text(widget.difficulty.emoji, style: const TextStyle(fontSize: 18)),
+      ],
+    );
+  }
+
+  Widget _buildHintsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.md),
+        const Text('Hints:', style: TextStyle(fontWeight: FontWeight.bold)),
+        ...widget.hints.asMap().entries.map((entry) {
+          final index = entry.key;
+          final hint = entry.value;
+          final isRevealed = _revealedHints.contains(index);
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                if (isRevealed) {
+                  _revealedHints.remove(index);
+                } else {
+                  _revealedHints.add(index);
+                }
+              });
+            },
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: AppSpacing.xs),
+              padding: AppSpacing.paddingAllSm,
+              decoration: BoxDecoration(
+                color: isRevealed
+                    ? Colors.amber.withOpacity(0.2)
+                    : Colors.grey.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+              ),
+              child: Text(isRevealed ? hint : 'Tap to reveal hint'),
             ),
-          ],
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildCardInfo() {
+    return Container(
+      padding: AppSpacing.paddingAllMd,
+      decoration: BoxDecoration(
+        color: context.surfaceVariantColor,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Type', style: context.textTheme.bodySmall),
+              Text(widget.tag.name, style: context.textTheme.titleSmall),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('Difficulty', style: context.textTheme.bodySmall),
+              Text(widget.difficulty.label, style: context.textTheme.titleSmall),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotesSection() {
+    return Container(
+      margin: const EdgeInsets.only(top: AppSpacing.lg),
+      padding: AppSpacing.paddingAllMd,
+      decoration: BoxDecoration(
+        color: context.surfaceVariantColor,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Notes', style: context.textTheme.titleSmall),
+          const SizedBox(height: AppSpacing.sm),
+          Text(widget.notes!),
         ],
       ),
     );

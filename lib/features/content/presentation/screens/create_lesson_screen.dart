@@ -15,7 +15,7 @@ import 'package:qvise/core/theme/theme_extensions.dart';
 class CreateLessonScreen extends ConsumerStatefulWidget {
   final String? initialSubjectName;
   final String? initialTopicName;
-  
+
   const CreateLessonScreen({
     super.key,
     this.initialSubjectName,
@@ -31,19 +31,18 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
   final _subjectController = TextEditingController();
   final _topicController = TextEditingController();
   final _titleController = TextEditingController();
-  
+
   bool _isNewSubject = true;
   bool _isNewTopic = true;
   bool _isLoading = false;
-  
+
   List<String> _existingSubjects = [];
   List<String> _existingTopics = [];
-  
+
   @override
   void initState() {
     super.initState();
-    
-    // Set initial values if provided
+
     if (widget.initialSubjectName != null) {
       _subjectController.text = widget.initialSubjectName!;
       _isNewSubject = false;
@@ -52,13 +51,12 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
       _topicController.text = widget.initialTopicName!;
       _isNewTopic = false;
     }
-    
-    // Load existing subjects
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadExistingContent();
     });
   }
-  
+
   @override
   void dispose() {
     _subjectController.dispose();
@@ -66,21 +64,20 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
     _titleController.dispose();
     super.dispose();
   }
-  
+
   void _loadExistingContent() async {
     final subjectsAsync = ref.read(subjectsNotifierProvider);
     subjectsAsync.whenData((subjects) {
       setState(() {
         _existingSubjects = subjects.map((s) => s.name).toList();
       });
-      
-      // Load topics if subject is pre-selected
+
       if (widget.initialSubjectName != null) {
         _loadTopicsForSubject(widget.initialSubjectName!);
       }
     });
   }
-  
+
   void _loadTopicsForSubject(String subjectName) async {
     final topicsAsync = ref.read(topicsNotifierProvider(subjectName));
     topicsAsync.whenData((topics) {
@@ -89,9 +86,8 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
       });
     });
   }
-  
+
   void _onSubjectChanged(String value) {
-    // Check if it's an existing subject
     final isExisting = _existingSubjects.contains(value);
     setState(() {
       _isNewSubject = !isExisting;
@@ -103,9 +99,8 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
       }
     });
   }
-  
+
   void _onTopicChanged(String value) {
-    // Check if it's an existing topic
     final isExisting = _existingTopics.contains(value);
     setState(() {
       _isNewTopic = !isExisting;
@@ -114,24 +109,23 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
 
   Future<void> _createLesson() async {
     if (!_formKey.currentState!.validate()) return;
-    
-    // Check if widget is still mounted
+
     if (!mounted) return;
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final params = CreateLessonParams(
         subjectName: _subjectController.text.trim(),
         topicName: _topicController.text.trim(),
-        lessonTitle: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
+        lessonTitle:
+            _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
         isNewSubject: _isNewSubject,
         isNewTopic: _isNewTopic,
       );
-      
-      // Show ad dialog for free users (placeholder - implement actual ad logic)
+
       final shouldProceed = await _showAdDialog();
       if (!shouldProceed || !mounted) {
         if (mounted) {
@@ -141,14 +135,23 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
         }
         return;
       }
-      
-      // Create the lesson
-      await ref.read(lessonsNotifierProvider(params.subjectName, params.topicName).notifier)
-          .createNewLesson(params);
-      
-      if (mounted) {
-        // Use addPostFrameCallback to ensure we're not in build phase
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+
+      final createLessonUseCase = ref.read(createLessonProvider);
+      final result = await createLessonUseCase(params);
+
+      result.fold(
+        (failure) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to create lesson: ${failure.message}'),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
+        (lesson) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -157,25 +160,19 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                 behavior: SnackBarBehavior.floating,
               ),
             );
-            
-            // Navigate to the lessons screen
-            context.go('${RouteNames.subjects}/${params.subjectName}/${params.topicName}');
+            context.go('${RouteNames.app}/lesson/${lesson.id}');
           }
-        });
-      }
+        },
+      );
     } catch (e) {
       if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to create lesson: ${e.toString()}'),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create lesson: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -185,10 +182,8 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
       }
     }
   }
-  
+
   Future<bool> _showAdDialog() async {
-    // TODO: Implement actual ad logic here
-    // For now, just show a placeholder dialog
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -217,7 +212,6 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              // Simulate ad watching
               Navigator.pop(dialogContext, true);
             },
             style: ElevatedButton.styleFrom(
@@ -232,14 +226,14 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
         actionsPadding: AppSpacing.paddingAllMd,
       ),
     );
-    
+
     return result ?? false;
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final isOnline = ref.watch(networkStatusProvider).valueOrNull ?? false;
-    
+
     if (!isOnline) {
       return Scaffold(
         backgroundColor: context.backgroundColor,
@@ -277,7 +271,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
         ),
       );
     }
-    
+
     return Scaffold(
       backgroundColor: context.backgroundColor,
       appBar: AppBar(
@@ -296,7 +290,6 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Subject field
               ContentFormField(
                 controller: _subjectController,
                 label: 'Subject',
@@ -314,12 +307,15 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
               ),
               if (_isNewSubject && _subjectController.text.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(left: AppSpacing.md, top: AppSpacing.xs, bottom: AppSpacing.md),
+                  padding: const EdgeInsets.only(
+                      left: AppSpacing.md,
+                      top: AppSpacing.xs,
+                      bottom: AppSpacing.md),
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.info_outline, 
-                        size: AppSpacing.iconSm, 
+                        Icons.info_outline,
+                        size: AppSpacing.iconSm,
                         color: AppColors.info,
                       ),
                       const SizedBox(width: AppSpacing.sm),
@@ -333,8 +329,6 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                   ),
                 ),
               const SizedBox(height: AppSpacing.md),
-              
-              // Topic field
               ContentFormField(
                 controller: _topicController,
                 label: 'Topic',
@@ -352,12 +346,15 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
               ),
               if (_isNewTopic && _topicController.text.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(left: AppSpacing.md, top: AppSpacing.xs, bottom: AppSpacing.md),
+                  padding: const EdgeInsets.only(
+                      left: AppSpacing.md,
+                      top: AppSpacing.xs,
+                      bottom: AppSpacing.md),
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.info_outline, 
-                        size: AppSpacing.iconSm, 
+                        Icons.info_outline,
+                        size: AppSpacing.iconSm,
                         color: AppColors.info,
                       ),
                       const SizedBox(width: AppSpacing.sm),
@@ -371,8 +368,6 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                   ),
                 ),
               const SizedBox(height: AppSpacing.md),
-              
-              // Title field (optional)
               ContentFormField(
                 controller: _titleController,
                 label: 'Lesson Title (Optional)',
@@ -388,8 +383,6 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              
-              // Info box
               Container(
                 padding: AppSpacing.paddingAllMd,
                 decoration: BoxDecoration(
@@ -405,8 +398,8 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                     Row(
                       children: [
                         const Icon(
-                          Icons.info, 
-                          size: AppSpacing.iconSm, 
+                          Icons.info,
+                          size: AppSpacing.iconSm,
                           color: AppColors.info,
                         ),
                         const SizedBox(width: AppSpacing.sm),
@@ -433,8 +426,6 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              
-              // Create button
               SizedBox(
                 height: AppSpacing.buttonHeight,
                 child: ElevatedButton(
@@ -442,9 +433,11 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: context.primaryColor,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: context.textDisabledColor.withValues(alpha: 0.12),
+                    disabledBackgroundColor:
+                        context.textDisabledColor.withValues(alpha: 0.12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.radiusMedium),
                     ),
                   ),
                   child: _isLoading
@@ -453,7 +446,8 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                           width: AppSpacing.iconSm,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : Text(

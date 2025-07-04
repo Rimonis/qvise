@@ -25,15 +25,18 @@ class FlashcardCreationScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<FlashcardCreationScreen> createState() => _FlashcardCreationScreenState();
+  ConsumerState<FlashcardCreationScreen> createState() =>
+      _FlashcardCreationScreenState();
 }
 
-class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScreen> {
+class _FlashcardCreationScreenState
+    extends ConsumerState<FlashcardCreationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _frontController = TextEditingController();
   final _backController = TextEditingController();
   final _notesController = TextEditingController();
-  
+  final _hintController = TextEditingController();
+
   FlashcardTag _selectedTag = FlashcardTag.definition;
   FlashcardDifficulty _selectedDifficulty = FlashcardDifficulty.medium;
   List<String> _hints = [];
@@ -43,17 +46,13 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
   @override
   void initState() {
     super.initState();
-    // Add listeners to text controllers to trigger UI updates
     _frontController.addListener(_onTextChanged);
     _backController.addListener(_onTextChanged);
   }
 
   void _onTextChanged() {
-    // Force UI update when text content changes
     if (mounted) {
-      setState(() {
-        // This will trigger rebuild and update button states
-      });
+      setState(() {});
     }
   }
 
@@ -64,6 +63,7 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
     _frontController.dispose();
     _backController.dispose();
     _notesController.dispose();
+    _hintController.dispose();
     super.dispose();
   }
 
@@ -82,81 +82,60 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
   }
 
   Future<void> _createFlashcard() async {
-  // In preview mode, we don't have access to the form, so validate manually
-  if (_frontController.text.trim().isEmpty || _backController.text.trim().isEmpty) {
-    if (mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please fill in both front and back content'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      });
+    final lastHint = _hintController.text.trim();
+    if (lastHint.isNotEmpty) {
+      _addHint(lastHint);
     }
-    return;
-  }
 
-    // If not in preview mode, validate the form
-    if (!_showPreview && !_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() {
-    _isCreating = true;
-  });
+    setState(() {
+      _isCreating = true;
+    });
 
-  try {
-    final createFlashcard = ref.read(createFlashcardProvider);
-    final result = await createFlashcard(
-      lessonId: widget.lessonId,
-      frontContent: _frontController.text,
-      backContent: _backController.text,
-      tagId: _selectedTag.id,
-      difficulty: _selectedDifficulty,
-      notes: _notesController.text.isEmpty ? null : _notesController.text,
-      hints: _hints.isEmpty ? null : _hints,
-    );
+    try {
+      final createFlashcard = ref.read(createFlashcardProvider);
+      final result = await createFlashcard(
+        lessonId: widget.lessonId,
+        frontContent: _frontController.text,
+        backContent: _backController.text,
+        tagId: _selectedTag.id,
+        difficulty: _selectedDifficulty,
+        notes: _notesController.text.isEmpty ? null : _notesController.text,
+        hints: _hints.isEmpty ? null : _hints,
+      );
 
-    result.fold(
-      (failure) {
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to create flashcard: ${failure.message}'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          });
-        }
-      },
-      (flashcard) {
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Flashcard created successfully!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              Navigator.of(context).pop(true); // Return true to indicate success
-            }
-          });
-        }
-      },
-    );
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isCreating = false;
-      });
+      result.fold(
+        (failure) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to create flashcard: ${failure.message}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        (flashcard) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Flashcard created successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.of(context).pop(true);
+          }
+        },
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCreating = false;
+        });
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +164,6 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Context info
             Container(
               padding: AppSpacing.paddingAllMd,
               decoration: BoxDecoration(
@@ -218,15 +196,11 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-
-            // Tag Selection
             TagSelectorWidget(
               selectedTag: _selectedTag,
               onTagSelected: (tag) => setState(() => _selectedTag = tag),
             ),
             const SizedBox(height: AppSpacing.lg),
-
-            // Front Content
             Text(
               _getFieldLabel('front'),
               style: const TextStyle(
@@ -252,8 +226,6 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
               },
             ),
             const SizedBox(height: AppSpacing.lg),
-
-            // Back Content
             Text(
               _getFieldLabel('back'),
               style: const TextStyle(
@@ -279,23 +251,27 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
               },
             ),
             const SizedBox(height: AppSpacing.lg),
-
-            // Difficulty Selection
             DifficultySelectororWidget(
               selectedDifficulty: _selectedDifficulty,
-              onDifficultySelected: (difficulty) => setState(() => _selectedDifficulty = difficulty),
+              onDifficultySelected: (difficulty) =>
+                  setState(() => _selectedDifficulty = difficulty),
             ),
+            if (_selectedDifficulty == FlashcardDifficulty.hard)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Text(
+                  'This is a hard card. Consider adding hints to help you learn.',
+                  style: context.textTheme.bodySmall
+                      ?.copyWith(color: context.warningColor),
+                ),
+              ),
             const SizedBox(height: AppSpacing.lg),
-
-            // Hints (Optional)
             HintInputWidget(
               hints: _hints,
               onHintAdded: _addHint,
               onHintRemoved: _removeHint,
             ),
             const SizedBox(height: AppSpacing.lg),
-
-            // Notes (Optional)
             const Text(
               'Notes (Optional)',
               style: TextStyle(
@@ -356,30 +332,27 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
       child: SafeArea(
         child: Row(
           children: [
-            // Preview button
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _canPreview() 
-                  ? () => setState(() => _showPreview = !_showPreview)
-                  : null,
+                onPressed: _canPreview()
+                    ? () => setState(() => _showPreview = !_showPreview)
+                    : null,
                 icon: Icon(_showPreview ? Icons.edit : Icons.visibility),
                 label: Text(_showPreview ? 'Edit' : 'Preview'),
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            
-            // Create button
             Expanded(
               flex: 2,
               child: ElevatedButton.icon(
                 onPressed: _canCreateFlashcard() ? _createFlashcard : null,
                 icon: _isCreating
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.add),
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add),
                 label: Text(_isCreating ? 'Creating...' : 'Create Flashcard'),
               ),
             ),
@@ -390,14 +363,14 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
   }
 
   bool _canCreateFlashcard() {
-    return _frontController.text.trim().isNotEmpty && 
-           _backController.text.trim().isNotEmpty &&
-           !_isCreating;
+    return _frontController.text.trim().isNotEmpty &&
+        _backController.text.trim().isNotEmpty &&
+        !_isCreating;
   }
 
   bool _canPreview() {
-    return _frontController.text.trim().isNotEmpty && 
-           _backController.text.trim().isNotEmpty;
+    return _frontController.text.trim().isNotEmpty &&
+        _backController.text.trim().isNotEmpty;
   }
 
   String _getFieldLabel(String field) {
@@ -422,33 +395,33 @@ class _FlashcardCreationScreenState extends ConsumerState<FlashcardCreationScree
   String _getFieldHint(String field) {
     switch (_selectedTag.id) {
       case 'definition':
-        return field == 'front' 
-          ? 'Enter the term to define...' 
-          : 'Provide a clear definition...';
+        return field == 'front'
+            ? 'Enter the term to define...'
+            : 'Provide a clear definition...';
       case 'qa':
-        return field == 'front' 
-          ? 'What is your question?' 
-          : 'What is the answer?';
+        return field == 'front'
+            ? 'What is your question?'
+            : 'What is the answer?';
       case 'formula':
-        return field == 'front' 
-          ? 'Enter formula name or context...' 
-          : 'Write the formula and explain variables...';
+        return field == 'front'
+            ? 'Enter formula name or context...'
+            : 'Write the formula and explain variables...';
       case 'concept':
-        return field == 'front' 
-          ? 'Enter the concept name...' 
-          : 'Explain the concept clearly...';
+        return field == 'front'
+            ? 'Enter the concept name...'
+            : 'Explain the concept clearly...';
       case 'process':
-        return field == 'front' 
-          ? 'Enter the process name...' 
-          : 'List the steps in order...';
+        return field == 'front'
+            ? 'Enter the process name...'
+            : 'List the steps in order...';
       case 'example':
-        return field == 'front' 
-          ? 'Describe what to demonstrate...' 
-          : 'Provide a specific example...';
+        return field == 'front'
+            ? 'Describe what to demonstrate...'
+            : 'Provide a specific example...';
       default:
-        return field == 'front' 
-          ? 'What goes on the front?' 
-          : 'What goes on the back?';
+        return field == 'front'
+            ? 'What goes on the front?'
+            : 'What goes on the back?';
     }
   }
 }

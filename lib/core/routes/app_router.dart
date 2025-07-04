@@ -1,3 +1,5 @@
+// lib/core/routes/app_router.dart
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,13 +11,14 @@ import 'package:qvise/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:qvise/features/auth/presentation/screens/splash_screen.dart';
 import 'package:qvise/features/auth/presentation/screens/email_verification_screen.dart';
 import 'package:qvise/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:qvise/features/content/presentation/screens/unlocked_lesson_screen.dart';
+import 'package:qvise/features/flashcards/presentation/screens/flashcard_preview_screen.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'route_guard.dart';
 import 'route_names.dart';
 
 part 'app_router.g.dart';
 
-// Custom ChangeNotifier that properly manages disposal
 class GoRouterNotifier extends ChangeNotifier {
   GoRouterNotifier(this._ref) {
     _init();
@@ -26,7 +29,6 @@ class GoRouterNotifier extends ChangeNotifier {
   bool _disposed = false;
 
   void _init() {
-    // Use addPostFrameCallback to ensure we're not modifying providers during build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_disposed) {
         _authSubscription = _ref.listen<AuthState>(
@@ -35,12 +37,10 @@ class GoRouterNotifier extends ChangeNotifier {
             if (kDebugMode) {
               print('🟡 Router: Auth state changed from $previous to $current');
             }
-            // Only notify if not disposed
             if (!_disposed) {
               notifyListeners();
             }
           },
-          // Fire immediately to get initial state
           fireImmediately: false,
         );
       }
@@ -53,17 +53,15 @@ class GoRouterNotifier extends ChangeNotifier {
     _authSubscription?.close();
     super.dispose();
   }
-  
+
   @override
   void notifyListeners() {
-    // Guard against notifying after disposal
     if (!_disposed) {
       super.notifyListeners();
     }
   }
 }
 
-// Singleton router notifier provider
 @Riverpod(keepAlive: true)
 GoRouterNotifier goRouterNotifier(Ref ref) {
   final notifier = GoRouterNotifier(ref);
@@ -71,17 +69,15 @@ GoRouterNotifier goRouterNotifier(Ref ref) {
   return notifier;
 }
 
-// Cached router provider
 @Riverpod(keepAlive: true)
 GoRouter router(Ref ref) {
   final notifier = ref.watch(goRouterNotifierProvider);
-  
-  // Keep track of last redirect to prevent loops
+
   String? lastRedirect;
   int redirectCount = 0;
   const maxRedirects = 5;
   DateTime? lastRedirectTime;
-  
+
   return GoRouter(
     initialLocation: RouteNames.splash,
     debugLogDiagnostics: kDebugMode,
@@ -89,42 +85,39 @@ GoRouter router(Ref ref) {
     redirect: (context, state) {
       final currentLocation = state.matchedLocation;
       final now = DateTime.now();
-      
-      // Reset counter if it's been more than 1 second since last redirect
-      if (lastRedirectTime != null && 
+
+      if (lastRedirectTime != null &&
           now.difference(lastRedirectTime!).inSeconds > 1) {
         redirectCount = 0;
       }
       lastRedirectTime = now;
-      
-      // Reset counter if navigating to a different route
+
       if (lastRedirect != currentLocation) {
         redirectCount = 0;
         lastRedirect = currentLocation;
       }
-      
-      // Prevent infinite redirects
+
       if (redirectCount >= maxRedirects) {
         if (kDebugMode) {
           print('🔴 Router: Max redirects reached, staying at $currentLocation');
         }
         return null;
       }
-      
+
       try {
         final result = authGuard(ref, currentLocation);
-        
+
         if (result != null) {
           redirectCount++;
         }
-        
+
         if (kDebugMode) {
-          print('🟡 Router: Location: $currentLocation → Redirect: ${result ?? "null (stay)"}');
+          print(
+              '🟡 Router: Location: $currentLocation → Redirect: ${result ?? "null (stay)"}');
         }
-        
+
         return result;
       } catch (e, stack) {
-        // Log error and stay at current location
         if (kDebugMode) {
           print('🔴 Router: Error in redirect: $e');
           print(stack);
@@ -134,7 +127,6 @@ GoRouter router(Ref ref) {
     },
     errorBuilder: (context, state) => _RouterErrorPage(error: state.error),
     routes: [
-      // Auth routes
       GoRoute(
         path: RouteNames.splash,
         name: 'splash',
@@ -171,8 +163,6 @@ GoRouter router(Ref ref) {
           name: 'email-verification',
         ),
       ),
-      
-      // Main app shell
       GoRoute(
         path: RouteNames.app,
         name: 'app',
@@ -181,9 +171,33 @@ GoRouter router(Ref ref) {
           child: const MainShellScreen(),
           name: 'app',
         ),
+        routes: [
+          GoRoute(
+            path: 'lesson/:lessonId',
+            name: 'unlocked-lesson',
+            pageBuilder: (context, state) {
+              final lessonId = state.pathParameters['lessonId']!;
+              return _buildPage(
+                key: state.pageKey,
+                child: UnlockedLessonScreen(lessonId: lessonId),
+                name: 'unlocked-lesson-$lessonId',
+              );
+            },
+          ),
+          GoRoute(
+            path: 'preview/:lessonId',
+            name: 'flashcard-preview',
+            pageBuilder: (context, state) {
+              final lessonId = state.pathParameters['lessonId']!;
+              return _buildPage(
+                key: state.pageKey,
+                child: FlashcardPreviewScreen(lessonId: lessonId),
+                name: 'flashcard-preview-$lessonId',
+              );
+            },
+          ),
+        ],
       ),
-      
-      // Legacy route redirects for backward compatibility
       GoRoute(
         path: RouteNames.home,
         name: 'home',
@@ -199,8 +213,6 @@ GoRouter router(Ref ref) {
         name: 'profile',
         redirect: (_, __) => RouteNames.app,
       ),
-      
-      // Individual lesson detail route
       GoRoute(
         path: '${RouteNames.lessonDetail}/:lessonId',
         name: 'lesson-detail',
@@ -214,7 +226,8 @@ GoRouter router(Ref ref) {
                 centerTitle: true,
               ),
               body: Center(
-                child: Text('Lesson Detail Screen - ID: $lessonId\nComing Soon'),
+                child:
+                    Text('Lesson Detail Screen - ID: $lessonId\nComing Soon'),
               ),
             ),
             name: 'lesson-detail-$lessonId',
@@ -225,7 +238,6 @@ GoRouter router(Ref ref) {
   );
 }
 
-// Helper function to build pages with consistent transitions
 Page<dynamic> _buildPage({
   required LocalKey key,
   required Widget child,
@@ -236,7 +248,6 @@ Page<dynamic> _buildPage({
     child: child,
     name: name,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      // Use a fade transition for smoother navigation
       return FadeTransition(
         opacity: animation,
         child: child,
@@ -245,7 +256,6 @@ Page<dynamic> _buildPage({
   );
 }
 
-// Error page for router errors
 class _RouterErrorPage extends StatelessWidget {
   final Exception? error;
 

@@ -25,17 +25,33 @@ class _HintInputWidgetState extends State<HintInputWidget> {
   final _focusNode = FocusNode();
 
   @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
   void dispose() {
     _hintController.dispose();
+    _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     super.dispose();
   }
 
-  void _addHint() {
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus) {
+      _addHint(keepFocus: false);
+    }
+  }
+
+  void _addHint({bool keepFocus = true}) {
     final hint = _hintController.text.trim();
     if (hint.isNotEmpty) {
       widget.onHintAdded(hint);
       _hintController.clear();
+    }
+    if (keepFocus) {
+      _focusNode.requestFocus();
     }
   }
 
@@ -66,8 +82,6 @@ class _HintInputWidgetState extends State<HintInputWidget> {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-
-        // Add hint input
         Row(
           children: [
             Expanded(
@@ -90,7 +104,7 @@ class _HintInputWidgetState extends State<HintInputWidget> {
             ),
             const SizedBox(width: AppSpacing.sm),
             IconButton(
-              onPressed: _addHint,
+              onPressed: () => _addHint(),
               icon: const Icon(Icons.add_circle),
               style: IconButton.styleFrom(
                 backgroundColor: context.primaryColor,
@@ -99,8 +113,6 @@ class _HintInputWidgetState extends State<HintInputWidget> {
             ),
           ],
         ),
-
-        // Display existing hints
         if (widget.hints.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           Container(
