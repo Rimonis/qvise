@@ -4,6 +4,7 @@ import 'package:dartz/dartz.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
+import 'package:qvise/features/flashcards/shared/data/datasources/flashcard_local_data_source.dart';
 import '../../../../core/error/failures.dart';
 import '../../domain/entities/subject.dart';
 import '../../domain/entities/topic.dart';
@@ -19,6 +20,7 @@ import '../models/lesson_model.dart';
 class ContentRepositoryImpl implements ContentRepository {
   final ContentLocalDataSource localDataSource;
   final ContentRemoteDataSource remoteDataSource;
+  final FlashcardLocalDataSource flashcardLocalDataSource; // Dependency added
   final InternetConnectionChecker connectionChecker;
   final FirebaseAuth firebaseAuth;
   final _uuid = const Uuid();
@@ -26,6 +28,7 @@ class ContentRepositoryImpl implements ContentRepository {
   ContentRepositoryImpl({
     required this.localDataSource,
     required this.remoteDataSource,
+    required this.flashcardLocalDataSource, // Dependency added
     required this.connectionChecker,
     required this.firebaseAuth,
   });
@@ -55,7 +58,7 @@ class ContentRepositoryImpl implements ContentRepository {
 
       final subject = await localDataSource.getSubject(_userId, subjectName);
       if (subject == null) {
-        return Right(null);
+        return const Right(null);
       }
 
       return Right(subject.toEntity());
@@ -91,7 +94,7 @@ class ContentRepositoryImpl implements ContentRepository {
       final topic =
           await localDataSource.getTopic(_userId, subjectName, topicName);
       if (topic == null) {
-        return Right(null);
+        return const Right(null);
       }
 
       return Right(topic.toEntity());
@@ -159,7 +162,7 @@ class ContentRepositoryImpl implements ContentRepository {
     try {
       final lesson = await localDataSource.getLesson(lessonId);
       if (lesson == null) {
-        return Right(null);
+        return const Right(null);
       }
 
       return Right(lesson.toEntity());
@@ -241,7 +244,7 @@ class ContentRepositoryImpl implements ContentRepository {
 
       final lesson = await localDataSource.getLesson(lessonId);
       if (lesson == null) {
-        return Left(CacheFailure('Lesson not found'));
+        return const Left(CacheFailure('Lesson not found'));
       }
 
       await remoteDataSource.deleteLesson(lessonId);
@@ -611,9 +614,9 @@ class ContentRepositoryImpl implements ContentRepository {
       if (lesson == null) {
         return const Left(CacheFailure('Lesson not found'));
       }
-      // In a real app, you would also count files and notes here.
+      
       final flashcardCount =
-          await localDataSource.countFlashcardsByLesson(lessonId);
+          await flashcardLocalDataSource.countFlashcardsByLesson(lessonId);
       final updatedLesson = lesson.copyWith(flashcardCount: flashcardCount);
       await localDataSource.insertOrUpdateLesson(updatedLesson);
       if (await connectionChecker.hasConnection) {

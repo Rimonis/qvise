@@ -189,7 +189,7 @@ class LessonsNotifier extends _$LessonsNotifier {
     state = const AsyncValue.loading();
 
     try {
-      final createLessonUseCase = ref.read(createLessonProvider);
+      final createLessonUseCase = ref.read(createLessonUseCaseProvider);
       final result = await createLessonUseCase(params);
 
       result.fold(

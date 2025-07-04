@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:qvise/core/providers/network_status_provider.dart';
 import '../../../../core/routes/route_names.dart';
 import '../../domain/entities/create_lesson_params.dart';
+import '../providers/content_providers.dart';
 import '../providers/content_state_providers.dart';
 import '../widgets/content_form_field.dart';
 // Theme imports
@@ -68,9 +69,11 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
   void _loadExistingContent() async {
     final subjectsAsync = ref.read(subjectsNotifierProvider);
     subjectsAsync.whenData((subjects) {
-      setState(() {
-        _existingSubjects = subjects.map((s) => s.name).toList();
-      });
+      if (mounted) {
+        setState(() {
+          _existingSubjects = subjects.map((s) => s.name).toList();
+        });
+      }
 
       if (widget.initialSubjectName != null) {
         _loadTopicsForSubject(widget.initialSubjectName!);
@@ -81,9 +84,11 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
   void _loadTopicsForSubject(String subjectName) async {
     final topicsAsync = ref.read(topicsNotifierProvider(subjectName));
     topicsAsync.whenData((topics) {
-      setState(() {
-        _existingTopics = topics.map((t) => t.name).toList();
-      });
+      if (mounted) {
+        setState(() {
+          _existingTopics = topics.map((t) => t.name).toList();
+        });
+      }
     });
   }
 
@@ -136,7 +141,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
         return;
       }
 
-      final createLessonUseCase = ref.read(createLessonProvider);
+      final createLessonUseCase = ref.read(createLessonUseCaseProvider); // CORRECTED
       final result = await createLessonUseCase(params);
 
       result.fold(
