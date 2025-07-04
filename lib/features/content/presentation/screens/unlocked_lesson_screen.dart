@@ -56,6 +56,7 @@ class UnlockedLessonScreen extends ConsumerWidget {
                     if (result == true) {
                       ref.invalidate(flashcardCountProvider(lesson.id));
                       ref.invalidate(lessonProvider(lesson.id)); // Refresh lesson data
+                      ref.invalidate(unlockedLessonsProvider);
                     }
                   },
                   onPreview: () => Navigator.push(

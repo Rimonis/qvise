@@ -165,7 +165,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                 behavior: SnackBarBehavior.floating,
               ),
             );
-            context.go('${RouteNames.app}/lesson/${lesson.id}');
+            context.pop();
           }
         },
       );
