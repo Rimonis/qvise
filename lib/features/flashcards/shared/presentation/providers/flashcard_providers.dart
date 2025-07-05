@@ -2,6 +2,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/features/content/presentation/providers/content_providers.dart';
+import 'package:qvise/features/flashcards/creation/domain/usecases/update_flashcard.dart';
 import 'package:qvise/features/flashcards/shared/domain/entities/flashcard.dart';
 import 'package:qvise/features/flashcards/shared/domain/repositories/flashcard_repository.dart';
 import 'package:qvise/core/providers/providers.dart';
@@ -32,6 +33,11 @@ final flashcardRepositoryProvider = Provider<FlashcardRepository>((ref) {
     connectionChecker: ref.watch(internetConnectionCheckerProvider),
     firebaseAuth: ref.watch(firebaseAuthProvider),
   );
+});
+
+// Provider for the update flashcard use case
+final updateFlashcardProvider = Provider<UpdateFlashcard>((ref) {
+  return UpdateFlashcard(ref.watch(flashcardRepositoryProvider));
 });
 
 @riverpod

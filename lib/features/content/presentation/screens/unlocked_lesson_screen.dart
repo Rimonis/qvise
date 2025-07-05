@@ -2,12 +2,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
 import 'package:qvise/features/flashcards/creation/presentation/screens/flashcard_creation_screen.dart';
 import 'package:qvise/features/flashcards/presentation/screens/flashcard_preview_screen.dart';
 import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_count_provider.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
+import 'package:qvise/core/routes/route_names.dart';
 
 class UnlockedLessonScreen extends ConsumerWidget {
   final String lessonId;
@@ -59,12 +61,9 @@ class UnlockedLessonScreen extends ConsumerWidget {
                       ref.invalidate(unlockedLessonsProvider);
                     }
                   },
-                  onPreview: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          FlashcardPreviewScreen(lessonId: lesson.id),
-                    ),
+                  onPreview: () => context.push(
+                    '${RouteNames.app}/preview/${lesson.id}',
+                    extra: true,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),

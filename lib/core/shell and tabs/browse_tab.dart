@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:qvise/core/routes/route_names.dart';
 import 'package:qvise/features/content/domain/entities/subject.dart';
 import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
 import 'package:qvise/features/content/presentation/providers/tab_navigation_provider.dart';
@@ -251,12 +253,8 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                       child: ListTile(
                         title: Text(lesson.displayTitle),
                         trailing: OutlinedButton(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  FlashcardPreviewScreen(lessonId: lesson.id),
-                            ),
+                          onPressed: () => context.push(
+                            '${RouteNames.app}/preview/${lesson.id}',
                           ),
                           child: const Text('Preview'),
                         ),

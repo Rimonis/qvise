@@ -191,9 +191,13 @@ GoRouter router(Ref ref) {
             name: 'flashcard-preview',
             pageBuilder: (context, state) {
               final lessonId = state.pathParameters['lessonId']!;
+              final allowEditing = (state.extra as bool?) ?? false;
               return _buildPage(
                 key: state.pageKey,
-                child: FlashcardPreviewScreen(lessonId: lessonId),
+                child: FlashcardPreviewScreen(
+                  lessonId: lessonId,
+                  allowEditing: allowEditing,
+                ),
                 name: 'flashcard-preview-$lessonId',
               );
             },

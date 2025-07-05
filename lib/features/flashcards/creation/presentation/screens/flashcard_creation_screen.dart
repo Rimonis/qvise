@@ -3,9 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/features/flashcards/creation/domain/entities/flashcard_difficulty.dart';
+import 'package:qvise/features/flashcards/shared/domain/entities/flashcard.dart';
 import 'package:qvise/features/flashcards/shared/domain/entities/flashcard_tag.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
+import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_providers.dart';
 import '../widgets/tag_selector_widget.dart';
 import '../widgets/difficulty_selector_widget.dart';
 import '../widgets/flashcard_preview_widget.dart';
@@ -16,12 +18,14 @@ class FlashcardCreationScreen extends ConsumerStatefulWidget {
   final String lessonId;
   final String subjectName;
   final String topicName;
+  final Flashcard? flashcardToEdit;
 
   const FlashcardCreationScreen({
     super.key,
     required this.lessonId,
     required this.subjectName,
     required this.topicName,
+    this.flashcardToEdit,
   });
 
   @override
@@ -37,15 +41,31 @@ class _FlashcardCreationScreenState
   final _notesController = TextEditingController();
   final _hintController = TextEditingController();
 
-  FlashcardTag _selectedTag = FlashcardTag.definition;
-  FlashcardDifficulty _selectedDifficulty = FlashcardDifficulty.medium;
-  List<String> _hints = [];
+  late FlashcardTag _selectedTag;
+  late FlashcardDifficulty _selectedDifficulty;
+  late List<String> _hints;
   bool _showPreview = false;
-  bool _isCreating = false;
+  bool _isSaving = false;
+  bool get _isEditing => widget.flashcardToEdit != null;
 
   @override
   void initState() {
     super.initState();
+    
+    if (_isEditing) {
+      final card = widget.flashcardToEdit!;
+      _frontController.text = card.frontContent;
+      _backController.text = card.backContent;
+      _notesController.text = card.notes ?? '';
+      _selectedTag = card.tag;
+      _selectedDifficulty = FlashcardDifficulty.fromValue(card.difficulty);
+      _hints = List<String>.from(card.hints ?? []);
+    } else {
+      _selectedTag = FlashcardTag.definition;
+      _selectedDifficulty = FlashcardDifficulty.medium;
+      _hints = [];
+    }
+    
     _frontController.addListener(_onTextChanged);
     _backController.addListener(_onTextChanged);
   }
@@ -81,12 +101,10 @@ class _FlashcardCreationScreenState
     });
   }
 
-  Future<void> _createFlashcard() async {
+  Future<void> _saveFlashcard() async {
     final lastHint = _hintController.text.trim();
     if (lastHint.isNotEmpty) {
       _addHint(lastHint);
-      // We clear the controller so the hint isn't processed again
-      // if the user hits create multiple times.
       _hintController.clear();
     }
 
@@ -95,48 +113,64 @@ class _FlashcardCreationScreenState
     }
 
     setState(() {
-      _isCreating = true;
+      _isSaving = true;
     });
 
     try {
-      final createFlashcard = ref.read(createFlashcardProvider);
-      final result = await createFlashcard(
-        lessonId: widget.lessonId,
-        frontContent: _frontController.text,
-        backContent: _backController.text,
-        tagId: _selectedTag.id,
-        difficulty: _selectedDifficulty,
-        notes: _notesController.text.isEmpty ? null : _notesController.text,
-        hints: _hints.isEmpty ? null : _hints,
-      );
+      if (_isEditing) {
+        final updatedFlashcard = widget.flashcardToEdit!.copyWith(
+          frontContent: _frontController.text,
+          backContent: _backController.text,
+          tag: _selectedTag,
+          difficulty: _selectedDifficulty.value,
+          notes: _notesController.text.isEmpty ? null : _notesController.text,
+          hints: _hints.isEmpty ? null : _hints,
+        );
 
-      result.fold(
-        (failure) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to create flashcard: ${failure.message}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        (flashcard) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Flashcard created successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            Navigator.of(context).pop(true);
-          }
-        },
-      );
+        final updateFlashcard = ref.read(updateFlashcardProvider);
+        final result = await updateFlashcard(updatedFlashcard);
+        
+        result.fold(
+          (failure) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update flashcard: ${failure.message}')));
+            }
+          },
+          (flashcard) {
+            if (mounted) {
+              Navigator.of(context).pop(true);
+            }
+          },
+        );
+      } else {
+        final createFlashcard = ref.read(createFlashcardProvider);
+        final result = await createFlashcard(
+          lessonId: widget.lessonId,
+          frontContent: _frontController.text,
+          backContent: _backController.text,
+          tagId: _selectedTag.id,
+          difficulty: _selectedDifficulty,
+          notes: _notesController.text.isEmpty ? null : _notesController.text,
+          hints: _hints.isEmpty ? null : _hints,
+        );
+
+        result.fold(
+          (failure) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to create flashcard: ${failure.message}')));
+            }
+          },
+          (flashcard) {
+            if (mounted) {
+              Navigator.of(context).pop(true);
+            }
+          },
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
-          _isCreating = false;
+          _isSaving = false;
         });
       }
     }
@@ -146,7 +180,7 @@ class _FlashcardCreationScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Flashcard'),
+        title: Text(_isEditing ? 'Edit Flashcard' : 'Create Flashcard'),
         centerTitle: true,
         actions: [
           if (_showPreview)
@@ -324,6 +358,8 @@ class _FlashcardCreationScreenState
         difficulty: _selectedDifficulty,
         hints: previewHints,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
+        isFavorite: _isEditing ? widget.flashcardToEdit!.isFavorite : false,
+        onToggleFavorite: null,
       ),
     );
   }
@@ -335,7 +371,7 @@ class _FlashcardCreationScreenState
         color: context.surfaceColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -357,15 +393,15 @@ class _FlashcardCreationScreenState
             Expanded(
               flex: 2,
               child: ElevatedButton.icon(
-                onPressed: _canCreateFlashcard() ? _createFlashcard : null,
-                icon: _isCreating
+                onPressed: _canSaveFlashcard() ? _saveFlashcard : null,
+                icon: _isSaving
                     ? const SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.add),
-                label: Text(_isCreating ? 'Creating...' : 'Create Flashcard'),
+                    : Icon(_isEditing ? Icons.save : Icons.add),
+                label: Text(_isSaving ? 'Saving...' : (_isEditing ? 'Update Flashcard' : 'Create Flashcard')),
               ),
             ),
           ],
@@ -374,10 +410,10 @@ class _FlashcardCreationScreenState
     );
   }
 
-  bool _canCreateFlashcard() {
+  bool _canSaveFlashcard() {
     return _frontController.text.trim().isNotEmpty &&
         _backController.text.trim().isNotEmpty &&
-        !_isCreating;
+        !_isSaving;
   }
 
   bool _canPreview() {
