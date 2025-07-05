@@ -11,6 +11,8 @@ import 'package:qvise/features/auth/presentation/screens/sign_in_screen.dart';
 import 'package:qvise/features/auth/presentation/screens/splash_screen.dart';
 import 'package:qvise/features/auth/presentation/screens/email_verification_screen.dart';
 import 'package:qvise/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:qvise/features/content/presentation/screens/create_lesson_screen.dart';
+import 'package:qvise/features/content/presentation/screens/subject_selection_screen.dart';
 import 'package:qvise/features/content/presentation/screens/unlocked_lesson_screen.dart';
 import 'package:qvise/features/flashcards/presentation/screens/flashcard_preview_screen.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -214,23 +216,26 @@ GoRouter router(Ref ref) {
         redirect: (_, __) => RouteNames.app,
       ),
       GoRoute(
-        path: '${RouteNames.lessonDetail}/:lessonId',
-        name: 'lesson-detail',
+        path: RouteNames.subjectSelection,
+        name: 'subject-selection',
+        pageBuilder: (context, state) => _buildPage(
+          key: state.pageKey,
+          child: const SubjectSelectionScreen(),
+          name: 'subject-selection',
+        ),
+      ),
+      GoRoute(
+        path: RouteNames.createLesson,
+        name: 'create-lesson',
         pageBuilder: (context, state) {
-          final lessonId = state.pathParameters['lessonId']!;
+          final extra = state.extra as Map<String, String>?;
           return _buildPage(
             key: state.pageKey,
-            child: Scaffold(
-              appBar: AppBar(
-                title: const Text('Lesson Detail'),
-                centerTitle: true,
-              ),
-              body: Center(
-                child:
-                    Text('Lesson Detail Screen - ID: $lessonId\nComing Soon'),
-              ),
+            child: CreateLessonScreen(
+              initialSubjectName: extra?['subjectName'],
+              initialTopicName: extra?['topicName'],
             ),
-            name: 'lesson-detail-$lessonId',
+            name: 'create-lesson',
           );
         },
       ),

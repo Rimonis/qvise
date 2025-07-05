@@ -87,7 +87,9 @@ class _FlashcardCreationScreenState
       _addHint(lastHint);
     }
 
-    if (!_formKey.currentState!.validate()) return;
+    if (!_showPreview) {
+      if (!_formKey.currentState!.validate()) return;
+    }
 
     setState(() {
       _isCreating = true;

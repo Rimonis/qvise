@@ -196,7 +196,7 @@ class LessonsNotifier extends _$LessonsNotifier {
         (failure) => throw Exception(failure.message),
         (_) async {
           await refresh();
-          ref.invalidate(topicsNotifierProvider);
+          ref.invalidate(topicsNotifierProvider(params.subjectName));
           ref.invalidate(subjectsNotifierProvider);
           ref.invalidate(dueLessonsProvider);
           ref.invalidate(unlockedLessonsProvider);
@@ -218,7 +218,7 @@ class LessonsNotifier extends _$LessonsNotifier {
         (failure) => throw Exception(failure.message),
         (_) async {
           await refresh();
-          ref.invalidate(topicsNotifierProvider);
+          ref.invalidate(topicsNotifierProvider(subjectName));
           ref.invalidate(subjectsNotifierProvider);
           ref.invalidate(dueLessonsProvider);
           ref.invalidate(unlockedLessonsProvider);

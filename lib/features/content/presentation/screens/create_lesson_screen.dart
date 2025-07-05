@@ -141,7 +141,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
         return;
       }
 
-      final createLessonUseCase = ref.read(createLessonUseCaseProvider); // CORRECTED
+      final createLessonUseCase = ref.read(createLessonUseCaseProvider);
       final result = await createLessonUseCase(params);
 
       result.fold(
@@ -165,7 +165,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
                 behavior: SnackBarBehavior.floating,
               ),
             );
-            context.pop();
+            context.go('${RouteNames.app}/lesson/${lesson.id}');
           }
         },
       );

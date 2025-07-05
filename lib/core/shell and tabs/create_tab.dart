@@ -7,7 +7,6 @@ import 'package:qvise/core/providers/network_status_provider.dart';
 import 'package:qvise/core/routes/route_names.dart';
 import 'package:qvise/features/content/domain/entities/lesson.dart';
 import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
-import 'package:qvise/features/content/presentation/screens/subject_selection_screen.dart';
 import 'package:qvise/features/content/presentation/widgets/content_loading_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card.dart';
@@ -82,7 +81,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
             description:
                 'Create your first lesson and start building your knowledge base!',
             buttonText: 'Create Lesson',
-            onButtonPressed: () => _navigateToSubjectSelection(context),
+            onButtonPressed: () => context.push(RouteNames.subjectSelection),
           );
         }
 
@@ -106,7 +105,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
             ),
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _navigateToSubjectSelection(context),
+            onPressed: () => context.push(RouteNames.subjectSelection),
             icon: const Icon(Icons.add),
             label: const Text('New Lesson'),
           ),
@@ -136,15 +135,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _navigateToSubjectSelection(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const SubjectSelectionScreen(),
       ),
     );
   }
