@@ -85,6 +85,9 @@ class _FlashcardCreationScreenState
     final lastHint = _hintController.text.trim();
     if (lastHint.isNotEmpty) {
       _addHint(lastHint);
+      // We clear the controller so the hint isn't processed again
+      // if the user hits create multiple times.
+      _hintController.clear();
     }
 
     if (!_showPreview) {
@@ -269,6 +272,7 @@ class _FlashcardCreationScreenState
               ),
             const SizedBox(height: AppSpacing.lg),
             HintInputWidget(
+              controller: _hintController,
               hints: _hints,
               onHintAdded: _addHint,
               onHintRemoved: _removeHint,
@@ -306,13 +310,19 @@ class _FlashcardCreationScreenState
       );
     }
 
+    final previewHints = List<String>.from(_hints);
+    final pendingHint = _hintController.text.trim();
+    if (pendingHint.isNotEmpty) {
+      previewHints.add(pendingHint);
+    }
+
     return Center(
       child: FlashcardPreviewWidget(
         frontContent: _frontController.text,
         backContent: _backController.text,
         tag: _selectedTag,
         difficulty: _selectedDifficulty,
-        hints: _hints,
+        hints: previewHints,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
       ),
     );

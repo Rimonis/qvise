@@ -5,12 +5,14 @@ import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
 
 class HintInputWidget extends StatefulWidget {
+  final TextEditingController controller;
   final List<String> hints;
   final void Function(String) onHintAdded;
   final void Function(int) onHintRemoved;
 
   const HintInputWidget({
     super.key,
+    required this.controller,
     required this.hints,
     required this.onHintAdded,
     required this.onHintRemoved,
@@ -21,7 +23,6 @@ class HintInputWidget extends StatefulWidget {
 }
 
 class _HintInputWidgetState extends State<HintInputWidget> {
-  final _hintController = TextEditingController();
   final _focusNode = FocusNode();
 
   @override
@@ -32,7 +33,6 @@ class _HintInputWidgetState extends State<HintInputWidget> {
 
   @override
   void dispose() {
-    _hintController.dispose();
     _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     super.dispose();
@@ -45,10 +45,10 @@ class _HintInputWidgetState extends State<HintInputWidget> {
   }
 
   void _addHint({bool keepFocus = true}) {
-    final hint = _hintController.text.trim();
+    final hint = widget.controller.text.trim();
     if (hint.isNotEmpty) {
       widget.onHintAdded(hint);
-      _hintController.clear();
+      widget.controller.clear();
     }
     if (keepFocus) {
       _focusNode.requestFocus();
@@ -86,7 +86,7 @@ class _HintInputWidgetState extends State<HintInputWidget> {
           children: [
             Expanded(
               child: TextField(
-                controller: _hintController,
+                controller: widget.controller,
                 focusNode: _focusNode,
                 decoration: InputDecoration(
                   hintText: 'Enter a helpful hint...',
