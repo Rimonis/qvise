@@ -36,6 +36,16 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
       final createdModel =
           await localDataSource.createFlashcard(flashcardModel);
 
+      // Upload to remote if online
+      if (await connectionChecker.hasConnection) {
+        try {
+          final remoteModel = await remoteDataSource.createFlashcard(createdModel);
+          await localDataSource.updateFlashcard(remoteModel.copyWith(syncStatus: 'synced'));
+        } catch (e) {
+          // If remote fails, it remains 'pending' locally, no re-throw needed
+        }
+      }
+
       await contentRepository.updateLessonContentCount(flashcard.lessonId);
 
       return Right(createdModel.toEntity());
@@ -80,6 +90,15 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
       final flashcardModel = FlashcardModel.fromEntity(flashcard);
       final updatedModel =
           await localDataSource.updateFlashcard(flashcardModel);
+
+      if (await connectionChecker.hasConnection) {
+        try {
+          final remoteModel = await remoteDataSource.updateFlashcard(updatedModel);
+          await localDataSource.updateFlashcard(remoteModel.copyWith(syncStatus: 'synced'));
+        } catch (e) {
+          // If remote fails, it remains 'pending' locally
+        }
+      }
 
       return Right(updatedModel.toEntity());
     } catch (e) {

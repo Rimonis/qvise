@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/theme/app_colors.dart';
 import 'package:qvise/features/content/domain/entities/lesson.dart';
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
 import 'package:qvise/features/flashcards/creation/presentation/screens/flashcard_creation_screen.dart';
@@ -111,7 +112,7 @@ class _FlashcardPreviewScreenState extends ConsumerState<FlashcardPreviewScreen>
                         tooltip: 'Edit Flashcard',
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        icon: const Icon(Icons.delete_outline, color: AppColors.error),
                         onPressed: () => _showDeleteDialog(context, ref, flashcard),
                         tooltip: 'Delete Flashcard',
                       ),
@@ -249,22 +250,24 @@ class _FlashcardPreviewScreenState extends ConsumerState<FlashcardPreviewScreen>
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
       ),
-      floatingActionButton: widget.allowEditing ? lessonAsync.when(
-        data: (lesson) => lesson != null
-            ? FloatingActionButton.extended(
-                onPressed: () => _navigateToCreateScreen(
-                  context,
-                  ref,
-                  lesson.subjectName,
-                  lesson.topicName,
-                ),
-                label: const Text('New Flashcard'),
-                icon: const Icon(Icons.add),
-              )
-            : null,
-        loading: () => null,
-        error: (_, __) => null,
-      ) : null,
+      floatingActionButton: (widget.allowEditing && (flashcardsAsync.valueOrNull?.isNotEmpty ?? false))
+          ? lessonAsync.when(
+              data: (lesson) => lesson != null
+                  ? FloatingActionButton.extended(
+                      onPressed: () => _navigateToCreateScreen(
+                        context,
+                        ref,
+                        lesson.subjectName,
+                        lesson.topicName,
+                      ),
+                      label: const Text('New Flashcard'),
+                      icon: const Icon(Icons.add),
+                    )
+                  : null,
+              loading: () => null,
+              error: (_, __) => null,
+            )
+          : null,
     );
   }
 
@@ -291,7 +294,7 @@ class _FlashcardPreviewScreenState extends ConsumerState<FlashcardPreviewScreen>
               ref.invalidate(flashcardCountProvider(widget.lessonId));
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
             child: const Text('Delete'),

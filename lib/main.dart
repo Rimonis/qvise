@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +7,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qvise/core/application/sync_coordinator.dart';
+import 'package:qvise/core/providers/network_status_provider.dart';
 import 'package:qvise/core/routes/app_router.dart';
 import 'package:qvise/core/widgets/error_boundary.dart';
 import 'package:qvise/core/theme/app_theme.dart';
@@ -12,21 +16,12 @@ import 'package:qvise/core/theme/theme_mode_provider.dart';
 import 'package:qvise/firebase_options.dart';
 
 void main() async {
-  // Set up error handling for async errors
   runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Set up Flutter error handling
     FlutterError.onError = (FlutterErrorDetails details) {
       if (kDebugMode) {
-        // In debug mode, print to console
         FlutterError.presentError(details);
-      } else {
-        // In release mode, log to crash reporting service
-        // TODO: Add crash reporting (Firebase Crashlytics, Sentry, etc.)
-        if (kDebugMode) {
-          print('Flutter error: ${details.exception}');
-        }
       }
     };
 
@@ -37,40 +32,55 @@ void main() async {
       if (kDebugMode) {
         print('Firebase initialization error: $e');
       }
-      // Continue running the app even if Firebase fails to initialize
-      // The app should handle this gracefully
     }
 
     runApp(
-      ProviderScope(
+      const ProviderScope(
         child: ErrorBoundary(
-          onError: (details) {
-            // Log errors to crash reporting in production
-            if (!kDebugMode) {
-              // TODO: Log to crash reporting service
-            }
-          },
-          child: const MyApp(),
+          child: MyApp(),
         ),
       ),
     );
   }, (error, stack) {
-    // Catch any errors that occur outside of Flutter
     if (kDebugMode) {
       print('Dart error: $error');
       print(stack);
-    } else {
-      // TODO: Log to crash reporting service
     }
   });
 }
 
-// Main app widget that handles theme loading
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupSyncListeners();
+      _performInitialSync();
+    });
+  }
+
+  void _setupSyncListeners() {
+    ref.read(networkCallbacksProvider.notifier).addOnlineCallback(() {
+      ref.read(syncCoordinatorProvider.notifier).syncAll();
+    });
+  }
+
+  void _performInitialSync() {
+    final isOnline = ref.read(networkStatusProvider).valueOrNull ?? false;
+    if (isOnline) {
+      ref.read(syncCoordinatorProvider.notifier).syncAll();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeModeAsync = ref.watch(themeModeNotifierProvider);
 
     return themeModeAsync.when(
