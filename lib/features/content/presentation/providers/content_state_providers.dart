@@ -159,7 +159,7 @@ class TopicsNotifier extends _$TopicsNotifier {
 @riverpod
 class LessonsNotifier extends _$LessonsNotifier {
   @override
-  Future<List<Lesson>> build(String subjectName, String topicName) async {
+  Future<List<Lesson>> build({required String subjectName, required String topicName}) async {
     final getLessonsUseCase = ref.watch(getLessonsByTopicProvider);
     final result = await getLessonsUseCase(subjectName, topicName);
 

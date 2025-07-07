@@ -34,6 +34,7 @@ ContentRepository contentRepository(ContentRepositoryRef ref) {
     localDataSource: ref.watch(contentLocalDataSourceProvider),
     remoteDataSource: ref.watch(contentRemoteDataSourceProvider),
     flashcardLocalDataSource: ref.watch(flashcardLocalDataSourceProvider),
+    flashcardRemoteDataSource: ref.watch(flashcardRemoteDataSourceProvider),
     connectionChecker: ref.watch(internetConnectionCheckerProvider),
     firebaseAuth: ref.watch(firebaseAuthProvider),
   );

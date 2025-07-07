@@ -1,3 +1,5 @@
+// lib/features/content/presentation/widgets/lesson_card.dart
+
 import 'package:flutter/material.dart';
 import 'package:qvise/core/theme/app_colors.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
@@ -8,7 +10,7 @@ class LessonCard extends StatelessWidget {
   final Lesson lesson;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
-  
+
   const LessonCard({
     super.key,
     required this.lesson,
@@ -18,26 +20,84 @@ class LessonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final proficiencyColor = Color(int.parse(lesson.proficiencyColor.replaceAll('#', '0xFF')));
-    final isDue = lesson.isReviewDue;
-    
+    final isDue = lesson.isDue;
+    final daysTillDue = lesson.daysTillNextReview;
+
     return Card(
       elevation: isDue ? 3 : 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
         side: isDue
-            ? BorderSide(color: AppColors.warning.withValues(alpha: 0.5), width: 2)
+            ? BorderSide(color: context.primaryColor, width: 2)
             : BorderSide.none,
       ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-        child: Container(
+        child: Padding(
           padding: AppSpacing.paddingAllMd,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      lesson.displayTitle,
+                      style: context.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (isDue)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: context.primaryColor,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusSmall),
+                      ),
+                      child: Text(
+                        'DUE',
+                        style: context.textTheme.labelSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  _buildStatChip(
+                    context,
+                    Icons.layers,
+                    '${lesson.flashcardCount} cards',
+                    context.textSecondaryColor,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _buildStatChip(
+                    context,
+                    Icons.repeat,
+                    '${lesson.reviewStage} reviews',
+                    context.textSecondaryColor,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _buildStatChip(
+                    context,
+                    Icons.timer,
+                    _getTimeStatus(daysTillDue),
+                    _getTimeStatusColor(daysTillDue),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
                   Expanded(
@@ -45,168 +105,105 @@ class LessonCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          lesson.displayTitle,
-                          style: context.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                          'Proficiency',
+                          style: context.textTheme.labelSmall?.copyWith(
+                            color: context.textSecondaryColor,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: AppSpacing.xs),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.layers,
-                              size: AppSpacing.iconSm,
-                              color: context.textSecondaryColor,
+                        ClipRRect(
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusSmall),
+                          child: LinearProgressIndicator(
+                            value: lesson.proficiency,
+                            backgroundColor: context.dividerColor,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              _getProficiencyColor(lesson.proficiency),
                             ),
-                            const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              'Stage ${lesson.reviewStage}',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: context.textSecondaryColor,
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            if (!lesson.isSynced) ...[
-                              const Icon(
-                                Icons.cloud_off,
-                                size: AppSpacing.iconSm,
-                                color: AppColors.warningDark,
-                              ),
-                              const SizedBox(width: AppSpacing.xs),
-                              Text(
-                                'Not synced',
-                                style: context.textTheme.bodySmall?.copyWith(
-                                  color: AppColors.warningDark,
-                                ),
-                              ),
-                            ],
-                          ],
+                            minHeight: 8,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  if (onDelete != null)
-                    PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'delete') {
-                          onDelete!();
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, color: AppColors.error, size: AppSpacing.iconSm),
-                              SizedBox(width: AppSpacing.sm),
-                              Text('Delete', style: TextStyle(color: AppColors.error)),
-                            ],
-                          ),
-                        ),
-                      ],
-                      icon: Icon(Icons.more_vert, color: context.iconColor),
+                  const SizedBox(width: AppSpacing.md),
+                  Text(
+                    '${(lesson.proficiency * 100).toInt()}%',
+                    style: context.textTheme.titleMedium?.copyWith(
+                      color: _getProficiencyColor(lesson.proficiency),
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
+                  if (onDelete != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    IconButton(
+                      onPressed: onDelete,
+                      icon: const Icon(Icons.delete_outline),
+                      color: AppColors.error,
+                      iconSize: 20,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                      tooltip: 'Delete lesson',
+                    ),
+                  ],
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
-              
-              // Review status
-              Container(
-                padding: AppSpacing.paddingSymmetricMd,
-                decoration: BoxDecoration(
-                  color: isDue 
-                    ? AppColors.warning.withValues(alpha: 0.1) 
-                    : context.surfaceVariantColor.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                  border: Border.all(
-                    color: isDue 
-                      ? AppColors.warning.withValues(alpha: 0.3) 
-                      : context.borderColor,
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          isDue ? Icons.alarm : Icons.schedule,
-                          size: AppSpacing.iconSm,
-                          color: isDue ? AppColors.warningDark : context.textSecondaryColor,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          lesson.reviewStatus,
-                          style: context.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                            color: isDue ? AppColors.warningDark : context.textSecondaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: AppSpacing.paddingSymmetricSm,
-                      decoration: BoxDecoration(
-                        color: proficiencyColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                      ),
-                      child: Text(
-                        '${(lesson.proficiency * 100).toInt()}%',
-                        style: context.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: proficiencyColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Last reviewed
-              if (lesson.lastReviewedAt != null) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.history,
-                      size: AppSpacing.iconSm,
-                      color: context.textTertiaryColor,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      'Last reviewed: ${_formatDate(lesson.lastReviewedAt!)}',
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: context.textTertiaryColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ],
           ),
         ),
       ),
     );
   }
-  
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-    
-    if (difference.inDays == 0) {
-      if (difference.inHours == 0) {
-        return '${difference.inMinutes} min ago';
-      }
-      return '${difference.inHours} hours ago';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
+
+  Widget _buildStatChip(
+      BuildContext context, IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: context.textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getTimeStatus(int daysTillDue) {
+    if (daysTillDue < 0) {
+      return '${-daysTillDue}d overdue';
+    } else if (daysTillDue == 0) {
+      return 'Due today';
     } else {
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      return '${months[date.month - 1]} ${date.day}';
+      return 'Due in ${daysTillDue}d';
     }
+  }
+
+  Color _getTimeStatusColor(int daysTillDue) {
+    if (daysTillDue < 0) return AppColors.error;
+    if (daysTillDue == 0) return AppColors.warning;
+    return AppColors.success;
+  }
+
+  Color _getProficiencyColor(double proficiency) {
+    if (proficiency >= 0.8) return AppColors.success;
+    if (proficiency >= 0.5) return AppColors.warning;
+    return AppColors.error;
   }
 }

@@ -1,6 +1,7 @@
 // lib/features/flashcards/shared/data/datasources/flashcard_local_data_source.dart
 
 import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
 import '../models/flashcard_model.dart';
 
 abstract class FlashcardLocalDataSource {
@@ -8,6 +9,7 @@ abstract class FlashcardLocalDataSource {
   Future<FlashcardModel> createFlashcard(FlashcardModel flashcard);
   Future<FlashcardModel> updateFlashcard(FlashcardModel flashcard);
   Future<void> deleteFlashcard(String id);
+  Future<void> deleteFlashcardsByLesson(String lessonId);
   Future<FlashcardModel?> getFlashcard(String id);
   Future<List<FlashcardModel>> getFlashcardsByLesson(String lessonId);
   Future<List<FlashcardModel>> getFlashcardsByLessonAndTag(
@@ -23,12 +25,17 @@ abstract class FlashcardLocalDataSource {
 class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
   Database? _database;
 
-  @override
-  Future<void> initDatabase() async {
-    if (_database != null) return;
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB();
+    return _database!;
+  }
 
-    _database = await openDatabase(
-      'qvise_flashcards.db',
+  Future<Database> _initDB() async {
+    final path = join(await getDatabasesPath(), 'qvise_flashcards.db');
+
+    return await openDatabase(
+      path,
       version: 1,
       onCreate: (db, version) async {
         await _createTables(db);
@@ -75,77 +82,73 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
     await db.execute('CREATE INDEX idx_flashcards_sync ON flashcards(sync_status)');
   }
 
-  Database get database {
-    if (_database == null) {
-      throw Exception('Database not initialized. Call initDatabase() first.');
-    }
-    return _database!;
+  @override
+  Future<void> initDatabase() async {
+    await database;
   }
 
   @override
   Future<FlashcardModel> createFlashcard(FlashcardModel flashcard) async {
-    await initDatabase();
-
-    final flashcardMap = flashcard.toMap();
-    await database.insert('flashcards', flashcardMap);
-
+    final db = await database;
+    await db.insert('flashcards', flashcard.toMap());
     return flashcard;
   }
 
   @override
   Future<FlashcardModel> updateFlashcard(FlashcardModel flashcard) async {
-    await initDatabase();
-
+    final db = await database;
     final flashcardMap = flashcard.toMap();
     flashcardMap['updated_at'] = DateTime.now().toIso8601String();
-
-    await database.update(
+    await db.update(
       'flashcards',
       flashcardMap,
       where: 'id = ?',
       whereArgs: [flashcard.id],
     );
-
     return flashcard.copyWith(updatedAt: DateTime.now());
   }
 
   @override
   Future<void> deleteFlashcard(String id) async {
-    await initDatabase();
-
-    await database.delete(
+    final db = await database;
+    await db.delete(
       'flashcards',
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  @override
+  Future<void> deleteFlashcardsByLesson(String lessonId) async {
+    final db = await database;
+    await db.delete(
+      'flashcards',
+      where: 'lesson_id = ?',
+      whereArgs: [lessonId],
     );
   }
 
   @override
   Future<FlashcardModel?> getFlashcard(String id) async {
-    await initDatabase();
-
-    final result = await database.query(
+    final db = await database;
+    final result = await db.query(
       'flashcards',
       where: 'id = ?',
       whereArgs: [id],
     );
-
     if (result.isEmpty) return null;
-
     return FlashcardModel.fromMap(result.first);
   }
 
   @override
   Future<List<FlashcardModel>> getFlashcardsByLesson(String lessonId) async {
-    await initDatabase();
-
-    final result = await database.query(
+    final db = await database;
+    final result = await db.query(
       'flashcards',
       where: 'lesson_id = ? AND is_active = 1',
       whereArgs: [lessonId],
       orderBy: 'created_at ASC',
     );
-
     return result.map((map) => FlashcardModel.fromMap(map)).toList();
   }
 
@@ -154,38 +157,33 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
     String lessonId,
     String tagId,
   ) async {
-    await initDatabase();
-
-    final result = await database.query(
+    final db = await database;
+    final result = await db.query(
       'flashcards',
       where: 'lesson_id = ? AND tag_id = ? AND is_active = 1',
       whereArgs: [lessonId, tagId],
       orderBy: 'created_at ASC',
     );
-
     return result.map((map) => FlashcardModel.fromMap(map)).toList();
   }
 
   @override
   Future<List<FlashcardModel>> getFavoriteFlashcards(String userId) async {
-    await initDatabase();
-
-    final result = await database.query(
+    final db = await database;
+    final result = await db.query(
       'flashcards',
       where: 'user_id = ? AND is_favorite = 1 AND is_active = 1',
       whereArgs: [userId],
       orderBy: 'updated_at DESC',
     );
-
     return result.map((map) => FlashcardModel.fromMap(map)).toList();
   }
 
   @override
   Future<List<FlashcardModel>> getFlashcardsNeedingAttention(
       String userId) async {
-    await initDatabase();
-
-    final result = await database.rawQuery('''
+    final db = await database;
+    final result = await db.rawQuery('''
       SELECT * FROM flashcards 
       WHERE user_id = ? 
         AND review_count >= 3 
@@ -193,29 +191,25 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
         AND is_active = 1
       ORDER BY CAST(correct_count AS REAL) / review_count ASC
     ''', [userId]);
-
     return result.map((map) => FlashcardModel.fromMap(map)).toList();
   }
 
   @override
   Future<int> countFlashcardsByLesson(String lessonId) async {
-    await initDatabase();
-
-    final result = await database.rawQuery('''
+    final db = await database;
+    final result = await db.rawQuery('''
       SELECT COUNT(*) as count FROM flashcards 
       WHERE lesson_id = ? AND is_active = 1
     ''', [lessonId]);
-
-    return result.first['count'] as int;
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   @override
   Future<List<FlashcardModel>> searchFlashcards(
       String userId, String query) async {
-    await initDatabase();
-
+    final db = await database;
     final searchTerm = '%$query%';
-    final result = await database.query(
+    final result = await db.query(
       'flashcards',
       where: '''
         user_id = ? AND is_active = 1 AND (
@@ -227,28 +221,25 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
       whereArgs: [userId, searchTerm, searchTerm, searchTerm],
       orderBy: 'updated_at DESC',
     );
-
     return result.map((map) => FlashcardModel.fromMap(map)).toList();
   }
 
   @override
   Future<List<FlashcardModel>> getPendingSyncFlashcards() async {
-    await initDatabase();
-
-    final result = await database.query(
+    final db = await database;
+    final result = await db.query(
       'flashcards',
       where: 'sync_status = ?',
       whereArgs: ['pending'],
       orderBy: 'updated_at ASC',
     );
-
     return result.map((map) => FlashcardModel.fromMap(map)).toList();
   }
 
   @override
   Future<void> toggleFavorite(String flashcardId, bool isFavorite) async {
-    await initDatabase();
-    await database.update(
+    final db = await database;
+    await db.update(
       'flashcards',
       {'is_favorite': isFavorite ? 1 : 0},
       where: 'id = ?',

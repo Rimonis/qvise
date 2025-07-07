@@ -7,6 +7,7 @@ abstract class FlashcardRemoteDataSource {
   Future<FlashcardModel> createFlashcard(FlashcardModel flashcard);
   Future<FlashcardModel> updateFlashcard(FlashcardModel flashcard);
   Future<void> deleteFlashcard(String id);
+  Future<void> deleteFlashcardsByLesson(String lessonId);
   Future<FlashcardModel?> getFlashcard(String id);
   Future<List<FlashcardModel>> getFlashcardsByLesson(String lessonId);
   Future<List<FlashcardModel>> getFlashcardsByUser(String userId,
@@ -101,6 +102,25 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
       await firestore.collection('flashcards').doc(id).delete();
     } catch (e) {
       throw Exception('Failed to delete flashcard: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<void> deleteFlashcardsByLesson(String lessonId) async {
+    try {
+      final querySnapshot = await firestore
+          .collection('flashcards')
+          .where('lessonId', isEqualTo: lessonId)
+          .get();
+
+      final batch = firestore.batch();
+      for (final doc in querySnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Failed to delete flashcards by lesson: ${e.toString()}');
     }
   }
 

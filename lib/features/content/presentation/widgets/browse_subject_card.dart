@@ -1,4 +1,8 @@
+// lib/features/content/presentation/widgets/browse_subject_card.dart
+
 import 'package:flutter/material.dart';
+import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
 import '../../domain/entities/subject.dart';
 
@@ -16,145 +20,83 @@ class BrowseSubjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final proficiencyColor =
-        Color(int.parse(subject.proficiencyColor.replaceAll('#', '0xFF')));
-
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+        child: Padding(
+          padding: AppSpacing.paddingAllMd,
+          child: Row(
             children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: proficiencyColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: context.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                ),
+                child: Icon(
+                  Icons.school,
+                  color: context.primaryColor,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      subject.name,
+                      style: context.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.school,
-                      color: proficiencyColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
                       children: [
-                        Text(
-                          subject.name,
-                          style: context.textTheme.titleLarge,
+                        _buildInfoChip(
+                          context,
+                          Icons.topic,
+                          '${subject.topicCount} topics',
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${subject.topicCount} topics • ${subject.lessonCount} lessons',
-                          style: context.textTheme.bodyMedium,
+                        const SizedBox(width: AppSpacing.sm),
+                        _buildInfoChip(
+                          context,
+                          Icons.book,
+                          '${subject.lessonCount} lessons',
                         ),
                       ],
                     ),
-                  ),
-                  if (onDelete != null)
-                    PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'delete') {
-                          onDelete!();
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete,
-                                  color: context.errorColor, size: 20),
-                              const SizedBox(width: 8),
-                              Text('Delete',
-                                  style: TextStyle(color: context.errorColor)),
-                            ],
-                          ),
-                        ),
-                      ],
-                      icon: Icon(Icons.more_vert, color: context.iconColor),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Proficiency indicator
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Proficiency',
-                        style: context.textTheme.bodySmall,
-                      ),
-                      Text(
-                        '${(subject.proficiency * 100).toInt()}%',
-                        style: context.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: proficiencyColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
+                    const SizedBox(height: AppSpacing.xs),
+                    LinearProgressIndicator(
                       value: subject.proficiency,
-                      minHeight: 8,
                       backgroundColor: context.dividerColor,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(proficiencyColor),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        _getProficiencyColor(subject.proficiency),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subject.proficiencyLabel,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: proficiencyColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-
-              // Last studied
-              Row(
-                children: [
-                  Icon(
-                    Icons.access_time,
-                    size: 16,
-                    color: context.textSecondaryColor,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Last studied: ${_formatLastStudied(subject.lastStudied)}',
-                    style: context.textTheme.bodySmall,
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: context.textTertiaryColor,
-                  ),
-                ],
+              if (onDelete != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                IconButton(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline),
+                  color: AppColors.error,
+                  tooltip: 'Delete subject',
+                ),
+              ],
+              const SizedBox(width: AppSpacing.xs),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: context.textTertiaryColor,
               ),
             ],
           ),
@@ -163,22 +105,35 @@ class BrowseSubjectCard extends StatelessWidget {
     );
   }
 
-  String _formatLastStudied(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
+  Widget _buildInfoChip(BuildContext context, IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: context.surfaceVariantColor,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: context.textSecondaryColor),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.textSecondaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-    if (difference.inDays == 0) {
-      return 'Today';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else if (difference.inDays < 30) {
-      final weeks = (difference.inDays / 7).floor();
-      return '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
-    } else {
-      final months = (difference.inDays / 30).floor();
-      return '$months ${months == 1 ? 'month' : 'months'} ago';
-    }
+  Color _getProficiencyColor(double proficiency) {
+    if (proficiency >= 0.8) return AppColors.success;
+    if (proficiency >= 0.5) return AppColors.warning;
+    return AppColors.error;
   }
 }

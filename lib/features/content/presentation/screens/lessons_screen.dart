@@ -1,3 +1,4 @@
+// lib/features/content/presentation/screens/lessons_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,7 +25,7 @@ class LessonsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lessonsAsync = ref.watch(lessonsNotifierProvider(subjectName, topicName));
+    final lessonsAsync = ref.watch(lessonsNotifierProvider(subjectName: subjectName, topicName: topicName));
     final selectedTopic = ref.watch(selectedTopicProvider);
     final isOnline = ref.watch(networkStatusProvider).valueOrNull ?? false;
     
@@ -69,12 +70,11 @@ class LessonsScreen extends ConsumerWidget {
             );
           }
           
-          // Sort lessons by review date
           final sortedLessons = [...lessons]
             ..sort((a, b) => a.nextReviewDate.compareTo(b.nextReviewDate));
           
           return RefreshIndicator(
-            onRefresh: () => ref.read(lessonsNotifierProvider(subjectName, topicName).notifier).refresh(),
+            onRefresh: () => ref.read(lessonsNotifierProvider(subjectName: subjectName, topicName: topicName).notifier).refresh(),
             color: context.primaryColor,
             backgroundColor: context.surfaceColor,
             child: ListView.builder(
@@ -198,7 +198,7 @@ class LessonsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             ElevatedButton.icon(
-              onPressed: () => ref.invalidate(lessonsNotifierProvider(subjectName, topicName)),
+              onPressed: () => ref.invalidate(lessonsNotifierProvider(subjectName: subjectName, topicName: topicName)),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
@@ -359,18 +359,14 @@ class LessonsScreen extends ConsumerWidget {
                     ? () async {
                         Navigator.pop(dialogContext);
                         try {
-                          await ref.read(lessonsNotifierProvider(subjectName, topicName).notifier)
+                          await ref.read(lessonsNotifierProvider(subjectName: subjectName, topicName: topicName).notifier)
                               .deleteLesson(lesson.id);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Lesson deleted successfully'),
-                                backgroundColor: context.successColor,
+                              const SnackBar(
+                                content: Text('Lesson deleted successfully'),
+                                backgroundColor: AppColors.success,
                                 behavior: SnackBarBehavior.floating,
-                                margin: AppSpacing.screenPaddingAll,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                                ),
                               ),
                             );
                           }
@@ -379,12 +375,8 @@ class LessonsScreen extends ConsumerWidget {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Failed to delete: ${e.toString()}'),
-                                backgroundColor: context.errorColor,
+                                backgroundColor: AppColors.error,
                                 behavior: SnackBarBehavior.floating,
-                                margin: AppSpacing.screenPaddingAll,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                                ),
                               ),
                             );
                           }
@@ -392,7 +384,7 @@ class LessonsScreen extends ConsumerWidget {
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: context.errorColor,
+                  backgroundColor: AppColors.error,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: context.textDisabledColor.withValues(alpha: 0.12),
                   shape: RoundedRectangleBorder(

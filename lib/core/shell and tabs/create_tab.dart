@@ -118,7 +118,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: AppColors.error),
+              const Icon(Icons.error_outline, size: 64, color: AppColors.error),
               const SizedBox(height: AppSpacing.md),
               Text(
                 'Error: ${error.toString()}',
@@ -160,8 +160,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
               Navigator.pop(dialogContext);
               try {
                 await ref
-                    .read(lessonsNotifierProvider(
-                            lesson.subjectName, lesson.topicName)
+                    .read(lessonsNotifierProvider(subjectName: lesson.subjectName, topicName: lesson.topicName)
                         .notifier)
                     .deleteLesson(lesson.id);
 

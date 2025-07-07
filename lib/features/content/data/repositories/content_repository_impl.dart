@@ -1,10 +1,10 @@
 // lib/features/content/data/repositories/content_repository_impl.dart
-
 import 'package:dartz/dartz.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
 import 'package:qvise/features/flashcards/shared/data/datasources/flashcard_local_data_source.dart';
+import 'package:qvise/features/flashcards/shared/data/datasources/flashcard_remote_data_source.dart';
 import '../../../../core/error/failures.dart';
 import '../../domain/entities/subject.dart';
 import '../../domain/entities/topic.dart';
@@ -20,7 +20,8 @@ import '../models/lesson_model.dart';
 class ContentRepositoryImpl implements ContentRepository {
   final ContentLocalDataSource localDataSource;
   final ContentRemoteDataSource remoteDataSource;
-  final FlashcardLocalDataSource flashcardLocalDataSource; // Dependency added
+  final FlashcardLocalDataSource flashcardLocalDataSource;
+  final FlashcardRemoteDataSource flashcardRemoteDataSource;
   final InternetConnectionChecker connectionChecker;
   final FirebaseAuth firebaseAuth;
   final _uuid = const Uuid();
@@ -28,7 +29,8 @@ class ContentRepositoryImpl implements ContentRepository {
   ContentRepositoryImpl({
     required this.localDataSource,
     required this.remoteDataSource,
-    required this.flashcardLocalDataSource, // Dependency added
+    required this.flashcardLocalDataSource,
+    required this.flashcardRemoteDataSource,
     required this.connectionChecker,
     required this.firebaseAuth,
   });
@@ -236,7 +238,6 @@ class ContentRepositoryImpl implements ContentRepository {
       if (_userId.isEmpty) {
         return const Left(AuthFailure('User not authenticated'));
       }
-
       if (!await connectionChecker.hasConnection) {
         return const Left(
             NetworkFailure('Network connection required to delete content'));
@@ -245,6 +246,13 @@ class ContentRepositoryImpl implements ContentRepository {
       final lesson = await localDataSource.getLesson(lessonId);
       if (lesson == null) {
         return const Left(CacheFailure('Lesson not found'));
+      }
+
+      await flashcardLocalDataSource.deleteFlashcardsByLesson(lessonId);
+      try {
+        await flashcardRemoteDataSource.deleteFlashcardsByLesson(lessonId);
+      } catch (e) {
+        print('Failed to delete remote flashcards for lesson $lessonId: $e');
       }
 
       await remoteDataSource.deleteLesson(lessonId);
@@ -266,17 +274,25 @@ class ContentRepositoryImpl implements ContentRepository {
       if (_userId.isEmpty) {
         return const Left(AuthFailure('User not authenticated'));
       }
-
       if (!await connectionChecker.hasConnection) {
         return const Left(
             NetworkFailure('Network connection required to delete content'));
       }
 
+      final lessons = await localDataSource.getLessonsByTopic(
+          _userId, subjectName, topicName);
+      for (final lesson in lessons) {
+        await flashcardLocalDataSource.deleteFlashcardsByLesson(lesson.id);
+        try {
+          await flashcardRemoteDataSource.deleteFlashcardsByLesson(lesson.id);
+        } catch (e) {
+          print('Failed to delete remote flashcards for lesson ${lesson.id}: $e');
+        }
+      }
+
       await remoteDataSource.deleteLessonsByTopic(
           _userId, subjectName, topicName);
 
-      final lessons = await localDataSource.getLessonsByTopic(
-          _userId, subjectName, topicName);
       for (final lesson in lessons) {
         await localDataSource.deleteLesson(lesson.id);
       }
@@ -297,7 +313,6 @@ class ContentRepositoryImpl implements ContentRepository {
       if (_userId.isEmpty) {
         return const Left(AuthFailure('User not authenticated'));
       }
-
       if (!await connectionChecker.hasConnection) {
         return const Left(
             NetworkFailure('Network connection required to delete content'));
@@ -311,6 +326,12 @@ class ContentRepositoryImpl implements ContentRepository {
         final lessons = await localDataSource.getLessonsByTopic(
             _userId, subjectName, topic.name);
         for (final lesson in lessons) {
+          await flashcardLocalDataSource.deleteFlashcardsByLesson(lesson.id);
+          try {
+            await flashcardRemoteDataSource.deleteFlashcardsByLesson(lesson.id);
+          } catch (e) {
+            print('Failed to delete remote flashcards for lesson ${lesson.id}: $e');
+          }
           await localDataSource.deleteLesson(lesson.id);
         }
         await localDataSource.deleteTopic(_userId, subjectName, topic.name);

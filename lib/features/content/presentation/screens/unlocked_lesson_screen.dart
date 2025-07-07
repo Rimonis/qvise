@@ -57,7 +57,7 @@ class UnlockedLessonScreen extends ConsumerWidget {
                     );
                     if (result == true) {
                       ref.invalidate(flashcardCountProvider(lesson.id));
-                      ref.invalidate(lessonProvider(lesson.id)); // Refresh lesson data
+                      ref.invalidate(lessonProvider(lesson.id));
                       ref.invalidate(unlockedLessonsProvider);
                     }
                   },
@@ -94,10 +94,9 @@ class UnlockedLessonScreen extends ConsumerWidget {
                   ),
                 );
                 if (confirmed == true) {
-                  // Call the notifier method which handles invalidation
                   await ref
                       .read(lessonsNotifierProvider(
-                              lesson.subjectName, lesson.topicName)
+                              subjectName: lesson.subjectName, topicName: lesson.topicName)
                           .notifier)
                       .lockLesson(lesson.id);
                   if (context.mounted) Navigator.pop(context);
