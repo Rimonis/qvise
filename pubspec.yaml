@@ -1,10 +1,10 @@
 name: qvise
 description: A spaced repetition learning app
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -25,6 +25,7 @@ dependencies:
   firebase_core: ^2.24.2
   firebase_auth: ^4.15.3
   cloud_firestore: ^4.13.6
+  firebase_crashlytics: ^3.4.15
   google_sign_in: ^6.1.6
   
   # Local Storage
@@ -32,15 +33,22 @@ dependencies:
   path: ^1.8.3
   shared_preferences: ^2.2.2
   
-  # Network
+  # Network & Sync
   internet_connection_checker: ^1.0.0+1
   connectivity_plus: ^5.0.2
+  backoff: 1.0.1
   
   # Utilities
   dartz: ^0.10.1
   freezed_annotation: ^2.4.1
   json_annotation: ^4.8.1
+  uuid: ^4.3.3
   
+  # Security
+  encrypt: ^5.0.3
+  crypto: ^3.0.3
+  flutter_secure_storage: ^9.0.0
+
   # Other
   flutter_localizations:
     sdk: flutter
@@ -53,19 +61,13 @@ dev_dependencies:
   freezed: ^2.4.6
   json_serializable: ^6.7.1
   riverpod_generator: ^2.3.9
+  mockito: ^5.4.4
+  integration_test:
+    sdk: flutter
+  golden_toolkit: ^0.15.0
 
 flutter:
   uses-material-design: true
-  
-  # To add assets to your application, add an assets section:
-  # assets:
-  #   - images/
-  #   - assets/
-  
-  # Fonts (if not using Google Fonts)
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
+  assets:
+    - assets/config/
+    - assets/images/

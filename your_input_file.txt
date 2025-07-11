@@ -1,0 +1,352 @@
+File: lib/features/auth/domain/repositories/auth_repository.dart
+Changes Made:
+
+Unified Error Handling: The abstract repository interface has been updated. All method signatures now correctly return Either<AppError, T>, ensuring any implementation will conform to the new, robust error handling system. The old Failure type has been completely removed.
+
+Dart
+
+// lib/features/auth/domain/repositories/auth_repository.dart
+import 'package:dartz/dartz.dart';
+import 'package:qvise/core/error/app_error.dart';
+import '../entities/user.dart';
+
+abstract class AuthRepository {
+  Stream<User?> authStateChanges();
+  Future<Either<AppError, User>> signInWithEmailPassword(String email, String password);
+  Future<Either<AppError, User>> signUpWithEmailPassword(String email, String password, String displayName);
+  Future<Either<AppError, User>> signInWithGoogle();
+  Future<Either<AppError, void>> signOut();
+  Future<Either<AppError, void>> sendPasswordResetEmail(String email);
+  Future<Either<AppError, void>> sendEmailVerification();
+}
+File: lib/features/auth/data/repositories/auth_repository_impl.dart
+Changes Made:
+
+Corrected Implementation: The repository implementation now correctly implements the updated AuthRepository interface.
+
+Unified Error Handling: All methods now return Either<AppError, T>. try-catch blocks have been updated to catch specific FirebaseAuthExceptions and map them to the appropriate AppError.auth or AppError.network types, providing clearer error context to the rest of the app.
+
+Removed Unused Dependencies: The AuthLocalDataSource and InternetConnectionChecker have been removed as the auth state is now managed directly via the Firebase stream, simplifying the logic.
+
+Dart
+
+// lib/features/auth/data/repositories/auth_repository_impl.dart
+import 'package:dartz/dartz.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:qvise/core/error/app_error.dart';
+import 'package:qvise/features/auth/domain/entities/user.dart';
+import 'package:qvise/features/auth/domain/repositories/auth_repository.dart';
+import '../datasources/auth_remote_data_source.dart';
+import '../models/user_model.dart';
+
+class AuthRepositoryImpl implements AuthRepository {
+  final AuthRemoteDataSource remoteDataSource;
+
+  AuthRepositoryImpl({required this.remoteDataSource});
+
+  @override
+  Stream<User?> authStateChanges() {
+    return remoteDataSource.authStateChanges().map((firebaseUser) {
+      return firebaseUser!= null? UserModel.fromFirebase(firebaseUser).toEntity() : null;
+    });
+  }
+
+  @override
+  Future<Either<AppError, User>> signInWithEmailPassword(String email, String password) async {
+    try {
+      final userModel = await remoteDataSource.signInWithEmailPassword(email, password);
+      return Right(userModel.toEntity());
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      return Left(AppError.auth(message: e.message?? 'Sign in failed.'));
+    } catch (e) {
+      return Left(AppError.unknown(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<AppError, User>> signUpWithEmailPassword(String email, String password, String displayName) async {
+    try {
+      final userModel = await remoteDataSource.signUpWithEmailPassword(email, password, displayName);
+      return Right(userModel.toEntity());
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      return Left(AppError.auth(message: e.message?? 'Sign up failed.'));
+    } catch (e) {
+      return Left(AppError.unknown(message: e.toString()));
+    }
+  }
+  
+  @override
+  Future<Either<AppError, User>> signInWithGoogle() async {
+    try {
+      final userModel = await remoteDataSource.signInWithGoogle();
+      return Right(userModel.toEntity());
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      return Left(AppError.auth(message: e.message?? 'Google sign in failed.'));
+    } catch (e) {
+      return Left(AppError.unknown(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<AppError, void>> signOut() async {
+    try {
+      await remoteDataSource.signOut();
+      return const Right(null);
+    } catch (e) {
+      return Left(AppError.unknown(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<AppError, void>> sendPasswordResetEmail(String email) async {
+    try {
+      await remoteDataSource.sendPasswordResetEmail(email);
+      return const Right(null);
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      return Left(AppError.auth(message: e.message?? 'Password reset failed.'));
+    } catch (e) {
+      return Left(AppError.unknown(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<AppError, void>> sendEmailVerification() async {
+    try {
+      await remoteDataSource.sendEmailVerification();
+      return const Right(null);
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      return Left(AppError.auth(message: e.message?? 'Failed to send verification email.'));
+    } catch (e) {
+      return Left(AppError.unknown(message: e.toString()));
+    }
+  }
+}
+Feature & Core Providers (Refactored)
+File: lib/features/auth/presentation/application/auth_providers.dart
+Changes Made:
+
+Simplified Provider Structure: The file has been streamlined. The use-case providers were removed as they were simple wrappers around repository methods. The main Auth notifier now calls the repository directly, which is a more pragmatic approach for this feature's complexity.
+
+Corrected Method Calls: The Auth notifier now uses the correct method names (signUp, signIn, etc.) and correctly handles the Either<AppError, T> result from the repository, updating its state accordingly.
+
+Removed AuthRateLimiter: The insecure client-side rate limiter has been completely removed.
+
+Dart
+
+// lib/features/auth/presentation/application/auth_providers.dart
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/providers/providers.dart';
+import 'package:qvise/features/auth/domain/repositories/auth_repository.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../data/datasources/auth_remote_data_source.dart';
+import '../../data/repositories/auth_repository_impl.dart';
+import 'auth_state.dart';
+import '../../domain/entities/user.dart';
+
+part 'auth_providers.g.dart';
+
+@riverpod
+AuthRemoteDataSource authRemoteDataSource(AuthRemoteDataSourceRef ref) {
+  return AuthRemoteDataSourceImpl(
+    firebaseAuth: ref.watch(firebaseAuthProvider),
+    googleSignIn: ref.watch(googleSignInProvider),
+  );
+}
+
+@riverpod
+AuthRepository authRepository(AuthRepositoryRef ref) {
+  return AuthRepositoryImpl(
+    remoteDataSource: ref.watch(authRemoteDataSourceProvider),
+  );
+}
+
+@Riverpod(keepAlive: true)
+class Auth extends _$Auth {
+  StreamSubscription<User?>? _authStateSubscription;
+
+  @override
+  AuthState build() {
+    _authStateSubscription?.cancel();
+    _authStateSubscription =
+        ref.watch(authRepositoryProvider).authStateChanges().listen(_onUserChanged);
+
+    ref.onDispose(() {
+      _authStateSubscription?.cancel();
+    });
+
+    return const AuthState.initial();
+  }
+
+  void _onUserChanged(User? user) {
+    if (user == null) {
+      state = const AuthState.unauthenticated();
+    } else {
+      state = user.isEmailVerified
+        ? AuthState.authenticated(user)
+          : AuthState.emailNotVerified(user);
+    }
+  }
+
+  Future<void> signUp({
+    required String email,
+    required String password,
+    required String displayName,
+  }) async {
+    state = const AuthState.loading();
+    final result = await ref.read(authRepositoryProvider).signUpWithEmailPassword(email, password, displayName);
+    result.fold(
+      (error) => state = AuthState.error(error.userFriendlyMessage),
+      (user) {
+        // Listener will handle state change
+      },
+    );
+  }
+
+  Future<void> signIn({
+    required String email,
+    required String password,
+  }) async {
+    state = const AuthState.loading();
+    final result = await ref.read(authRepositoryProvider).signInWithEmailPassword(email, password);
+    result.fold(
+      (error) => state = AuthState.error(error.userFriendlyMessage),
+      (user) {
+        // Listener will handle state change
+      },
+    );
+  }
+
+  Future<void> googleSignIn() async {
+    state = const AuthState.loading();
+    final result = await ref.read(authRepositoryProvider).signInWithGoogle();
+    result.fold(
+      (error) => state = AuthState.error(error.userFriendlyMessage),
+      (user) {
+        // Listener will handle state change
+      },
+    );
+  }
+
+  Future<void> doSignOut() async {
+    await ref.read(authRepositoryProvider).signOut();
+    state = const AuthState.unauthenticated();
+  }
+
+  Future<void> doSendVerificationEmail() async {
+    await ref.read(authRepositoryProvider).sendEmailVerification();
+  }
+
+  Future<void> reloadUser() async {
+    await ref.read(firebaseAuthProvider).currentUser?.reload();
+    final firebaseUser = ref.read(firebaseAuthProvider).currentUser;
+    _onUserChanged(firebaseUser!= null? User.fromFirebase(firebaseUser) : null);
+  }
+}
+UI Layer (Refactored)
+File: lib/features/auth/presentation/screens/email_verification_screen.dart
+Changes Made:
+
+Corrected Method Calls: The screen now calls the correctly named methods on the Auth notifier (doSendVerificationEmail, reloadUser, doSignOut).
+
+Simplified State Handling: The UI now correctly reacts to the AuthState to display user information and verification status.
+
+Dart
+
+// lib/features/auth/presentation/screens/email_verification_screen.dart
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../application/auth_providers.dart';
+import '../application/auth_state.dart';
+import '../widgets/auth_button.dart';
+import '../../domain/entities/user.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/theme_extensions.dart';
+
+class EmailVerificationScreen extends ConsumerStatefulWidget {
+  const EmailVerificationScreen({super.key});
+
+  @override
+  ConsumerState<EmailVerificationScreen> createState() => _EmailVerificationScreenState();
+}
+
+class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScreen> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start a timer to periodically check the verification status
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      ref.read(authProvider.notifier).reloadUser();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final user = authState.whenOrNull(emailNotVerified: (user) => user);
+
+    if (user == null) {
+      // This case should ideally not be reached if routing is correct,
+      // but it's a safe fallback.
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: AppSpacing.screenPaddingAll,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children:,
+          ),
+        ),
+      ),
+    );
+  }
+}
+Testing Framework
+File: test/widget_test.dart
+Changes Made:
+
+Meaningful Smoke Test: Replaced the default counter test with a more useful one that verifies the app starts correctly and shows the SignInScreen when a user is not authenticated, confirming the initial routing logic works.
+
+Dart
+
+// test/widget_test.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:qvise/features/auth/presentation/screens/sign_in_screen.dart';
+import 'package:qvise/main.dart';
+
+void main() {
+  testWidgets('App starts and shows SignInScreen when unauthenticated', (WidgetTester tester) async {
+    // Build our app and trigger a frame.
+    // We wrap MyApp in a ProviderScope for Riverpod.
+    await tester.pumpWidget(const ProviderScope(child: MyApp()));
+
+    // Wait for all frames to settle.
+    await tester.pumpAndSettle();
+
+    // Verify that the SignInScreen is present.
+    expect(find.byType(SignInScreen), findsOneWidget);
+    expect(find.text('Welcome Back'), findsOneWidget);
+
+    // Verify that the home screen is not present.
+    expect(find.text('Home'), findsNothing);
+  });
+}
+This concludes the full refactoring of all provided files. The application now has a robust, secure, and scalable architecture.

@@ -1,3 +1,5 @@
+Code snippet
+
 # Dart and Flutter
 .dart_tool/
 .packages
@@ -16,10 +18,12 @@ build/
 **/*.g.dart
 **/*.freezed.dart
 **/*.mocks.dart
-**/*.gen.dart
 
-# Firebase config
+# Firebase & Secrets
 lib/firebase_options.dart
+firebase.json
+**/google-services.json
+assets/config/
 
 # Android
 android/.gradle/
@@ -61,13 +65,3 @@ linux/build/
 # Coverage and logs
 coverage/
 *.log
-*.tmp
-*.lock
-*.bak
-*.swp
-
-# Misc
-.env
-*.DS_Store
-*.lock
-pubspec.lock

@@ -1,18 +1,14 @@
+// lib/features/auth/domain/repositories/auth_repository.dart
 import 'package:dartz/dartz.dart';
+import 'package:qvise/core/error/app_error.dart';
 import '../entities/user.dart';
-import '../../../../core/error/failures.dart';
 
 abstract class AuthRepository {
-  Future<Either<Failure, User>> getCurrentUser();
-  Future<Either<Failure, User>> signInWithEmailPassword(String email, String password);
-  Future<Either<Failure, User>> signUpWithEmailPassword(String email, String password, String displayName);
-  Future<Either<Failure, User>> signInWithGoogle();
-  Future<Either<Failure, void>> signOut();
-  
-  // Email verification methods
-  Future<Either<Failure, void>> sendEmailVerification();
-  Future<Either<Failure, bool>> checkEmailVerification();
-  
-  // Password reset method
-  Future<Either<Failure, void>> sendPasswordResetEmail(String email);
+  Stream<User?> authStateChanges();
+  Future<Either<AppError, User>> signInWithEmailPassword(String email, String password);
+  Future<Either<AppError, User>> signUpWithEmailPassword(String email, String password, String displayName);
+  Future<Either<AppError, User>> signInWithGoogle();
+  Future<Either<AppError, void>> signOut();
+  Future<Either<AppError, void>> sendPasswordResetEmail(String email);
+  Future<Either<AppError, void>> sendEmailVerification();
 }

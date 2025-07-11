@@ -1,0 +1,6 @@
+);
+    final json = jsonDecode(contents);
+    return AppConfig(
+      appName: json['appName'],
+      apiBaseUrl: json,
+      environment: Environment.values.firstWhere(

@@ -1,245 +1,117 @@
 // lib/main.dart
-
 import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:go_router/go_router.dart';
-import 'package:qvise/core/application/sync_coordinator.dart';
-import 'package:qvise/core/providers/network_status_provider.dart';
+import 'package:qvise/core/config/app_config.dart';
+import 'package:qvise/core/database/database_helper.dart';
+import 'package:qvise/core/providers/providers.dart';
 import 'package:qvise/core/routes/app_router.dart';
-import 'package:qvise/core/widgets/error_boundary.dart';
 import 'package:qvise/core/theme/app_theme.dart';
 import 'package:qvise/core/theme/theme_mode_provider.dart';
+import 'package:qvise/core/widgets/error_boundary.dart';
+import 'package:qvise/features/flashcards/application/lesson_event_handler.dart';
 import 'package:qvise/firebase_options.dart';
 
-void main() async {
-  runZonedGuarded<Future<void>>(() async {
+Future<void> main() async {
+  await runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    FlutterError.onError = (FlutterErrorDetails details) {
-      if (kDebugMode) {
-        FlutterError.presentError(details);
-      }
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    // Load environment configuration
+    const env = String.fromEnvironment('APP_ENV', defaultValue: 'development');
+    final appConfig = await AppConfig.forEnvironment(env);
+
+    // Initialize services
+    await DatabaseHelper.instance.database; // Initializes DB and runs migrations
+
+    // Setup top-level providers and observers
+    final container = ProviderContainer(
+      overrides: [
+        appConfigProvider.overrideWithValue(appConfig),
+      ],
+      observers:,
+    );
+
+    // Initialize the event handler that listens for cross-feature events
+    container.read(lessonEventHandlerProvider).initialize();
+
+    // Pass all uncaught errors from the framework to Crashlytics.
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
+    // Pass all uncaught asynchronous errors to Crashlytics.
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
     };
 
-    try {
-      await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform);
-    } catch (e) {
-      if (kDebugMode) {
-        print('Firebase initialization error: $e');
-      }
-    }
-
     runApp(
-      const ProviderScope(
-        child: ErrorBoundary(
-          child: MyApp(),
-        ),
+      UncontrolledProviderScope(
+        container: container,
+        child: const MyApp(),
       ),
     );
   }, (error, stack) {
-    if (kDebugMode) {
-      print('Dart error: $error');
-      print(stack);
-    }
+    // This top-level error handler catches errors that might be missed
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
   });
 }
 
-class MyApp extends ConsumerStatefulWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  ConsumerState<MyApp> createState() => _MyAppState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeNotifierProvider);
+
+    return MaterialApp.router(
+      title: ref.watch(appConfigProvider).appName,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode.asData?.value?? ThemeMode.system,
+      routerConfig: router,
+      builder: (context, child) => ErrorBoundary(child: child!),
+    );
+  }
 }
 
-class _MyAppState extends ConsumerState<MyApp> {
+// Simple observer for logging provider changes in debug mode
+class AppObserver extends ProviderObserver {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _setupSyncListeners();
-      _performInitialSync();
-    });
-  }
-
-  void _setupSyncListeners() {
-    ref.read(networkCallbacksProvider.notifier).addOnlineCallback(() {
-      ref.read(syncCoordinatorProvider.notifier).syncAll();
-    });
-  }
-
-  void _performInitialSync() {
-    final isOnline = ref.read(networkStatusProvider).valueOrNull ?? false;
-    if (isOnline) {
-      ref.read(syncCoordinatorProvider.notifier).syncAll();
+  void didUpdateProvider(
+    ProviderBase<Object?> provider,
+    Object? previousValue,
+    Object? newValue,
+    ProviderContainer container,
+  ) {
+    if (kDebugMode) {
+      debugPrint('''
+{
+  "provider": "${provider.name?? provider.runtimeType}",
+  "newValue": "$newValue"
+}''');
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final themeModeAsync = ref.watch(themeModeNotifierProvider);
-
-    return themeModeAsync.when(
-      data: (themeMode) => _AppMaterialRouter(themeMode: themeMode),
-      loading: () => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(
-              color: AppTheme.lightTheme.colorScheme.primary,
-            ),
-          ),
-        ),
-      ),
-      error: (error, stackTrace) {
-        if (kDebugMode) {
-          print('Theme loading error: $error');
-          print(stackTrace);
-        }
-        return _AppMaterialRouter(themeMode: ThemeMode.system);
-      },
-    );
-  }
-}
-
-// Separated MaterialApp widget to prevent unnecessary rebuilds
-class _AppMaterialRouter extends ConsumerStatefulWidget {
-  final ThemeMode themeMode;
-
-  const _AppMaterialRouter({
-    required this.themeMode,
-  });
-
-  @override
-  ConsumerState<_AppMaterialRouter> createState() => _AppMaterialRouterState();
-}
-
-class _AppMaterialRouterState extends ConsumerState<_AppMaterialRouter> {
-  late final GoRouter _router;
-
-  @override
-  void initState() {
-    super.initState();
-    // Cache the router to prevent rebuilds
-    _router = ref.read(routerProvider);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Force a frame to ensure clean theme transitions
-    SchedulerBinding.instance.ensureVisualUpdate();
-    
-    return MaterialApp.router(
-      // Add key to force rebuild on theme change
-      key: ValueKey(widget.themeMode),
-      routerConfig: _router,
-      debugShowCheckedModeBanner: false,
-      title: 'Qvise',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: widget.themeMode,
-      // Add animation duration for theme transitions
-      themeAnimationDuration: const Duration(milliseconds: 300),
-      themeAnimationCurve: Curves.easeInOut,
-      builder: (context, child) {
-        // Wrap with error boundary for each route
-        return ErrorBoundary(
-          errorBuilder: (details) => _ErrorScreen(details: details),
-          child: GestureDetector(
-            // Dismiss keyboard when tapping outside text fields
-            onTap: () {
-              FocusManager.instance.primaryFocus?.unfocus();
-            },
-            child: child!,
-          ),
-        );
-      },
-    );
-  }
-}
-
-// Custom error screen for production
-class _ErrorScreen extends StatelessWidget {
-  final FlutterErrorDetails details;
-
-  const _ErrorScreen({required this.details});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      home: Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Something went wrong',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  kDebugMode
-                      ? details.exception.toString()
-                      : 'An unexpected error occurred. Please restart the app.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.7),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                if (kDebugMode) ...[
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.all(12),
-                      child: SingleChildScrollView(
-                        child: Text(
-                          details.stack.toString(),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                ElevatedButton(
-                  onPressed: () {
-                    // In a real app, you might want to restart or navigate to home
-                    // For now, we'll just show a message
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Please restart the app'),
-                      ),
-                    );
-                  },
-                  child: const Text('Try Again'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  void providerDidFail(
+    ProviderBase<Object?> provider,
+    Object error,
+    StackTrace stackTrace,
+    ProviderContainer container,
+  ) {
+    if (kDebugMode) {
+      debugPrint('Provider ${provider.name?? provider.runtimeType} threw $error at $stackTrace');
+    }
+    FirebaseCrashlytics.instance.recordError(error, stackTrace);
   }
 }

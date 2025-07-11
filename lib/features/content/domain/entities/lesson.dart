@@ -1,5 +1,4 @@
 // lib/features/content/domain/entities/lesson.dart
-
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'lesson.freezed.dart';
@@ -13,13 +12,13 @@ class Lesson with _$Lesson {
     required String topicName,
     String? title,
     required DateTime createdAt,
+    required DateTime updatedAt, // Added for sync conflict resolution
     DateTime? lockedAt,
     required DateTime nextReviewDate,
     DateTime? lastReviewedAt,
     required int reviewStage,
     required double proficiency,
     @Default(false) bool isLocked,
-    @Default(false) bool isSynced,
     @Default(0) int flashcardCount,
     @Default(0) int fileCount,
     @Default(0) int noteCount,
@@ -28,21 +27,14 @@ class Lesson with _$Lesson {
   const Lesson._();
 
   String get displayTitle {
-    if (title != null && title!.isNotEmpty) {
+    if (title!= null && title!.isNotEmpty) {
       return title!;
     }
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months =;
     final month = months[createdAt.month - 1];
     final day = createdAt.day;
     final year = createdAt.year;
     return '$month $day, $year';
-  }
-
-  String get dayCreated {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    final month = months[createdAt.month - 1];
-    final day = createdAt.day;
-    return '$month $day';
   }
 
   bool get isReviewDue {
@@ -69,18 +61,5 @@ class Lesson with _$Lesson {
     if (proficiency >= 0.6) return '#FFC107'; // Amber
     if (proficiency >= 0.4) return '#FF9800'; // Orange
     return '#F44336'; // Red
-  }
-
-  double get reviewStageProgress {
-    return (reviewStage / 5.0).clamp(0.0, 1.0);
-  }
-
-  int get totalContentCount => flashcardCount + fileCount + noteCount;
-
-  bool get isDue => isLocked && DateTime.now().isAfter(nextReviewDate);
-
-  int get daysTillNextReview {
-    if (!isLocked) return 0;
-    return nextReviewDate.difference(DateTime.now()).inDays;
   }
 }
