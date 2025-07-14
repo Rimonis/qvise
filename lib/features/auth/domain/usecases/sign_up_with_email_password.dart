@@ -1,14 +1,33 @@
+// lib/features/auth/domain/usecases/sign_up_with_email_password.dart
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
+import 'package:qvise/core/error/app_error.dart';
+import 'package:qvise/core/usecases/usecase.dart';
 import '../entities/user.dart';
 import '../repositories/auth_repository.dart';
 
-class SignUpWithEmailPassword {
+class SignUpWithEmailPasswordParams {
+  final String email;
+  final String password;
+  final String displayName;
+
+  SignUpWithEmailPasswordParams({
+    required this.email,
+    required this.password,
+    required this.displayName,
+  });
+}
+
+class SignUpWithEmailPassword implements UseCase<User, SignUpWithEmailPasswordParams> {
   final AuthRepository repository;
 
   SignUpWithEmailPassword(this.repository);
 
-  Future<Either<Failure, User>> call(String email, String password, String displayName) async {
-    return await repository.signUpWithEmailPassword(email, password, displayName);
+  @override
+  Future<Either<AppError, User>> call(SignUpWithEmailPasswordParams params) async {
+    return await repository.signUpWithEmailPassword(
+      params.email,
+      params.password,
+      params.displayName,
+    );
   }
 }

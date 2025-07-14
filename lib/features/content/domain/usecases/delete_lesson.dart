@@ -1,13 +1,22 @@
+// lib/features/content/domain/usecases/delete_lesson.dart
 import 'package:dartz/dartz.dart';
-import 'package:qvise/features/content/domain/repositories/content_repository.dart';
-import '../../../../../core/error/failures.dart';
+import 'package:qvise/core/error/app_error.dart';
+import 'package:qvise/core/usecases/usecase.dart';
+import '../repositories/content_repository.dart';
 
-class DeleteLesson {
+class DeleteLessonParams {
+  final String lessonId;
+
+  DeleteLessonParams({required this.lessonId});
+}
+
+class DeleteLesson implements VoidUseCase<DeleteLessonParams> {
   final ContentRepository repository;
 
   DeleteLesson(this.repository);
 
-  Future<Either<Failure, void>> call(String lessonId) async {
-    return await repository.deleteLesson(lessonId);
+  @override
+  Future<Either<AppError, void>> call(DeleteLessonParams params) async {
+    return await repository.deleteLesson(params.lessonId);
   }
 }

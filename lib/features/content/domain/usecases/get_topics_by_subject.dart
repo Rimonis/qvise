@@ -1,15 +1,23 @@
+// lib/features/content/domain/usecases/get_topics_by_subject.dart
 import 'package:dartz/dartz.dart';
-import 'package:qvise/features/content/domain/entities/topic.dart';
-import 'package:qvise/features/content/domain/repositories/content_repository.dart';
-import '../../../../../core/error/failures.dart';
+import 'package:qvise/core/error/app_error.dart';
+import 'package:qvise/core/usecases/usecase.dart';
+import '../entities/topic.dart';
+import '../repositories/content_repository.dart';
 
+class GetTopicsBySubjectParams {
+  final String subjectName;
 
-class GetTopicsBySubject {
+  GetTopicsBySubjectParams({required this.subjectName});
+}
+
+class GetTopicsBySubject implements UseCase<List<Topic>, GetTopicsBySubjectParams> {
   final ContentRepository repository;
 
   GetTopicsBySubject(this.repository);
 
-  Future<Either<Failure, List<Topic>>> call(String subjectName) async {
-    return await repository.getTopicsBySubject(subjectName);
+  @override
+  Future<Either<AppError, List<Topic>>> call(GetTopicsBySubjectParams params) async {
+    return await repository.getTopicsBySubject(params.subjectName);
   }
 }

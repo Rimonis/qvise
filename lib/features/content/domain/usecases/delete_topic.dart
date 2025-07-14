@@ -1,14 +1,26 @@
+// lib/features/content/domain/usecases/delete_topic.dart
 import 'package:dartz/dartz.dart';
-import 'package:qvise/features/content/domain/repositories/content_repository.dart';
-import '../../../../../core/error/failures.dart';
+import 'package:qvise/core/error/app_error.dart';
+import 'package:qvise/core/usecases/usecase.dart';
+import '../repositories/content_repository.dart';
 
+class DeleteTopicParams {
+  final String subjectName;
+  final String topicName;
 
-class DeleteTopic {
+  DeleteTopicParams({
+    required this.subjectName,
+    required this.topicName,
+  });
+}
+
+class DeleteTopic implements VoidUseCase<DeleteTopicParams> {
   final ContentRepository repository;
 
   DeleteTopic(this.repository);
 
-  Future<Either<Failure, void>> call(String subjectName, String topicName) async {
-    return await repository.deleteTopic(subjectName, topicName);
+  @override
+  Future<Either<AppError, void>> call(DeleteTopicParams params) async {
+    return await repository.deleteTopic(params.subjectName, params.topicName);
   }
 }

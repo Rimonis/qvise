@@ -1,321 +1,269 @@
 // lib/core/routes/app_router.dart
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:qvise/core/shell%20and%20tabs/main_shell_screen.dart';
-import 'package:qvise/features/auth/presentation/application/auth_providers.dart';
-import 'package:qvise/features/auth/presentation/application/auth_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/features/auth/presentation/screens/sign_in_screen.dart';
-import 'package:qvise/features/auth/presentation/screens/splash_screen.dart';
-import 'package:qvise/features/auth/presentation/screens/email_verification_screen.dart';
+import 'package:qvise/features/auth/presentation/screens/sign_up_screen.dart';
 import 'package:qvise/features/auth/presentation/screens/forgot_password_screen.dart';
-import 'package:qvise/features/content/presentation/screens/create_lesson_screen.dart';
-import 'package:qvise/features/content/presentation/screens/subject_selection_screen.dart';
 import 'package:qvise/features/content/presentation/screens/unlocked_lesson_screen.dart';
 import 'package:qvise/features/flashcards/presentation/screens/flashcard_preview_screen.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'route_guard.dart';
-import 'route_names.dart';
+import 'package:qvise/features/flashcards/creation/presentation/screens/flashcard_creation_screen.dart';
+import 'package:qvise/core/shell%20and%20tabs/main_shell_screen.dart';
 
-part 'app_router.g.dart';
-
-class GoRouterNotifier extends ChangeNotifier {
-  GoRouterNotifier(this._ref) {
-    _init();
-  }
-
-  final Ref _ref;
-  ProviderSubscription<AuthState>? _authSubscription;
-  bool _disposed = false;
-
-  void _init() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_disposed) {
-        _authSubscription = _ref.listen<AuthState>(
-          authProvider,
-          (previous, current) {
-            if (kDebugMode) {
-              print('🟡 Router: Auth state changed from $previous to $current');
-            }
-            if (!_disposed) {
-              notifyListeners();
-            }
-          },
-          fireImmediately: false,
-        );
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _disposed = true;
-    _authSubscription?.close();
-    super.dispose();
-  }
-
-  @override
-  void notifyListeners() {
-    if (!_disposed) {
-      super.notifyListeners();
-    }
-  }
-}
-
-@Riverpod(keepAlive: true)
-GoRouterNotifier goRouterNotifier(Ref ref) {
-  final notifier = GoRouterNotifier(ref);
-  ref.onDispose(() => notifier.dispose());
-  return notifier;
-}
-
-@Riverpod(keepAlive: true)
-GoRouter router(Ref ref) {
-  final notifier = ref.watch(goRouterNotifierProvider);
-
-  String? lastRedirect;
-  int redirectCount = 0;
-  const maxRedirects = 5;
-  DateTime? lastRedirectTime;
-
+final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: RouteNames.splash,
-    debugLogDiagnostics: kDebugMode,
-    refreshListenable: notifier,
-    redirect: (context, state) {
-      final currentLocation = state.matchedLocation;
-      final now = DateTime.now();
-
-      if (lastRedirectTime != null &&
-          now.difference(lastRedirectTime!).inSeconds > 1) {
-        redirectCount = 0;
-      }
-      lastRedirectTime = now;
-
-      if (lastRedirect != currentLocation) {
-        redirectCount = 0;
-        lastRedirect = currentLocation;
-      }
-
-      if (redirectCount >= maxRedirects) {
-        if (kDebugMode) {
-          print('🔴 Router: Max redirects reached, staying at $currentLocation');
-        }
-        return null;
-      }
-
-      try {
-        final result = authGuard(ref, currentLocation);
-
-        if (result != null) {
-          redirectCount++;
-        }
-
-        if (kDebugMode) {
-          print(
-              '🟡 Router: Location: $currentLocation → Redirect: ${result ?? "null (stay)"}');
-        }
-
-        return result;
-      } catch (e, stack) {
-        if (kDebugMode) {
-          print('🔴 Router: Error in redirect: $e');
-          print(stack);
-        }
-        return null;
-      }
-    },
-    errorBuilder: (context, state) => _RouterErrorPage(error: state.error),
+    initialLocation: '/auth/sign-in',
     routes: [
+      // Authentication routes
       GoRoute(
-        path: RouteNames.splash,
-        name: 'splash',
-        pageBuilder: (context, state) => _buildPage(
-          key: state.pageKey,
-          child: const DebugSplashScreen(),
-          name: 'splash',
-        ),
+        path: '/auth/sign-in',
+        name: 'sign-in',
+        builder: (context, state) => const SignInScreen(),
       ),
       GoRoute(
-        path: RouteNames.login,
-        name: 'login',
-        pageBuilder: (context, state) => _buildPage(
-          key: state.pageKey,
-          child: const SignInScreen(),
-          name: 'login',
-        ),
+        path: '/auth/sign-up',
+        name: 'sign-up',
+        builder: (context, state) => const SignUpScreen(),
       ),
       GoRoute(
-        path: RouteNames.forgotPassword,
+        path: '/auth/forgot-password',
         name: 'forgot-password',
-        pageBuilder: (context, state) => _buildPage(
-          key: state.pageKey,
-          child: const ForgotPasswordScreen(),
-          name: 'forgot-password',
-        ),
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
-      GoRoute(
-        path: RouteNames.emailVerification,
-        name: 'email-verification',
-        pageBuilder: (context, state) => _buildPage(
-          key: state.pageKey,
-          child: const EmailVerificationScreen(),
-          name: 'email-verification',
-        ),
-      ),
-      GoRoute(
-        path: RouteNames.app,
-        name: 'app',
-        pageBuilder: (context, state) => _buildPage(
-          key: state.pageKey,
-          child: const MainShellScreen(),
-          name: 'app',
-        ),
+
+      // Main app shell
+      ShellRoute(
+        builder: (context, state, child) => MainShellScreen(child: child),
         routes: [
+          // Home tab routes
           GoRoute(
-            path: 'lesson/:lessonId',
-            name: 'unlocked-lesson',
-            pageBuilder: (context, state) {
+            path: '/home',
+            name: 'home',
+            builder: (context, state) => const SizedBox(), // Home tab content
+          ),
+
+          // Browse tab routes
+          GoRoute(
+            path: '/browse',
+            name: 'browse',
+            builder: (context, state) => const SizedBox(), // Browse tab content
+          ),
+
+          // Study tab routes
+          GoRoute(
+            path: '/study',
+            name: 'study', 
+            builder: (context, state) => const SizedBox(), // Study tab content
+          ),
+
+          // Profile tab routes
+          GoRoute(
+            path: '/profile',
+            name: 'profile',
+            builder: (context, state) => const SizedBox(), // Profile tab content
+          ),
+
+          // Lesson routes
+          GoRoute(
+            path: '/lesson/:lessonId',
+            name: 'lesson-details',
+            builder: (context, state) {
               final lessonId = state.pathParameters['lessonId']!;
-              return _buildPage(
-                key: state.pageKey,
-                child: UnlockedLessonScreen(lessonId: lessonId),
-                name: 'unlocked-lesson-$lessonId',
+              final lesson = state.extra as Lesson?; // Pass lesson object if available
+              
+              return UnlockedLessonScreen(
+                lessonId: lessonId,
+                lesson: lesson, // This satisfies the required parameter
               );
             },
           ),
+
+          // Flashcard routes
           GoRoute(
-            path: 'preview/:lessonId',
+            path: '/lesson/:lessonId/flashcards',
             name: 'flashcard-preview',
-            pageBuilder: (context, state) {
+            builder: (context, state) {
               final lessonId = state.pathParameters['lessonId']!;
-              final allowEditing = (state.extra as bool?) ?? false;
-              return _buildPage(
-                key: state.pageKey,
-                child: FlashcardPreviewScreen(
-                  lessonId: lessonId,
-                  allowEditing: allowEditing,
+              final allowEditing = state.uri.queryParameters['edit'] == 'true';
+              
+              return FlashcardPreviewScreen(
+                lessonId: lessonId,
+                allowEditing: allowEditing,
+              );
+            },
+          ),
+
+          GoRoute(
+            path: '/lesson/:lessonId/flashcards/create',
+            name: 'flashcard-creation',
+            builder: (context, state) {
+              final lessonId = state.pathParameters['lessonId']!;
+              
+              return FlashcardCreationScreen(
+                lessonId: lessonId,
+              );
+            },
+          ),
+
+          GoRoute(
+            path: '/lesson/:lessonId/flashcards/:flashcardId/edit',
+            name: 'flashcard-edit',
+            builder: (context, state) {
+              final lessonId = state.pathParameters['lessonId']!;
+              final flashcardId = state.pathParameters['flashcardId']!;
+              final flashcard = state.extra as Flashcard?;
+              
+              return FlashcardCreationScreen(
+                lessonId: lessonId,
+                editingFlashcard: flashcard,
+              );
+            },
+          ),
+
+          // Study session routes
+          GoRoute(
+            path: '/study-session',
+            name: 'study-session',
+            builder: (context, state) {
+              // Future: Study session screen
+              return const Scaffold(
+                body: Center(
+                  child: Text('Study Session - Coming Soon'),
                 ),
-                name: 'flashcard-preview-$lessonId',
+              );
+            },
+          ),
+
+          // Settings routes
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            builder: (context, state) {
+              // Future: Settings screen
+              return const Scaffold(
+                body: Center(
+                  child: Text('Settings - Coming Soon'),
+                ),
               );
             },
           ),
         ],
       ),
-      GoRoute(
-        path: RouteNames.home,
-        name: 'home',
-        redirect: (_, __) => RouteNames.app,
-      ),
-      GoRoute(
-        path: RouteNames.subjects,
-        name: 'subjects',
-        redirect: (_, __) => RouteNames.app,
-      ),
-      GoRoute(
-        path: RouteNames.profile,
-        name: 'profile',
-        redirect: (_, __) => RouteNames.app,
-      ),
-      GoRoute(
-        path: RouteNames.subjectSelection,
-        name: 'subject-selection',
-        pageBuilder: (context, state) => _buildPage(
-          key: state.pageKey,
-          child: const SubjectSelectionScreen(),
-          name: 'subject-selection',
+    ],
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Page Not Found',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'The page you\'re looking for doesn\'t exist.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.go('/home'),
+              child: const Text('Go Home'),
+            ),
+          ],
         ),
       ),
-      GoRoute(
-        path: RouteNames.createLesson,
-        name: 'create-lesson',
-        pageBuilder: (context, state) {
-          final extra = state.extra as Map<String, String>?;
-          return _buildPage(
-            key: state.pageKey,
-            child: CreateLessonScreen(
-              initialSubjectName: extra?['subjectName'],
-              initialTopicName: extra?['topicName'],
-            ),
-            name: 'create-lesson',
-          );
-        },
-      ),
-    ],
+    ),
   );
+});
+
+// Navigation extension for easy usage
+extension AppNavigation on GoRouter {
+  void goToLesson(String lessonId, {Lesson? lesson}) {
+    go('/lesson/$lessonId', extra: lesson);
+  }
+
+  void goToFlashcardPreview(String lessonId, {bool allowEditing = false}) {
+    go('/lesson/$lessonId/flashcards?edit=$allowEditing');
+  }
+
+  void goToFlashcardCreation(String lessonId) {
+    go('/lesson/$lessonId/flashcards/create');
+  }
+
+  void goToFlashcardEdit(String lessonId, String flashcardId, {Flashcard? flashcard}) {
+    go('/lesson/$lessonId/flashcards/$flashcardId/edit', extra: flashcard);
+  }
+
+  void goToHome() => go('/home');
+  void goToBrowse() => go('/browse');
+  void goToStudy() => go('/study');
+  void goToProfile() => go('/profile');
+  void goToSettings() => go('/settings');
+  void goToStudySession() => go('/study-session');
 }
 
-Page<dynamic> _buildPage({
-  required LocalKey key,
-  required Widget child,
-  required String name,
-}) {
-  return CustomTransitionPage(
-    key: key,
-    child: child,
-    name: name,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      return FadeTransition(
-        opacity: animation,
-        child: child,
-      );
-    },
-  );
-}
+// Navigation helper widget
+class AppNavigationHelper extends ConsumerWidget {
+  final Widget child;
 
-class _RouterErrorPage extends StatelessWidget {
-  final Exception? error;
-
-  const _RouterErrorPage({this.error});
+  const AppNavigationHelper({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Navigation Error'),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Navigation Error',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                kDebugMode
-                    ? error?.toString() ?? 'Unknown navigation error'
-                    : 'Unable to navigate to the requested page',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => context.go(RouteNames.app),
-                child: const Text('Go to Home'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    return child;
+  }
+
+  static void navigateToLesson(BuildContext context, String lessonId, {Lesson? lesson}) {
+    GoRouter.of(context).goToLesson(lessonId, lesson: lesson);
+  }
+
+  static void navigateToFlashcards(BuildContext context, String lessonId, {bool allowEditing = false}) {
+    GoRouter.of(context).goToFlashcardPreview(lessonId, allowEditing: allowEditing);
+  }
+
+  static void navigateToCreateFlashcard(BuildContext context, String lessonId) {
+    GoRouter.of(context).goToFlashcardCreation(lessonId);
+  }
+
+  static void navigateToEditFlashcard(BuildContext context, String lessonId, String flashcardId, {Flashcard? flashcard}) {
+    GoRouter.of(context).goToFlashcardEdit(lessonId, flashcardId, flashcard: flashcard);
+  }
+
+  static void navigateBack(BuildContext context) {
+    if (GoRouter.of(context).canPop()) {
+      GoRouter.of(context).pop();
+    } else {
+      GoRouter.of(context).goToHome();
+    }
   }
 }
+
+// Route parameters helper
+class RouteParams {
+  static String? getLessonId(GoRouterState state) {
+    return state.pathParameters['lessonId'];
+  }
+
+  static String? getFlashcardId(GoRouterState state) {
+    return state.pathParameters['flashcardId'];
+  }
+
+  static bool getEditMode(GoRouterState state) {
+    return state.uri.queryParameters['edit'] == 'true';
+  }
+
+  static T? getExtra<T>(GoRouterState state) {
+    return state.extra as T?;
+  }
+}
+
+// Missing import fix - add these imports
+import 'package:qvise/features/content/domain/entities/lesson.dart';
+import 'package:qvise/features/flashcards/shared/domain/entities/flashcard.dart';

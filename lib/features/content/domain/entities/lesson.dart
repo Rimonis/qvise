@@ -1,4 +1,5 @@
 // lib/features/content/domain/entities/lesson.dart
+
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'lesson.freezed.dart';
@@ -12,7 +13,7 @@ class Lesson with _$Lesson {
     required String topicName,
     String? title,
     required DateTime createdAt,
-    required DateTime updatedAt, // Added for sync conflict resolution
+    required DateTime updatedAt,
     DateTime? lockedAt,
     required DateTime nextReviewDate,
     DateTime? lastReviewedAt,
@@ -26,40 +27,76 @@ class Lesson with _$Lesson {
 
   const Lesson._();
 
-  String get displayTitle {
-    if (title!= null && title!.isNotEmpty) {
-      return title!;
-    }
-    final months =;
-    final month = months[createdAt.month - 1];
-    final day = createdAt.day;
-    final year = createdAt.year;
-    return '$month $day, $year';
+  // Business logic methods
+  bool get isDue => DateTime.now().isAfter(nextReviewDate) && !isLocked;
+  
+  bool get needsReview => isDue;
+  
+  bool get hasContent => flashcardCount > 0 || fileCount > 0 || noteCount > 0;
+  
+  double get completionPercentage => proficiency.clamp(0.0, 1.0);
+  
+  String get proficiencyLevel {
+    if (proficiency >= 0.8) return 'Expert';
+    if (proficiency >= 0.6) return 'Advanced';
+    if (proficiency >= 0.4) return 'Intermediate';
+    if (proficiency >= 0.2) return 'Beginner';
+    return 'Novice';
+  }
+  
+  Duration get timeSinceLastReview {
+    if (lastReviewedAt == null) return Duration.zero;
+    return DateTime.now().difference(lastReviewedAt!);
   }
 
-  bool get isReviewDue {
-    if (!isLocked) return false;
-    return DateTime.now().isAfter(nextReviewDate);
+  Duration get timeUntilNextReview {
+    final now = DateTime.now();
+    if (now.isAfter(nextReviewDate)) return Duration.zero;
+    return nextReviewDate.difference(now);
   }
 
-  int get daysUntilReview {
-    if (!isLocked) return 0;
-    final difference = nextReviewDate.difference(DateTime.now());
-    return difference.inDays;
+  // Copy methods for state updates
+  Lesson markAsReviewed({
+    required double newProficiency,
+    required DateTime nextReview,
+    required int newReviewStage,
+  }) {
+    return copyWith(
+      proficiency: newProficiency,
+      nextReviewDate: nextReview,
+      reviewStage: newReviewStage,
+      lastReviewedAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
   }
 
-  String get reviewStatus {
-    if (!isLocked) return 'Unlocked';
-    if (isReviewDue) return 'Due Now';
-    if (daysUntilReview == 0) return 'Due Today';
-    if (daysUntilReview == 1) return 'Due Tomorrow';
-    return 'Due in $daysUntilReview days';
+  Lesson lock() {
+    return copyWith(
+      isLocked: true,
+      lockedAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
   }
 
-  String get proficiencyColor {
-    if (proficiency >= 0.8) return '#4CAF50'; // Green
-    if (proficiency >= 0.6) return '#FFC107'; // Amber
-    if (proficiency >= 0.4) return '#FF9800'; // Orange
-    return '#F44336'; // Red
+  Lesson unlock() {
+    return copyWith(
+      isLocked: false,
+      lockedAt: null,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  Lesson updateContentCounts({
+    int? flashcardCount,
+    int? fileCount,
+    int? noteCount,
+  }) {
+    return copyWith(
+      flashcardCount: flashcardCount ?? this.flashcardCount,
+      fileCount: fileCount ?? this.fileCount,
+      noteCount: noteCount ?? this.noteCount,
+      updatedAt: DateTime.now(),
+    );
   }
 }
+

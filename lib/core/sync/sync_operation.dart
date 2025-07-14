@@ -72,7 +72,7 @@ class SyncOperation {
       'entityId': entityId,
       'entityType': entityType,
       'operationType': operationType.name,
-      'payload': payload!= null? jsonEncode(payload) : null,
+      'payload': payload != null ? jsonEncode(payload) : null,
       'createdAt': createdAt.millisecondsSinceEpoch,
       'attempts': attempts,
     };
@@ -82,11 +82,45 @@ class SyncOperation {
     return SyncOperation(
       id: map['id'] as String,
       entityId: map['entityId'] as String,
-      entityType: map as String,
-      operationType: OperationType.values.byName(map as String),
-      payload: map['payload']!= null? jsonDecode(map['payload'] as String) : null,
+      entityType: map['entityType'] as String, // Fixed: was just 'map as String'
+      operationType: OperationType.values.byName(map['operationType'] as String), // Fixed: was just 'map as String'
+      payload: map['payload'] != null ? jsonDecode(map['payload'] as String) : null,
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int),
       attempts: map['attempts'] as int,
     );
   }
+
+  SyncOperation copyWith({
+    String? id,
+    String? entityId,
+    String? entityType,
+    OperationType? operationType,
+    Map<String, dynamic>? payload,
+    DateTime? createdAt,
+    int? attempts,
+  }) {
+    return SyncOperation(
+      id: id ?? this.id,
+      entityId: entityId ?? this.entityId,
+      entityType: entityType ?? this.entityType,
+      operationType: operationType ?? this.operationType,
+      payload: payload ?? this.payload,
+      createdAt: createdAt ?? this.createdAt,
+      attempts: attempts ?? this.attempts,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'SyncOperation(id: $id, entityId: $entityId, entityType: $entityType, operationType: $operationType, attempts: $attempts)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SyncOperation && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

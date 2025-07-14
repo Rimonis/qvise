@@ -1,15 +1,17 @@
+// lib/features/content/domain/usecases/get_subjects.dart
 import 'package:dartz/dartz.dart';
-import 'package:qvise/features/content/domain/entities/subject.dart';
-import 'package:qvise/features/content/domain/repositories/content_repository.dart';
-import '../../../../../core/error/failures.dart';
+import 'package:qvise/core/error/app_error.dart';
+import 'package:qvise/core/usecases/usecase.dart';
+import '../entities/subject.dart';
+import '../repositories/content_repository.dart';
 
-
-class GetSubjects {
+class GetSubjects implements UseCase<List<Subject>, NoParams> {
   final ContentRepository repository;
 
   GetSubjects(this.repository);
 
-  Future<Either<Failure, List<Subject>>> call() async {
+  @override
+  Future<Either<AppError, List<Subject>>> call(NoParams params) async {
     return await repository.getSubjects();
   }
 }
