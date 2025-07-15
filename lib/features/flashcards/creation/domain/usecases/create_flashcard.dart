@@ -2,7 +2,7 @@
 
 import 'package:dartz/dartz.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:qvise/core/error/failures.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/flashcards/shared/domain/entities/flashcard.dart';
 import 'package:qvise/features/flashcards/shared/domain/entities/flashcard_tag.dart';
 import 'package:qvise/features/flashcards/shared/domain/repositories/flashcard_repository.dart';
@@ -14,7 +14,7 @@ class CreateFlashcard {
 
   CreateFlashcard(this.repository, this.firebaseAuth);
 
-  Future<Either<Failure, Flashcard>> call({
+  Future<Either<AppFailure, Flashcard>> call({
     required String lessonId,
     required String frontContent,
     required String backContent,
@@ -23,26 +23,26 @@ class CreateFlashcard {
     String? notes,
     List<String>? hints,
   }) async {
-    // Validation
-    if (frontContent.trim().isEmpty) {
-      return const Left(CacheFailure('Front content cannot be empty'));
-    }
-    
-    if (backContent.trim().isEmpty) {
-      return const Left(CacheFailure('Back content cannot be empty'));
-    }
-
     try {
+      // Validation
+      if (frontContent.trim().isEmpty) {
+        throw AppFailure(type: FailureType.validation, message: 'Front content cannot be empty');
+      }
+      
+      if (backContent.trim().isEmpty) {
+        throw AppFailure(type: FailureType.validation, message: 'Back content cannot be empty');
+      }
+
       // Get current user
       final currentUserId = _getCurrentUserId();
       if (currentUserId == null) {
-        return const Left(AuthFailure('User not authenticated'));
+        throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
       }
 
       // Get the tag
       final tag = _getSystemTag(tagId);
       if (tag == null) {
-        return const Left(CacheFailure('Invalid tag selected'));
+        throw AppFailure(type: FailureType.validation, message: 'Invalid tag selected');
       }
 
       // Create flashcard entity
@@ -61,8 +61,10 @@ class CreateFlashcard {
 
       // Save to repository
       return await repository.createFlashcard(flashcard);
-    } catch (e) {
-      return Left(CacheFailure('Failed to create flashcard: ${e.toString()}'));
+    } on AppFailure catch (e) {
+      return Left(e);
+    } catch (e, s) {
+      return Left(AppFailure.fromException(e, s));
     }
   }
 

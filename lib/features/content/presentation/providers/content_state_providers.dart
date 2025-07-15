@@ -1,7 +1,7 @@
 // lib/features/content/presentation/providers/content_state_providers.dart
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/features/content/presentation/providers/content_error_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../domain/entities/subject.dart';
 import '../../domain/entities/topic.dart';
@@ -19,8 +19,8 @@ Future<List<Lesson>> dueLessons(Ref ref) async {
 
   return result.fold(
     (failure) {
-      if (kDebugMode) print('Failed to load due lessons: ${failure.message}');
-      throw Exception(failure.message);
+      ref.read(contentErrorHandlerProvider.notifier).logError(ContentError.fromFailure(failure));
+      throw failure.userFriendlyMessage;
     },
     (lessons) => lessons,
   );
@@ -34,8 +34,8 @@ Future<List<Lesson>> unlockedLessons(Ref ref) async {
 
   return result.fold(
     (failure) {
-      if (kDebugMode) print('Failed to load lessons: ${failure.message}');
-      throw Exception(failure.message);
+      ref.read(contentErrorHandlerProvider.notifier).logError(ContentError.fromFailure(failure));
+      throw failure.userFriendlyMessage;
     },
     (lessons) => lessons.where((lesson) => !lesson.isLocked).toList(),
   );
@@ -47,7 +47,10 @@ Future<Lesson?> lesson(Ref ref, String lessonId) async {
   final contentRepository = ref.watch(contentRepositoryProvider);
   final result = await contentRepository.getLesson(lessonId);
   return result.fold(
-    (failure) => null,
+    (failure) {
+      ref.read(contentErrorHandlerProvider.notifier).logError(ContentError.fromFailure(failure));
+      return null;
+    },
     (lesson) => lesson,
   );
 }
@@ -62,8 +65,8 @@ class SubjectsNotifier extends _$SubjectsNotifier {
 
     return result.fold(
       (failure) {
-        if (kDebugMode) print('Failed to load subjects: ${failure.message}');
-        throw Exception(failure.message);
+        ref.read(contentErrorHandlerProvider.notifier).logError(ContentError.fromFailure(failure));
+        throw failure.userFriendlyMessage;
       },
       (subjects) => subjects,
     );
@@ -74,32 +77,24 @@ class SubjectsNotifier extends _$SubjectsNotifier {
     state = await AsyncValue.guard(() async {
       final getSubjectsUseCase = ref.read(getSubjectsProvider);
       final result = await getSubjectsUseCase();
-
-      return result.fold(
-        (failure) => throw Exception(failure.message),
-        (subjects) => subjects,
-      );
+      return result.fold((l) => throw l.userFriendlyMessage, (r) => r);
     });
+    state = state.handleError(ref);
   }
 
   Future<void> deleteSubject(String subjectName) async {
     state = const AsyncValue.loading();
+    final deleteSubjectUseCase = ref.read(deleteSubjectProvider);
+    final result = await deleteSubjectUseCase(subjectName);
 
-    try {
-      final deleteSubjectUseCase = ref.read(deleteSubjectProvider);
-      final result = await deleteSubjectUseCase(subjectName);
-
-      result.fold(
-        (failure) => throw Exception(failure.message),
-        (_) async {
-          await refresh();
-          ref.invalidate(dueLessonsProvider);
-          ref.invalidate(unlockedLessonsProvider);
-        },
-      );
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-    }
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.userFriendlyMessage, StackTrace.current),
+      (_) async {
+        await refresh();
+        ref.invalidate(dueLessonsProvider);
+        ref.invalidate(unlockedLessonsProvider);
+      },
+    );
   }
 }
 
@@ -113,8 +108,8 @@ class TopicsNotifier extends _$TopicsNotifier {
 
     return result.fold(
       (failure) {
-        if (kDebugMode) print('Failed to load topics: ${failure.message}');
-        throw Exception(failure.message);
+        ref.read(contentErrorHandlerProvider.notifier).logError(ContentError.fromFailure(failure));
+        throw failure.userFriendlyMessage;
       },
       (topics) => topics,
     );
@@ -125,33 +120,25 @@ class TopicsNotifier extends _$TopicsNotifier {
     state = await AsyncValue.guard(() async {
       final getTopicsUseCase = ref.read(getTopicsBySubjectProvider);
       final result = await getTopicsUseCase(subjectName);
-
-      return result.fold(
-        (failure) => throw Exception(failure.message),
-        (topics) => topics,
-      );
+      return result.fold((l) => throw l.userFriendlyMessage, (r) => r);
     });
+    state = state.handleError(ref);
   }
 
   Future<void> deleteTopic(String topicName) async {
     state = const AsyncValue.loading();
+    final deleteTopicUseCase = ref.read(deleteTopicProvider);
+    final result = await deleteTopicUseCase(subjectName, topicName);
 
-    try {
-      final deleteTopicUseCase = ref.read(deleteTopicProvider);
-      final result = await deleteTopicUseCase(subjectName, topicName);
-
-      result.fold(
-        (failure) => throw Exception(failure.message),
-        (_) async {
-          await refresh();
-          ref.invalidate(subjectsNotifierProvider);
-          ref.invalidate(dueLessonsProvider);
-          ref.invalidate(unlockedLessonsProvider);
-        },
-      );
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-    }
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.userFriendlyMessage, StackTrace.current),
+      (_) async {
+        await refresh();
+        ref.invalidate(subjectsNotifierProvider);
+        ref.invalidate(dueLessonsProvider);
+        ref.invalidate(unlockedLessonsProvider);
+      },
+    );
   }
 }
 
@@ -165,8 +152,8 @@ class LessonsNotifier extends _$LessonsNotifier {
 
     return result.fold(
       (failure) {
-        if (kDebugMode) print('Failed to load lessons: ${failure.message}');
-        throw Exception(failure.message);
+        ref.read(contentErrorHandlerProvider.notifier).logError(ContentError.fromFailure(failure));
+        throw failure.userFriendlyMessage;
       },
       (lessons) => lessons,
     );
@@ -177,68 +164,57 @@ class LessonsNotifier extends _$LessonsNotifier {
     state = await AsyncValue.guard(() async {
       final getLessonsUseCase = ref.read(getLessonsByTopicProvider);
       final result = await getLessonsUseCase(subjectName, topicName);
-
-      return result.fold(
-        (failure) => throw Exception(failure.message),
-        (lessons) => lessons,
-      );
+      return result.fold((l) => throw l.userFriendlyMessage, (r) => r);
     });
+    state = state.handleError(ref);
   }
 
   Future<void> createNewLesson(CreateLessonParams params) async {
     state = const AsyncValue.loading();
+    final createLessonUseCase = ref.read(createLessonUseCaseProvider);
+    final result = await createLessonUseCase(params);
 
-    try {
-      final createLessonUseCase = ref.read(createLessonUseCaseProvider);
-      final result = await createLessonUseCase(params);
-
-      result.fold(
-        (failure) => throw Exception(failure.message),
-        (_) async {
-          await refresh();
-          ref.invalidate(topicsNotifierProvider(params.subjectName));
-          ref.invalidate(subjectsNotifierProvider);
-          ref.invalidate(dueLessonsProvider);
-          ref.invalidate(unlockedLessonsProvider);
-        },
-      );
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-    }
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.userFriendlyMessage, StackTrace.current),
+      (_) async {
+        await refresh();
+        ref.invalidate(topicsNotifierProvider(params.subjectName));
+        ref.invalidate(subjectsNotifierProvider);
+        ref.invalidate(dueLessonsProvider);
+        ref.invalidate(unlockedLessonsProvider);
+      },
+    );
   }
 
   Future<void> deleteLesson(String lessonId) async {
     state = const AsyncValue.loading();
+    final deleteLessonUseCase = ref.read(deleteLessonProvider);
+    final result = await deleteLessonUseCase(lessonId);
 
-    try {
-      final deleteLessonUseCase = ref.read(deleteLessonProvider);
-      final result = await deleteLessonUseCase(lessonId);
-
-      result.fold(
-        (failure) => throw Exception(failure.message),
-        (_) async {
-          await refresh();
-          ref.invalidate(topicsNotifierProvider(subjectName));
-          ref.invalidate(subjectsNotifierProvider);
-          ref.invalidate(dueLessonsProvider);
-          ref.invalidate(unlockedLessonsProvider);
-        },
-      );
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-    }
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.userFriendlyMessage, StackTrace.current),
+      (_) async {
+        await refresh();
+        ref.invalidate(topicsNotifierProvider(subjectName));
+        ref.invalidate(subjectsNotifierProvider);
+        ref.invalidate(dueLessonsProvider);
+        ref.invalidate(unlockedLessonsProvider);
+      },
+    );
   }
 
   Future<void> lockLesson(String lessonId) async {
-    try {
-      final contentRepository = ref.read(contentRepositoryProvider);
-      await contentRepository.lockLesson(lessonId);
-      await refresh();
-      ref.invalidate(dueLessonsProvider);
-      ref.invalidate(unlockedLessonsProvider);
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-    }
+    final contentRepository = ref.read(contentRepositoryProvider);
+    final result = await contentRepository.lockLesson(lessonId);
+
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.userFriendlyMessage, StackTrace.current),
+      (_) async {
+        await refresh();
+        ref.invalidate(dueLessonsProvider);
+        ref.invalidate(unlockedLessonsProvider);
+      },
+    );
   }
 }
 
@@ -247,18 +223,12 @@ class LessonsNotifier extends _$LessonsNotifier {
 class SelectedSubject extends _$SelectedSubject {
   @override
   Subject? build() => null;
-
-  void select(Subject? subject) {
-    state = subject;
-  }
+  void select(Subject? subject) => state = subject;
 }
 
 @riverpod
 class SelectedTopic extends _$SelectedTopic {
   @override
   Topic? build() => null;
-
-  void select(Topic? topic) {
-    state = topic;
-  }
+  void select(Topic? topic) => state = topic;
 }

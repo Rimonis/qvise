@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/flashcards/creation/domain/entities/flashcard_difficulty.dart';
 import 'package:qvise/features/flashcards/shared/domain/entities/flashcard.dart';
 import 'package:qvise/features/flashcards/shared/domain/entities/flashcard_tag.dart';
@@ -130,18 +131,16 @@ class _FlashcardCreationScreenState
         final updateFlashcard = ref.read(updateFlashcardProvider);
         final result = await updateFlashcard(updatedFlashcard);
         
-        result.fold(
-          (failure) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update flashcard: ${failure.message}')));
-            }
-          },
-          (flashcard) {
-            if (mounted) {
+        if (mounted) {
+          result.fold(
+            (failure) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.userFriendlyMessage)));
+            },
+            (flashcard) {
               Navigator.of(context).pop(true);
-            }
-          },
-        );
+            },
+          );
+        }
       } else {
         final createFlashcard = ref.read(createFlashcardProvider);
         final result = await createFlashcard(
@@ -154,19 +153,21 @@ class _FlashcardCreationScreenState
           hints: _hints.isEmpty ? null : _hints,
         );
 
-        result.fold(
-          (failure) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to create flashcard: ${failure.message}')));
-            }
-          },
-          (flashcard) {
-            if (mounted) {
+        if (mounted) {
+          result.fold(
+            (failure) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.userFriendlyMessage)));
+            },
+            (flashcard) {
               Navigator.of(context).pop(true);
-            }
-          },
-        );
+            },
+          );
+        }
       }
+    } on AppFailure catch(failure) {
+       if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.userFriendlyMessage)));
+        }
     } finally {
       if (mounted) {
         setState(() {

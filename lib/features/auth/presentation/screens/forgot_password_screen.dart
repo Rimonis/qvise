@@ -1,6 +1,8 @@
+// lib/features/auth/presentation/screens/forgot_password_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/auth_text_field.dart';
 import '../../../../core/providers/providers.dart';
@@ -48,46 +50,44 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       final resetPassword = await ref.read(resetPasswordProvider.future);
       final result = await resetPassword(_emailController.text.trim());
 
+      if (!mounted) return;
+
       result.fold(
         (failure) {
-          if (!_isDisposed && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(failure.message),
-                backgroundColor: context.errorColor,
-                behavior: SnackBarBehavior.floating,
-                margin: AppSpacing.screenPaddingAll,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                ),
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(failure.userFriendlyMessage),
+              backgroundColor: context.errorColor,
+              behavior: SnackBarBehavior.floating,
+              margin: AppSpacing.screenPaddingAll,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
               ),
-            );
-          }
+            ),
+          );
         },
         (_) {
-          if (!_isDisposed && mounted) {
-            setState(() {
-              _emailSent = true;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Password reset email sent successfully!'),
-                backgroundColor: context.successColor,
-                behavior: SnackBarBehavior.floating,
-                margin: AppSpacing.screenPaddingAll,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                ),
+          setState(() {
+            _emailSent = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Password reset email sent successfully!'),
+              backgroundColor: context.successColor,
+              behavior: SnackBarBehavior.floating,
+              margin: AppSpacing.screenPaddingAll,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
               ),
-            );
-          }
+            ),
+          );
         },
       );
-    } catch (e) {
+    } on AppFailure catch (failure) {
       if (!_isDisposed && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text(failure.userFriendlyMessage),
             backgroundColor: context.errorColor,
             behavior: SnackBarBehavior.floating,
             margin: AppSpacing.screenPaddingAll,

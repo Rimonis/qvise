@@ -28,14 +28,10 @@ class HomeTab extends ConsumerWidget {
           );
         }
         
-        // Sort lessons by priority (due now first, then by next review date)
         final sortedLessons = [...dueLessons];
         sortedLessons.sort((a, b) {
-          // Due lessons first
           if (a.isReviewDue && !b.isReviewDue) return -1;
           if (!a.isReviewDue && b.isReviewDue) return 1;
-          
-          // Then by next review date
           return a.nextReviewDate.compareTo(b.nextReviewDate);
         });
         
@@ -46,7 +42,6 @@ class HomeTab extends ConsumerWidget {
             itemCount: sortedLessons.length + 1, // +1 for header
             itemBuilder: (context, index) {
               if (index == 0) {
-                // Header with stats
                 return _buildHeader(context, sortedLessons);
               }
               
@@ -56,8 +51,6 @@ class HomeTab extends ConsumerWidget {
                 child: DueLessonCard(
                   lesson: lesson,
                   onTap: () {
-                    // Navigate to lesson detail/study screen
-                    // TODO: Implement lesson study screen navigation
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Study "${lesson.displayTitle}" - Coming Soon'),
@@ -79,7 +72,7 @@ class HomeTab extends ConsumerWidget {
             const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Error loading lessons: ${error.toString()}',
+              'Error loading lessons',
               textAlign: TextAlign.center,
               style: context.textTheme.titleMedium?.copyWith(color: AppColors.error),
             ),
@@ -95,6 +88,7 @@ class HomeTab extends ConsumerWidget {
   }
   
   Widget _buildHeader(BuildContext context, List<Lesson> dueLessons) {
+    // Unchanged...
     final dueNowCount = dueLessons.where((l) => l.isReviewDue).length;
     final dueTodayCount = dueLessons.where((l) => l.daysUntilReview == 0 && !l.isReviewDue).length;
     final dueSoonCount = dueLessons.length - dueNowCount - dueTodayCount;

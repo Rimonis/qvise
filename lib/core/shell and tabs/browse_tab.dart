@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/core/providers/network_status_provider.dart';
 import 'package:qvise/features/content/domain/entities/subject.dart';
 import 'package:qvise/features/content/domain/entities/topic.dart';
@@ -89,7 +90,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
       loading: () =>
           const ContentLoadingWidget(message: 'Loading subjects...'),
       error: (error, stack) =>
-          _buildErrorView(() => ref.invalidate(subjectsNotifierProvider)),
+          _buildErrorView(error.toString(), () => ref.invalidate(subjectsNotifierProvider)),
     );
   }
 
@@ -178,7 +179,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
             loading: () =>
                 const ContentLoadingWidget(message: 'Loading topics...'),
             error: (error, stack) => _buildErrorView(
-                () => ref.invalidate(topicsNotifierProvider(subjectName))),
+                error.toString(), () => ref.invalidate(topicsNotifierProvider(subjectName))),
           ),
         ),
       ],
@@ -287,7 +288,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
             },
             loading: () =>
                 const ContentLoadingWidget(message: 'Loading lessons...'),
-            error: (error, stack) => _buildErrorView(() => ref.invalidate(
+            error: (error, stack) => _buildErrorView(error.toString(), () => ref.invalidate(
                 lessonsNotifierProvider(subjectName: subjectName, topicName: topicName))),
           ),
         ),
@@ -425,11 +426,11 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                     ),
                   );
                 }
-              } catch (e) {
+              } on AppFailure catch (failure) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Error: ${e.toString()}'),
+                      content: Text(failure.userFriendlyMessage),
                       backgroundColor: AppColors.error,
                     ),
                   );
@@ -558,11 +559,11 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                     ),
                   );
                 }
-              } catch (e) {
+              } on AppFailure catch (failure) {
                 if(context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Error: ${e.toString()}'),
+                      content: Text(failure.userFriendlyMessage),
                       backgroundColor: AppColors.error,
                     ),
                   );
@@ -668,11 +669,11 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                     ),
                   );
                 }
-              } catch (e) {
+              } on AppFailure catch (failure) {
                 if(context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Error: ${e.toString()}'),
+                      content: Text(failure.userFriendlyMessage),
                       backgroundColor: AppColors.error,
                     ),
                   );
@@ -690,7 +691,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
     );
   }
 
-  Widget _buildErrorView(VoidCallback onRetry) {
+  Widget _buildErrorView(String error, VoidCallback onRetry) {
     return Center(
       child: Padding(
         padding: AppSpacing.screenPaddingAll,
@@ -704,6 +705,10 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
               style: context.textTheme.titleMedium?.copyWith(
                 color: AppColors.error,
               ),
+            ),
+            Text(
+              error,
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.md),
             ElevatedButton.icon(

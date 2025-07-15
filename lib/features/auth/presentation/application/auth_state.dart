@@ -1,4 +1,6 @@
+// lib/features/auth/presentation/application/auth_state.dart
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import '../../domain/entities/user.dart';
 
 part 'auth_state.freezed.dart';
@@ -9,6 +11,6 @@ class AuthState with _$AuthState {
   const factory AuthState.loading() = _Loading;
   const factory AuthState.authenticated(User user) = _Authenticated;
   const factory AuthState.unauthenticated() = _Unauthenticated;
-  const factory AuthState.emailNotVerified(User user) = _EmailNotVerified; // New state
-  const factory AuthState.error(String message) = _Error;
+  const factory AuthState.emailNotVerified(User user) = _EmailNotVerified;
+  const factory AuthState.error(AppFailure failure) = _Error;
 }

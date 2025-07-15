@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/core/providers/network_status_provider.dart';
 import '../../../../core/routes/route_names.dart';
 import '../../domain/entities/create_lesson_params.dart';
@@ -114,19 +115,15 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
 
   Future<void> _createLesson() async {
     if (!_formKey.currentState!.validate()) return;
-
     if (!mounted) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() { _isLoading = true; });
 
     try {
       final params = CreateLessonParams(
         subjectName: _subjectController.text.trim(),
         topicName: _topicController.text.trim(),
-        lessonTitle:
-            _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
+        lessonTitle: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
         isNewSubject: _isNewSubject,
         isNewTopic: _isNewTopic,
       );
@@ -134,9 +131,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
       final shouldProceed = await _showAdDialog();
       if (!shouldProceed || !mounted) {
         if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
+          setState(() { _isLoading = false; });
         }
         return;
       }
@@ -144,36 +139,35 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
       final createLessonUseCase = ref.read(createLessonUseCaseProvider);
       final result = await createLessonUseCase(params);
 
+      if (!mounted) return;
+
       result.fold(
-        (failure) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to create lesson: ${failure.message}'),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
+        (AppFailure failure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to create lesson: ${failure.userFriendlyMessage}'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
         },
         (lesson) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Lesson created successfully!'),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-            context.go('${RouteNames.app}/lesson/${lesson.id}');
-          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Lesson created successfully!'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          context.go('${RouteNames.app}/lesson/${lesson.id}');
         },
       );
     } catch (e) {
       if (mounted) {
+        final failure = AppFailure.fromException(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to create lesson: ${e.toString()}'),
+            content: Text('An unexpected error occurred: ${failure.userFriendlyMessage}'),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -181,14 +175,13 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() { _isLoading = false; });
       }
     }
   }
 
   Future<bool> _showAdDialog() async {
+    // Unchanged...
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -237,6 +230,7 @@ class _CreateLessonScreenState extends ConsumerState<CreateLessonScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Unchanged...
     final isOnline = ref.watch(networkStatusProvider).valueOrNull ?? false;
 
     if (!isOnline) {

@@ -1,5 +1,6 @@
+// lib/features/auth/domain/usecases/get_current_user.dart
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import '../entities/user.dart';
 import '../repositories/auth_repository.dart';
 
@@ -8,7 +9,7 @@ class GetCurrentUser {
 
   GetCurrentUser(this.repository);
 
-  Future<Either<Failure, User>> call() async {
+  Future<Either<AppFailure, User>> call() async {
     return await repository.getCurrentUser();
   }
 }

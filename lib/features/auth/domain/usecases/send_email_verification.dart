@@ -1,5 +1,6 @@
+// lib/features/auth/domain/usecases/send_email_verification.dart
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import '../repositories/auth_repository.dart';
 
 class SendEmailVerification {
@@ -7,7 +8,7 @@ class SendEmailVerification {
 
   SendEmailVerification(this.repository);
 
-  Future<Either<Failure, void>> call() async {
+  Future<Either<AppFailure, void>> call() async {
     return await repository.sendEmailVerification();
   }
 }

@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/core/application/sync_state.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/flashcards/shared/domain/repositories/flashcard_repository.dart';
 import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_providers.dart';
 
@@ -40,11 +41,16 @@ class SyncCoordinator extends StateNotifier<SyncState> {
         print('✅ SyncCoordinator: Sync completed successfully.');
       }
 
+    } on AppFailure catch (failure) {
+      if (kDebugMode) {
+        print('❌ SyncCoordinator: Sync failed. Error: ${failure.message}');
+      }
+      _handleSyncError(failure);
     } catch (e) {
       if (kDebugMode) {
         print('❌ SyncCoordinator: Sync failed. Error: $e');
       }
-      _handleSyncError(e.toString());
+      _handleSyncError(AppFailure.fromException(e));
     } finally {
       _isSyncing = false;
     }
@@ -55,7 +61,7 @@ class SyncCoordinator extends StateNotifier<SyncState> {
     final pendingFlashcardsResult = await repository.getPendingSyncFlashcards();
 
     await pendingFlashcardsResult.fold(
-      (failure) => throw Exception('Failed to get pending cards: ${failure.message}'),
+      (failure) => throw failure,
       (pendingCards) async {
         if (pendingCards.isNotEmpty) {
            if (kDebugMode) {
@@ -64,7 +70,7 @@ class SyncCoordinator extends StateNotifier<SyncState> {
           final idsToSync = pendingCards.map((card) => card.id).toList();
           final syncResult = await repository.syncFlashcardsToRemote(idsToSync);
           syncResult.fold(
-            (failure) => throw Exception('Failed to sync cards to remote: ${failure.message}'),
+            (failure) => throw failure,
             (_) => null,
           );
         } else {
@@ -76,9 +82,9 @@ class SyncCoordinator extends StateNotifier<SyncState> {
     );
   }
 
-  void _handleSyncError(String error) {
-    _retryCount++;
-    if (_retryCount <= _maxRetries) {
+  void _handleSyncError(AppFailure failure) {
+    if (failure.isRetryable && _retryCount < _maxRetries) {
+      _retryCount++;
       final delay = Duration(seconds: (5 * _retryCount)); // Exponential backoff
       if (kDebugMode) {
         print('🔁 SyncCoordinator: Retrying sync in ${delay.inSeconds} seconds...');
@@ -87,9 +93,9 @@ class SyncCoordinator extends StateNotifier<SyncState> {
       state = SyncState.error('Sync failed. Retrying... ($_retryCount/$_maxRetries)');
     } else {
       if (kDebugMode) {
-        print('🚫 SyncCoordinator: Max retries reached. Sync failed.');
+        print('🚫 SyncCoordinator: Max retries reached or non-retryable error. Sync failed.');
       }
-      state = SyncState.error('Sync failed after $_maxRetries attempts.');
+      state = SyncState.error(failure.userFriendlyMessage);
       // Keep error state for a while before going idle
       Future.delayed(const Duration(seconds: 10), () {
         if (mounted && state is Error) {

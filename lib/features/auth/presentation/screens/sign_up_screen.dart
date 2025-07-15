@@ -1,5 +1,7 @@
+// lib/features/auth/presentation/screens/sign_up_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import '../application/auth_providers.dart';
 import '../application/auth_state.dart';
 import '../widgets/auth_button.dart';
@@ -59,10 +61,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     if (_isDisposed || !mounted) return;
     
     state.maybeWhen(
-      error: (message) {
+      error: (AppFailure failure) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(message),
+            content: Text(failure.userFriendlyMessage),
             backgroundColor: context.errorColor,
             behavior: SnackBarBehavior.floating,
             margin: AppSpacing.screenPaddingAll,

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/core/providers/network_status_provider.dart';
 import '../../../../core/routes/route_names.dart';
 import '../../domain/entities/lesson.dart';
@@ -370,11 +371,11 @@ class LessonsScreen extends ConsumerWidget {
                               ),
                             );
                           }
-                        } catch (e) {
+                        } on AppFailure catch (failure) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Failed to delete: ${e.toString()}'),
+                                content: Text(failure.userFriendlyMessage),
                                 backgroundColor: AppColors.error,
                                 behavior: SnackBarBehavior.floating,
                               ),

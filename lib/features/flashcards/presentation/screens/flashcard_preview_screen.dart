@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/core/theme/app_colors.dart';
 import 'package:qvise/features/content/domain/entities/lesson.dart';
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
@@ -288,10 +289,24 @@ class _FlashcardPreviewScreenState extends ConsumerState<FlashcardPreviewScreen>
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              await ref.read(flashcardRepositoryProvider).deleteFlashcard(flashcard.id);
-              ref.invalidate(flashcardsByLessonProvider(widget.lessonId));
-              ref.invalidate(unlockedLessonsProvider);
-              ref.invalidate(flashcardCountProvider(widget.lessonId));
+              final result = await ref.read(flashcardRepositoryProvider).deleteFlashcard(flashcard.id);
+              if (mounted) {
+                result.fold(
+                  (failure) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(failure.userFriendlyMessage),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  },
+                  (_) {
+                    ref.invalidate(flashcardsByLessonProvider(widget.lessonId));
+                    ref.invalidate(unlockedLessonsProvider);
+                    ref.invalidate(flashcardCountProvider(widget.lessonId));
+                  }
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,

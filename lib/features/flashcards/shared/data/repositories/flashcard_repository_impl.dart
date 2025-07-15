@@ -3,7 +3,8 @@
 import 'package:dartz/dartz.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
-import 'package:qvise/core/error/failures.dart';
+import 'package:qvise/core/data/repositories/base_repository.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/content/domain/repositories/content_repository.dart';
 import '../../domain/entities/flashcard.dart';
 import '../../domain/repositories/flashcard_repository.dart';
@@ -11,7 +12,7 @@ import '../datasources/flashcard_local_data_source.dart';
 import '../datasources/flashcard_remote_data_source.dart';
 import '../models/flashcard_model.dart';
 
-class FlashcardRepositoryImpl implements FlashcardRepository {
+class FlashcardRepositoryImpl extends BaseRepository implements FlashcardRepository {
   final FlashcardLocalDataSource localDataSource;
   final FlashcardRemoteDataSource remoteDataSource;
   final ContentRepository contentRepository;
@@ -27,41 +28,31 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   });
 
   @override
-  Future<Either<Failure, Flashcard>> createFlashcard(
-      Flashcard flashcard) async {
-    try {
+  Future<Either<AppFailure, Flashcard>> createFlashcard(Flashcard flashcard) async {
+    return guard(() async {
       await localDataSource.initDatabase();
-
       final flashcardModel = FlashcardModel.fromEntity(flashcard);
-      final createdModel =
-          await localDataSource.createFlashcard(flashcardModel);
+      final createdModel = await localDataSource.createFlashcard(flashcardModel);
 
-      // Upload to remote if online
       if (await connectionChecker.hasConnection) {
         try {
           final remoteModel = await remoteDataSource.createFlashcard(createdModel);
           await localDataSource.updateFlashcard(remoteModel.copyWith(syncStatus: 'synced'));
         } catch (e) {
-          // If remote fails, it remains 'pending' locally, no re-throw needed
+          // Non-critical, will sync later
         }
       }
-
       await contentRepository.updateLessonContentCount(flashcard.lessonId);
-
-      return Right(createdModel.toEntity());
-    } catch (e) {
-      return Left(CacheFailure('Failed to create flashcard: ${e.toString()}'));
-    }
+      return createdModel.toEntity();
+    });
   }
 
   @override
-  Future<Either<Failure, void>> deleteFlashcard(String id) async {
-    try {
+  Future<Either<AppFailure, void>> deleteFlashcard(String id) async {
+    return guard(() async {
       await localDataSource.initDatabase();
       final flashcard = await localDataSource.getFlashcard(id);
-      if (flashcard == null) {
-        return const Left(CacheFailure('Flashcard not found'));
-      }
+      if (flashcard == null) throw AppFailure(type: FailureType.cache, message: 'Flashcard not found');
 
       await localDataSource.deleteFlashcard(id);
 
@@ -69,248 +60,146 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
         try {
           await remoteDataSource.deleteFlashcard(id);
         } catch (e) {
-          // Continue even if remote delete fails
+          // Non-critical
         }
       }
-
       await contentRepository.updateLessonContentCount(flashcard.lessonId);
-
-      return const Right(null);
-    } catch (e) {
-      return Left(CacheFailure('Failed to delete flashcard: ${e.toString()}'));
-    }
+    });
   }
 
-  // ... other methods remain the same
   @override
-  Future<Either<Failure, Flashcard>> updateFlashcard(
-      Flashcard flashcard) async {
-    try {
+  Future<Either<AppFailure, Flashcard>> updateFlashcard(Flashcard flashcard) async {
+    return guard(() async {
       await localDataSource.initDatabase();
       final flashcardModel = FlashcardModel.fromEntity(flashcard);
-      final updatedModel =
-          await localDataSource.updateFlashcard(flashcardModel);
+      final updatedModel = await localDataSource.updateFlashcard(flashcardModel);
 
       if (await connectionChecker.hasConnection) {
         try {
           final remoteModel = await remoteDataSource.updateFlashcard(updatedModel);
           await localDataSource.updateFlashcard(remoteModel.copyWith(syncStatus: 'synced'));
         } catch (e) {
-          // If remote fails, it remains 'pending' locally
+          // Non-critical
         }
       }
-
-      return Right(updatedModel.toEntity());
-    } catch (e) {
-      return Left(CacheFailure('Failed to update flashcard: ${e.toString()}'));
-    }
+      return updatedModel.toEntity();
+    });
   }
 
   @override
-  Future<Either<Failure, Flashcard?>> getFlashcard(String id) async {
-    try {
+  Future<Either<AppFailure, Flashcard?>> getFlashcard(String id) async {
+    return guard(() async {
       await localDataSource.initDatabase();
       final flashcardModel = await localDataSource.getFlashcard(id);
-      return Right(flashcardModel?.toEntity());
-    } catch (e) {
-      return Left(CacheFailure('Failed to get flashcard: ${e.toString()}'));
-    }
+      return flashcardModel?.toEntity();
+    });
   }
 
   @override
-  Future<Either<Failure, List<Flashcard>>> getFlashcardsByLesson(
-      String lessonId) async {
-    try {
+  Future<Either<AppFailure, List<Flashcard>>> getFlashcardsByLesson(String lessonId) async {
+    return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels =
-          await localDataSource.getFlashcardsByLesson(lessonId);
-      final flashcards =
-          flashcardModels.map((model) => model.toEntity()).toList();
-
-      return Right(flashcards);
-    } catch (e) {
-      return Left(
-          CacheFailure('Failed to get flashcards by lesson: ${e.toString()}'));
-    }
+      final flashcardModels = await localDataSource.getFlashcardsByLesson(lessonId);
+      return flashcardModels.map((model) => model.toEntity()).toList();
+    });
   }
 
   @override
-  Future<Either<Failure, List<Flashcard>>> getFlashcardsByLessonAndTag(
-    String lessonId,
-    String tagId,
-  ) async {
-    try {
+  Future<Either<AppFailure, List<Flashcard>>> getFlashcardsByLessonAndTag(String lessonId, String tagId) async {
+    return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels =
-          await localDataSource.getFlashcardsByLessonAndTag(lessonId, tagId);
-      final flashcards =
-          flashcardModels.map((model) => model.toEntity()).toList();
-
-      return Right(flashcards);
-    } catch (e) {
-      return Left(CacheFailure(
-          'Failed to get flashcards by lesson and tag: ${e.toString()}'));
-    }
+      final flashcardModels = await localDataSource.getFlashcardsByLessonAndTag(lessonId, tagId);
+      return flashcardModels.map((model) => model.toEntity()).toList();
+    });
   }
 
   @override
-  Future<Either<Failure, List<Flashcard>>> getFavoriteFlashcards(
-      String userId) async {
-    try {
+  Future<Either<AppFailure, List<Flashcard>>> getFavoriteFlashcards(String userId) async {
+    return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels =
-          await localDataSource.getFavoriteFlashcards(userId);
-      final flashcards =
-          flashcardModels.map((model) => model.toEntity()).toList();
-
-      return Right(flashcards);
-    } catch (e) {
-      return Left(
-          CacheFailure('Failed to get favorite flashcards: ${e.toString()}'));
-    }
+      final flashcardModels = await localDataSource.getFavoriteFlashcards(userId);
+      return flashcardModels.map((model) => model.toEntity()).toList();
+    });
   }
 
   @override
-  Future<Either<Failure, List<Flashcard>>> getFlashcardsNeedingAttention(
-      String userId) async {
-    try {
+  Future<Either<AppFailure, List<Flashcard>>> getFlashcardsNeedingAttention(String userId) async {
+    return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels =
-          await localDataSource.getFlashcardsNeedingAttention(userId);
-      final flashcards =
-          flashcardModels.map((model) => model.toEntity()).toList();
-
-      return Right(flashcards);
-    } catch (e) {
-      return Left(CacheFailure(
-          'Failed to get flashcards needing attention: ${e.toString()}'));
-    }
+      final flashcardModels = await localDataSource.getFlashcardsNeedingAttention(userId);
+      return flashcardModels.map((model) => model.toEntity()).toList();
+    });
   }
 
   @override
-  Future<Either<Failure, int>> countFlashcardsByLesson(String lessonId) async {
-    try {
+  Future<Either<AppFailure, int>> countFlashcardsByLesson(String lessonId) async {
+    return guard(() async {
       await localDataSource.initDatabase();
-      final count = await localDataSource.countFlashcardsByLesson(lessonId);
-      return Right(count);
-    } catch (e) {
-      return Left(CacheFailure('Failed to count flashcards: ${e.toString()}'));
-    }
+      return await localDataSource.countFlashcardsByLesson(lessonId);
+    });
   }
 
   @override
-  Future<Either<Failure, List<Flashcard>>> searchFlashcards(
-    String userId,
-    String query,
-  ) async {
-    try {
+  Future<Either<AppFailure, List<Flashcard>>> searchFlashcards(String userId, String query) async {
+    return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels =
-          await localDataSource.searchFlashcards(userId, query);
-      final flashcards =
-          flashcardModels.map((model) => model.toEntity()).toList();
-
-      return Right(flashcards);
-    } catch (e) {
-      return Left(CacheFailure('Failed to search flashcards: ${e.toString()}'));
-    }
+      final flashcardModels = await localDataSource.searchFlashcards(userId, query);
+      return flashcardModels.map((model) => model.toEntity()).toList();
+    });
   }
 
   @override
-  Future<Either<Failure, void>> syncFlashcardsToRemote(
-      List<String> flashcardIds) async {
-    try {
-      if (!await connectionChecker.hasConnection) {
-        return const Left(NetworkFailure('No internet connection'));
-      }
+  Future<Either<AppFailure, void>> syncFlashcardsToRemote(List<String> flashcardIds) async {
+    return guard(() async {
+      if (!await connectionChecker.hasConnection) throw AppFailure(type: FailureType.network, message: 'No internet connection');
 
       final flashcardModels = <FlashcardModel>[];
       for (final id in flashcardIds) {
         final model = await localDataSource.getFlashcard(id);
-        if (model != null) {
-          flashcardModels.add(model);
-        }
+        if (model != null) flashcardModels.add(model);
       }
-
-      if (flashcardModels.isEmpty) {
-        return const Right(null);
-      }
+      if (flashcardModels.isEmpty) return;
 
       await remoteDataSource.syncFlashcards(flashcardModels);
-
       for (final model in flashcardModels) {
-        final syncedModel = model.copyWith(syncStatus: 'synced');
-        await localDataSource.updateFlashcard(syncedModel);
+        await localDataSource.updateFlashcard(model.copyWith(syncStatus: 'synced'));
       }
-
-      return const Right(null);
-    } catch (e) {
-      return Left(
-          ServerFailure('Failed to sync flashcards to remote: ${e.toString()}'));
-    }
+    });
   }
 
   @override
-  Future<Either<Failure, void>> syncFlashcardsFromRemote(
-      String lessonId) async {
-    try {
-      if (!await connectionChecker.hasConnection) {
-        return const Left(NetworkFailure('No internet connection'));
-      }
+  Future<Either<AppFailure, void>> syncFlashcardsFromRemote(String lessonId) async {
+    return guard(() async {
+      if (!await connectionChecker.hasConnection) throw AppFailure(type: FailureType.network, message: 'No internet connection');
 
-      final remoteFlashcards =
-          await remoteDataSource.getFlashcardsByLesson(lessonId);
-
+      final remoteFlashcards = await remoteDataSource.getFlashcardsByLesson(lessonId);
       for (final remoteModel in remoteFlashcards) {
         final localModel = await localDataSource.getFlashcard(remoteModel.id);
-
-        if (localModel == null) {
-          await localDataSource.createFlashcard(remoteModel);
-        } else if (localModel.syncStatus == 'synced') {
+        if (localModel == null || localModel.syncStatus == 'synced') {
           await localDataSource.updateFlashcard(remoteModel);
         }
       }
-
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure(
-          'Failed to sync flashcards from remote: ${e.toString()}'));
-    }
+    });
   }
 
   @override
-  Future<Either<Failure, List<Flashcard>>> getPendingSyncFlashcards() async {
-    try {
+  Future<Either<AppFailure, List<Flashcard>>> getPendingSyncFlashcards() async {
+    return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels =
-          await localDataSource.getPendingSyncFlashcards();
-      final flashcards =
-          flashcardModels.map((model) => model.toEntity()).toList();
-
-      return Right(flashcards);
-    } catch (e) {
-      return Left(CacheFailure(
-          'Failed to get pending sync flashcards: ${e.toString()}'));
-    }
+      final flashcardModels = await localDataSource.getPendingSyncFlashcards();
+      return flashcardModels.map((model) => model.toEntity()).toList();
+    });
   }
 
   @override
-  Future<Either<Failure, void>> toggleFavorite(String flashcardId) async {
-    try {
-      final flashcard = await getFlashcard(flashcardId);
-      return flashcard.fold(
-        (l) => Left(l),
-        (r) async {
-          if (r == null) {
-            return const Left(CacheFailure('Flashcard not found'));
-          }
-          final updatedFlashcard = r.copyWith(isFavorite: !r.isFavorite);
-          await updateFlashcard(updatedFlashcard);
-          return const Right(null);
-        },
-      );
-    } catch (e) {
-      return Left(CacheFailure('Failed to toggle favorite: ${e.toString()}'));
-    }
+  Future<Either<AppFailure, void>> toggleFavorite(String flashcardId) async {
+    return guard(() async {
+      final flashcardEither = await getFlashcard(flashcardId);
+      final flashcard = flashcardEither.getOrElse(() => null);
+      if (flashcard == null) throw AppFailure(type: FailureType.cache, message: 'Flashcard not found');
+      
+      final updatedFlashcard = flashcard.copyWith(isFavorite: !flashcard.isFavorite);
+      await updateFlashcard(updatedFlashcard);
+    });
   }
 }

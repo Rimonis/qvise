@@ -3,9 +3,10 @@ import 'package:dartz/dartz.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
+import 'package:qvise/core/data/repositories/base_repository.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/flashcards/shared/data/datasources/flashcard_local_data_source.dart';
 import 'package:qvise/features/flashcards/shared/data/datasources/flashcard_remote_data_source.dart';
-import '../../../../core/error/failures.dart';
 import '../../domain/entities/subject.dart';
 import '../../domain/entities/topic.dart';
 import '../../domain/entities/lesson.dart';
@@ -17,7 +18,7 @@ import '../models/subject_model.dart';
 import '../models/topic_model.dart';
 import '../models/lesson_model.dart';
 
-class ContentRepositoryImpl implements ContentRepository {
+class ContentRepositoryImpl extends BaseRepository implements ContentRepository {
   final ContentLocalDataSource localDataSource;
   final ContentRemoteDataSource remoteDataSource;
   final FlashcardLocalDataSource flashcardLocalDataSource;
@@ -38,153 +39,85 @@ class ContentRepositoryImpl implements ContentRepository {
   String get _userId => firebaseAuth.currentUser?.uid ?? '';
 
   @override
-  Future<Either<Failure, List<Subject>>> getSubjects() async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-
+  Future<Either<AppFailure, List<Subject>>> getSubjects() async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
       final subjects = await localDataSource.getSubjects(_userId);
-      return Right(subjects.map((s) => s.toEntity()).toList());
-    } catch (e) {
-      return Left(CacheFailure('Failed to get subjects: ${e.toString()}'));
-    }
+      return subjects.map((s) => s.toEntity()).toList();
+    });
   }
 
   @override
-  Future<Either<Failure, Subject?>> getSubject(String subjectName) async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-
+  Future<Either<AppFailure, Subject?>> getSubject(String subjectName) async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
       final subject = await localDataSource.getSubject(_userId, subjectName);
-      if (subject == null) {
-        return const Right(null);
-      }
-
-      return Right(subject.toEntity());
-    } catch (e) {
-      return Left(CacheFailure('Failed to get subject: ${e.toString()}'));
-    }
+      return subject?.toEntity();
+    });
   }
 
   @override
-  Future<Either<Failure, List<Topic>>> getTopicsBySubject(
-      String subjectName) async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-
-      final topics =
-          await localDataSource.getTopicsBySubject(_userId, subjectName);
-      return Right(topics.map((t) => t.toEntity()).toList());
-    } catch (e) {
-      return Left(CacheFailure('Failed to get topics: ${e.toString()}'));
-    }
+  Future<Either<AppFailure, List<Topic>>> getTopicsBySubject(String subjectName) async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      final topics = await localDataSource.getTopicsBySubject(_userId, subjectName);
+      return topics.map((t) => t.toEntity()).toList();
+    });
   }
 
   @override
-  Future<Either<Failure, Topic?>> getTopic(
-      String subjectName, String topicName) async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-
-      final topic =
-          await localDataSource.getTopic(_userId, subjectName, topicName);
-      if (topic == null) {
-        return const Right(null);
-      }
-
-      return Right(topic.toEntity());
-    } catch (e) {
-      return Left(CacheFailure('Failed to get topic: ${e.toString()}'));
-    }
+  Future<Either<AppFailure, Topic?>> getTopic(String subjectName, String topicName) async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      final topic = await localDataSource.getTopic(_userId, subjectName, topicName);
+      return topic?.toEntity();
+    });
   }
 
   @override
-  Future<Either<Failure, List<Lesson>>> getLessonsByTopic(
-      String subjectName, String topicName) async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-
-      final lessons = await localDataSource.getLessonsByTopic(
-          _userId, subjectName, topicName);
-      return Right(lessons.map((l) => l.toEntity()).toList());
-    } catch (e) {
-      return Left(CacheFailure('Failed to get lessons: ${e.toString()}'));
-    }
+  Future<Either<AppFailure, List<Lesson>>> getLessonsByTopic(String subjectName, String topicName) async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      final lessons = await localDataSource.getLessonsByTopic(_userId, subjectName, topicName);
+      return lessons.map((l) => l.toEntity()).toList();
+    });
   }
 
   @override
-  Future<Either<Failure, List<Lesson>>> getAllLessons() async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-
+  Future<Either<AppFailure, List<Lesson>>> getAllLessons() async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
       final lessons = await localDataSource.getAllLessons(_userId);
-      return Right(lessons.map((l) => l.toEntity()).toList());
-    } catch (e) {
-      return Left(CacheFailure('Failed to get all lessons: ${e.toString()}'));
-    }
+      return lessons.map((l) => l.toEntity()).toList();
+    });
   }
 
   @override
-  Future<Either<Failure, List<Lesson>>> getDueLessons() async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-
+  Future<Either<AppFailure, List<Lesson>>> getDueLessons() async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
       final lessons = await localDataSource.getAllLessons(_userId);
       final now = DateTime.now();
-
-      final dueLessons = lessons
-          .where((lesson) =>
-              lesson.isLocked &&
-              (lesson.nextReviewDate.isBefore(now) ||
-                  lesson.nextReviewDate.isAtSameMomentAs(now)))
+      return lessons
+          .where((lesson) => lesson.isLocked && (lesson.nextReviewDate.isBefore(now) || lesson.nextReviewDate.isAtSameMomentAs(now)))
           .map((l) => l.toEntity())
           .toList();
-
-      return Right(dueLessons);
-    } catch (e) {
-      return Left(CacheFailure('Failed to get due lessons: ${e.toString()}'));
-    }
+    });
   }
 
   @override
-  Future<Either<Failure, Lesson?>> getLesson(String lessonId) async {
-    try {
+  Future<Either<AppFailure, Lesson?>> getLesson(String lessonId) async {
+    return guard(() async {
       final lesson = await localDataSource.getLesson(lessonId);
-      if (lesson == null) {
-        return const Right(null);
-      }
-
-      return Right(lesson.toEntity());
-    } catch (e) {
-      return Left(CacheFailure('Failed to get lesson: ${e.toString()}'));
-    }
+      return lesson?.toEntity();
+    });
   }
 
   @override
-  Future<Either<Failure, Lesson>> createLesson(
-      CreateLessonParams params) async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-
-      if (!await connectionChecker.hasConnection) {
-        return const Left(
-            NetworkFailure('Network connection required to create lessons'));
-      }
+  Future<Either<AppFailure, Lesson>> createLesson(CreateLessonParams params) async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      if (!await connectionChecker.hasConnection) throw AppFailure(type: FailureType.network, message: 'Network connection required to create lessons');
 
       final now = DateTime.now();
       final lessonModel = LessonModel(
@@ -201,249 +134,187 @@ class ContentRepositoryImpl implements ContentRepository {
       );
 
       final syncedLesson = await remoteDataSource.createLesson(lessonModel);
-
       await localDataSource.insertOrUpdateLesson(syncedLesson);
-
       await _updateContentHierarchy(params.subjectName, params.topicName, now);
 
-      return Right(syncedLesson.toEntity());
-    } catch (e) {
-      return Left(ServerFailure('Failed to create lesson: ${e.toString()}'));
-    }
+      return syncedLesson.toEntity();
+    });
   }
 
   @override
-  Future<Either<Failure, Lesson>> updateLesson(Lesson lesson) async {
-    try {
+  Future<Either<AppFailure, Lesson>> updateLesson(Lesson lesson) async {
+    return guard(() async {
       final lessonModel = LessonModel.fromEntity(lesson);
-
       await localDataSource.insertOrUpdateLesson(lessonModel);
 
       if (await connectionChecker.hasConnection) {
         await remoteDataSource.updateLesson(lessonModel);
         await localDataSource.markLessonAsSynced(lesson.id);
       }
-
       await recalculateProficiencies();
-
-      return Right(lesson);
-    } catch (e) {
-      return Left(CacheFailure('Failed to update lesson: ${e.toString()}'));
-    }
+      return lesson;
+    });
   }
 
   @override
-  Future<Either<Failure, void>> deleteLesson(String lessonId) async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-      if (!await connectionChecker.hasConnection) {
-        return const Left(
-            NetworkFailure('Network connection required to delete content'));
-      }
+  Future<Either<AppFailure, void>> deleteLesson(String lessonId) async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      if (!await connectionChecker.hasConnection) throw AppFailure(type: FailureType.network, message: 'Network connection required');
 
       final lesson = await localDataSource.getLesson(lessonId);
-      if (lesson == null) {
-        return const Left(CacheFailure('Lesson not found'));
-      }
-
+      if (lesson == null) throw AppFailure(type: FailureType.cache, message: 'Lesson not found');
+      
       await flashcardLocalDataSource.deleteFlashcardsByLesson(lessonId);
       try {
         await flashcardRemoteDataSource.deleteFlashcardsByLesson(lessonId);
       } catch (e) {
-        print('Failed to delete remote flashcards for lesson $lessonId: $e');
+        // Log this but don't fail the operation
+        print('Non-critical failure: Could not delete remote flashcards for lesson $lessonId: $e');
       }
 
       await remoteDataSource.deleteLesson(lessonId);
-
       await localDataSource.deleteLesson(lessonId);
-
       await _cleanupEmptyTopicAndSubject(lesson.subjectName, lesson.topicName);
-
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure('Failed to delete lesson: ${e.toString()}'));
-    }
+    });
   }
 
   @override
-  Future<Either<Failure, void>> deleteTopic(
-      String subjectName, String topicName) async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-      if (!await connectionChecker.hasConnection) {
-        return const Left(
-            NetworkFailure('Network connection required to delete content'));
-      }
+  Future<Either<AppFailure, void>> deleteTopic(String subjectName, String topicName) async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      if (!await connectionChecker.hasConnection) throw AppFailure(type: FailureType.network, message: 'Network connection required');
 
-      final lessons = await localDataSource.getLessonsByTopic(
-          _userId, subjectName, topicName);
+      final lessons = await localDataSource.getLessonsByTopic(_userId, subjectName, topicName);
       for (final lesson in lessons) {
         await flashcardLocalDataSource.deleteFlashcardsByLesson(lesson.id);
         try {
           await flashcardRemoteDataSource.deleteFlashcardsByLesson(lesson.id);
         } catch (e) {
-          print('Failed to delete remote flashcards for lesson ${lesson.id}: $e');
+          print('Non-critical failure: Could not delete remote flashcards for lesson ${lesson.id}: $e');
         }
       }
 
-      await remoteDataSource.deleteLessonsByTopic(
-          _userId, subjectName, topicName);
-
+      await remoteDataSource.deleteLessonsByTopic(_userId, subjectName, topicName);
       for (final lesson in lessons) {
         await localDataSource.deleteLesson(lesson.id);
       }
-
       await localDataSource.deleteTopic(_userId, subjectName, topicName);
-
       await _cleanupEmptySubject(subjectName);
-
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure('Failed to delete topic: ${e.toString()}'));
-    }
+    });
   }
 
   @override
-  Future<Either<Failure, void>> deleteSubject(String subjectName) async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-      if (!await connectionChecker.hasConnection) {
-        return const Left(
-            NetworkFailure('Network connection required to delete content'));
-      }
-
+  Future<Either<AppFailure, void>> deleteSubject(String subjectName) async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      if (!await connectionChecker.hasConnection) throw AppFailure(type: FailureType.network, message: 'Network connection required');
+      
       await remoteDataSource.deleteLessonsBySubject(_userId, subjectName);
 
-      final topics =
-          await localDataSource.getTopicsBySubject(_userId, subjectName);
+      final topics = await localDataSource.getTopicsBySubject(_userId, subjectName);
       for (final topic in topics) {
-        final lessons = await localDataSource.getLessonsByTopic(
-            _userId, subjectName, topic.name);
+        final lessons = await localDataSource.getLessonsByTopic(_userId, subjectName, topic.name);
         for (final lesson in lessons) {
           await flashcardLocalDataSource.deleteFlashcardsByLesson(lesson.id);
           try {
             await flashcardRemoteDataSource.deleteFlashcardsByLesson(lesson.id);
           } catch (e) {
-            print('Failed to delete remote flashcards for lesson ${lesson.id}: $e');
+            print('Non-critical failure: Could not delete remote flashcards for lesson ${lesson.id}: $e');
           }
           await localDataSource.deleteLesson(lesson.id);
         }
         await localDataSource.deleteTopic(_userId, subjectName, topic.name);
       }
-
       await localDataSource.deleteSubject(_userId, subjectName);
-
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure('Failed to delete subject: ${e.toString()}'));
-    }
+    });
   }
-
+  
   @override
-  Future<Either<Failure, void>> syncLessons() async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-
-      if (!await connectionChecker.hasConnection) {
-        return const Left(NetworkFailure('No internet connection'));
-      }
+  Future<Either<AppFailure, void>> syncLessons() async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      if (!await connectionChecker.hasConnection) throw AppFailure(type: FailureType.network, message: 'No internet connection');
 
       final unsyncedLessons = await localDataSource.getUnsyncedLessons(_userId);
-
       if (unsyncedLessons.isNotEmpty) {
         await remoteDataSource.syncLessons(unsyncedLessons);
-
         for (final lesson in unsyncedLessons) {
           await localDataSource.markLessonAsSynced(lesson.id);
         }
       }
 
       final remoteLessons = await remoteDataSource.getUserLessons(_userId);
-
       for (final lesson in remoteLessons) {
         await localDataSource.insertOrUpdateLesson(lesson);
       }
-
       await _rebuildContentHierarchy();
-
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure('Failed to sync lessons: ${e.toString()}'));
-    }
+    });
   }
 
   @override
-  Future<Either<Failure, bool>> hasUnsyncedLessons() async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-
+  Future<Either<AppFailure, bool>> hasUnsyncedLessons() async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
       final unsyncedLessons = await localDataSource.getUnsyncedLessons(_userId);
-      return Right(unsyncedLessons.isNotEmpty);
-    } catch (e) {
-      return Left(
-          CacheFailure('Failed to check unsynced lessons: ${e.toString()}'));
-    }
+      return unsyncedLessons.isNotEmpty;
+    });
   }
 
   @override
-  Future<Either<Failure, void>> recalculateProficiencies() async {
-    try {
-      if (_userId.isEmpty) {
-        return const Left(AuthFailure('User not authenticated'));
-      }
-
+  Future<Either<AppFailure, void>> recalculateProficiencies() async {
+    return guard(() async {
+      if (_userId.isEmpty) throw AppFailure(type: FailureType.auth, message: 'User not authenticated');
       final subjects = await localDataSource.getSubjects(_userId);
 
       for (final subject in subjects) {
-        final topics =
-            await localDataSource.getTopicsBySubject(_userId, subject.name);
+        final topics = await localDataSource.getTopicsBySubject(_userId, subject.name);
         double totalSubjectProficiency = 0;
-
         for (final topic in topics) {
-          final lessons = await localDataSource.getLessonsByTopic(
-              _userId, subject.name, topic.name);
-
+          final lessons = await localDataSource.getLessonsByTopic(_userId, subject.name, topic.name);
           if (lessons.isNotEmpty) {
-            final topicProficiency = lessons.fold<double>(
-                  0,
-                  (sum, lesson) => sum + lesson.proficiency,
-                ) /
-                lessons.length;
-
-            await localDataSource.updateTopicProficiency(
-                _userId, subject.name, topic.name, topicProficiency);
-
+            final topicProficiency = lessons.fold<double>(0, (sum, lesson) => sum + lesson.proficiency) / lessons.length;
+            await localDataSource.updateTopicProficiency(_userId, subject.name, topic.name, topicProficiency);
             totalSubjectProficiency += topicProficiency;
           }
         }
-
         if (topics.isNotEmpty) {
           final subjectProficiency = totalSubjectProficiency / topics.length;
-
-          await localDataSource.updateSubjectProficiency(
-              _userId, subject.name, subjectProficiency);
+          await localDataSource.updateSubjectProficiency(_userId, subject.name, subjectProficiency);
         }
       }
-
-      return const Right(null);
-    } catch (e) {
-      return Left(CacheFailure(
-          'Failed to recalculate proficiencies: ${e.toString()}'));
-    }
+    });
+  }
+  
+  @override
+  Future<Either<AppFailure, void>> lockLesson(String lessonId) async {
+    return guard(() async {
+      final lesson = await localDataSource.getLesson(lessonId);
+      if (lesson == null) throw AppFailure(type: FailureType.cache, message: 'Lesson not found');
+      final updatedLesson = lesson.copyWith(isLocked: true, lockedAt: DateTime.now());
+      await localDataSource.insertOrUpdateLesson(updatedLesson);
+      if (await connectionChecker.hasConnection) {
+        await remoteDataSource.updateLesson(updatedLesson);
+      }
+    });
   }
 
-  Future<void> _updateContentHierarchy(
-      String subjectName, String topicName, DateTime now) async {
+  @override
+  Future<Either<AppFailure, void>> updateLessonContentCount(String lessonId) async {
+    return guard(() async {
+      final lesson = await localDataSource.getLesson(lessonId);
+      if (lesson == null) throw AppFailure(type: FailureType.cache, message: 'Lesson not found');
+      final flashcardCount = await flashcardLocalDataSource.countFlashcardsByLesson(lessonId);
+      final updatedLesson = lesson.copyWith(flashcardCount: flashcardCount);
+      await localDataSource.insertOrUpdateLesson(updatedLesson);
+      if (await connectionChecker.hasConnection) {
+        await remoteDataSource.updateLesson(updatedLesson);
+      }
+    });
+  }
+
+  // Internal helper methods (no change)
+  Future<void> _updateContentHierarchy(String subjectName, String topicName, DateTime now) async {
     var topic = await localDataSource.getTopic(_userId, subjectName, topicName);
     if (topic == null) {
       topic = TopicModel(
@@ -456,10 +327,7 @@ class ContentRepositoryImpl implements ContentRepository {
         createdAt: now,
       );
     } else {
-      topic = topic.copyWith(
-        lessonCount: topic.lessonCount + 1,
-        lastStudied: now,
-      );
+      topic = topic.copyWith(lessonCount: topic.lessonCount + 1, lastStudied: now);
     }
     await localDataSource.insertOrUpdateTopic(topic);
 
@@ -475,51 +343,34 @@ class ContentRepositoryImpl implements ContentRepository {
         createdAt: now,
       );
     } else {
-      final topicCount =
-          (await localDataSource.getTopicsBySubject(_userId, subjectName))
-              .length;
-      subject = subject.copyWith(
-        lessonCount: subject.lessonCount + 1,
-        topicCount: topicCount,
-        lastStudied: now,
-      );
+      final topicCount = (await localDataSource.getTopicsBySubject(_userId, subjectName)).length;
+      subject = subject.copyWith(lessonCount: subject.lessonCount + 1, topicCount: topicCount, lastStudied: now);
     }
     await localDataSource.insertOrUpdateSubject(subject);
-
     await recalculateProficiencies();
   }
 
-  Future<void> _cleanupEmptyTopicAndSubject(
-      String subjectName, String topicName) async {
-    final topicLessons =
-        await localDataSource.getLessonsByTopic(_userId, subjectName, topicName);
+  Future<void> _cleanupEmptyTopicAndSubject(String subjectName, String topicName) async {
+    final topicLessons = await localDataSource.getLessonsByTopic(_userId, subjectName, topicName);
     if (topicLessons.isEmpty) {
       await localDataSource.deleteTopic(_userId, subjectName, topicName);
-
       await _cleanupEmptySubject(subjectName);
     } else {
-      final topic =
-          await localDataSource.getTopic(_userId, subjectName, topicName);
+      final topic = await localDataSource.getTopic(_userId, subjectName, topicName);
       if (topic != null) {
-        await localDataSource.insertOrUpdateTopic(
-          topic.copyWith(lessonCount: topicLessons.length),
-        );
+        await localDataSource.insertOrUpdateTopic(topic.copyWith(lessonCount: topicLessons.length));
       }
-
       await _updateSubjectCounts(subjectName);
-
       await recalculateProficiencies();
     }
   }
 
   Future<void> _cleanupEmptySubject(String subjectName) async {
-    final subjectTopics =
-        await localDataSource.getTopicsBySubject(_userId, subjectName);
+    final subjectTopics = await localDataSource.getTopicsBySubject(_userId, subjectName);
     if (subjectTopics.isEmpty) {
       await localDataSource.deleteSubject(_userId, subjectName);
     } else {
       await _updateSubjectCounts(subjectName);
-
       await recalculateProficiencies();
     }
   }
@@ -527,28 +378,18 @@ class ContentRepositoryImpl implements ContentRepository {
   Future<void> _updateSubjectCounts(String subjectName) async {
     final subject = await localDataSource.getSubject(_userId, subjectName);
     if (subject != null) {
-      final topics =
-          await localDataSource.getTopicsBySubject(_userId, subjectName);
+      final topics = await localDataSource.getTopicsBySubject(_userId, subjectName);
       int totalLessons = 0;
-
       for (final topic in topics) {
-        final lessons = await localDataSource.getLessonsByTopic(
-            _userId, subjectName, topic.name);
+        final lessons = await localDataSource.getLessonsByTopic(_userId, subjectName, topic.name);
         totalLessons += lessons.length;
       }
-
-      await localDataSource.insertOrUpdateSubject(
-        subject.copyWith(
-          topicCount: topics.length,
-          lessonCount: totalLessons,
-        ),
-      );
+      await localDataSource.insertOrUpdateSubject(subject.copyWith(topicCount: topics.length, lessonCount: totalLessons));
     }
   }
 
   Future<void> _rebuildContentHierarchy() async {
     final lessons = await localDataSource.getAllLessons(_userId);
-
     final subjectMap = <String, Map<String, List<LessonModel>>>{};
 
     for (final lesson in lessons) {
@@ -560,23 +401,18 @@ class ContentRepositoryImpl implements ContentRepository {
     for (final subjectEntry in subjectMap.entries) {
       final subjectName = subjectEntry.key;
       final topicsMap = subjectEntry.value;
-
       DateTime lastStudied = DateTime(1970);
       int totalLessons = 0;
 
       for (final topicEntry in topicsMap.entries) {
         final topicName = topicEntry.key;
         final topicLessons = topicEntry.value;
-
         totalLessons += topicLessons.length;
-
         for (final lesson in topicLessons) {
-          if (lesson.lastReviewedAt != null &&
-              lesson.lastReviewedAt!.isAfter(lastStudied)) {
+          if (lesson.lastReviewedAt != null && lesson.lastReviewedAt!.isAfter(lastStudied)) {
             lastStudied = lesson.lastReviewedAt!;
           }
         }
-
         final topic = TopicModel(
           name: topicName,
           subjectName: subjectName,
@@ -584,11 +420,8 @@ class ContentRepositoryImpl implements ContentRepository {
           proficiency: 0.0,
           lessonCount: topicLessons.length,
           lastStudied: lastStudied,
-          createdAt: topicLessons
-              .map((l) => l.createdAt)
-              .reduce((a, b) => a.isBefore(b) ? a : b),
+          createdAt: topicLessons.map((l) => l.createdAt).reduce((a, b) => a.isBefore(b) ? a : b),
         );
-
         await localDataSource.insertOrUpdateTopic(topic);
       }
 
@@ -601,52 +434,8 @@ class ContentRepositoryImpl implements ContentRepository {
         lastStudied: lastStudied,
         createdAt: DateTime.now(),
       );
-
       await localDataSource.insertOrUpdateSubject(subject);
     }
-
     await recalculateProficiencies();
-  }
-
-  @override
-  Future<Either<Failure, void>> lockLesson(String lessonId) async {
-    try {
-      final lesson = await localDataSource.getLesson(lessonId);
-      if (lesson == null) {
-        return const Left(CacheFailure('Lesson not found'));
-      }
-      final updatedLesson =
-          lesson.copyWith(isLocked: true, lockedAt: DateTime.now());
-      await localDataSource.insertOrUpdateLesson(updatedLesson);
-      if (await connectionChecker.hasConnection) {
-        await remoteDataSource.updateLesson(updatedLesson);
-      }
-      return const Right(null);
-    } catch (e) {
-      return Left(CacheFailure('Failed to lock lesson: ${e.toString()}'));
-    }
-  }
-
-  @override
-  Future<Either<Failure, void>> updateLessonContentCount(
-      String lessonId) async {
-    try {
-      final lesson = await localDataSource.getLesson(lessonId);
-      if (lesson == null) {
-        return const Left(CacheFailure('Lesson not found'));
-      }
-      
-      final flashcardCount =
-          await flashcardLocalDataSource.countFlashcardsByLesson(lessonId);
-      final updatedLesson = lesson.copyWith(flashcardCount: flashcardCount);
-      await localDataSource.insertOrUpdateLesson(updatedLesson);
-      if (await connectionChecker.hasConnection) {
-        await remoteDataSource.updateLesson(updatedLesson);
-      }
-      return const Right(null);
-    } catch (e) {
-      return Left(
-          CacheFailure('Failed to update lesson content count: ${e.toString()}'));
-    }
   }
 }

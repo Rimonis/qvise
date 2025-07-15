@@ -1,6 +1,8 @@
+// lib/features/auth/presentation/screens/email_verification_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import '../application/auth_providers.dart';
 import '../application/auth_state.dart';
 import '../widgets/auth_button.dart';
@@ -98,11 +100,11 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
           ),
         );
       }
-    } catch (e) {
+    } on AppFailure catch (failure) {
       if (!_isDisposed && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to send email: ${e.toString()}'),
+            content: Text(failure.userFriendlyMessage),
             backgroundColor: context.errorColor,
             behavior: SnackBarBehavior.floating,
             margin: AppSpacing.screenPaddingAll,
@@ -156,7 +158,7 @@ class _EmailVerificationScreenState extends ConsumerState<EmailVerificationScree
         emailNotVerified: (user) => _buildVerificationContent(user),
         authenticated: (user) => _buildSuccessState(),
         unauthenticated: () => _buildSessionExpiredState(),
-        error: (error) => _buildErrorState(error),
+        error: (failure) => _buildErrorState(failure.userFriendlyMessage),
       ),
     );
   }

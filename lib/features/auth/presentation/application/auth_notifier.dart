@@ -1,8 +1,9 @@
+// lib/features/auth/presentation/application/auth_notifier.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/auth/domain/usecases/sign_in_with_email_password.dart';
 import 'package:qvise/features/auth/domain/usecases/sign_in_with_google.dart';
 import 'auth_state.dart';
-
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final SignInWithEmailPassword _signInWithEmail;
@@ -16,8 +17,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final result = await _signInWithEmail(email, password);
 
     result.fold(
-      (failure) => state = AuthState.error(failure.message),  // Use 'error' not 'failure'
-      (user) => state = AuthState.authenticated(user),        // Use 'authenticated' with user data
+      (AppFailure failure) => state = AuthState.error(failure),
+      (user) => state = AuthState.authenticated(user),
     );
   }
 
@@ -26,8 +27,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final result = await _signInWithGoogle();
 
     result.fold(
-      (failure) => state = AuthState.error(failure.message),  // Use 'error' not 'failure'
-      (user) => state = AuthState.authenticated(user),        // Use 'authenticated' with user data
+      (AppFailure failure) => state = AuthState.error(failure),
+      (user) => state = AuthState.authenticated(user),
     );
   }
 }

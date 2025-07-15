@@ -1,5 +1,6 @@
+// lib/features/auth/domain/usecases/reset_password.dart
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import '../repositories/auth_repository.dart';
 
 class ResetPassword {
@@ -7,7 +8,7 @@ class ResetPassword {
 
   ResetPassword(this.repository);
 
-  Future<Either<Failure, void>> call(String email) async {
+  Future<Either<AppFailure, void>> call(String email) async {
     return await repository.sendPasswordResetEmail(email);
   }
 }

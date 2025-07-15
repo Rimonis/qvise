@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/core/providers/network_status_provider.dart';
 import 'package:qvise/core/routes/route_names.dart';
 import 'package:qvise/features/content/domain/entities/lesson.dart';
@@ -121,7 +122,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
               const Icon(Icons.error_outline, size: 64, color: AppColors.error),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Error: ${error.toString()}',
+                'Error loading lessons',
                 textAlign: TextAlign.center,
                 style:
                     context.textTheme.titleMedium?.copyWith(color: AppColors.error),
@@ -174,11 +175,11 @@ class _CreateTabState extends ConsumerState<CreateTab>
                     ),
                   );
                 }
-              } catch (e) {
+              } on AppFailure catch (failure) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Failed to delete: ${e.toString()}'),
+                      content: Text(failure.userFriendlyMessage),
                       backgroundColor: AppColors.error,
                       behavior: SnackBarBehavior.floating,
                     ),

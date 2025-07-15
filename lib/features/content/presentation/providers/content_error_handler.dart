@@ -1,7 +1,9 @@
+// lib/features/content/presentation/providers/content_error_handler.dart
+
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // FIX: Added missing import for Ref
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../../../core/error/failures.dart';
 
 part 'content_error_handler.g.dart';
 
@@ -33,86 +35,49 @@ class ContentError {
     this.stackTrace,
   }) : timestamp = DateTime.now();
 
-  factory ContentError.fromFailure(Failure failure) {
-    ContentErrorType type;
-    String details = '';
-
-    // FIX: Updated to modern pattern matching syntax
-    switch (failure) {
-      case NetworkFailure _:
-        type = ContentErrorType.network;
-        details = 'Please check your internet connection';
+  factory ContentError.fromFailure(AppFailure failure) {
+    ContentErrorType errorType;
+    switch(failure.type) {
+      case FailureType.network:
+        errorType = ContentErrorType.network;
         break;
-      case ServerFailure _:
-        type = ContentErrorType.serverError;
-        details = 'Our servers are experiencing issues. Please try again later';
+      case FailureType.server:
+        errorType = ContentErrorType.serverError;
         break;
-      case CacheFailure _:
-        type = ContentErrorType.localStorageError;
-        details = 'Error accessing local storage';
+      case FailureType.auth:
+        errorType = ContentErrorType.unauthorized;
         break;
-      case AuthFailure _:
-        type = ContentErrorType.unauthorized;
-        details = 'Please sign in again to continue';
+      case FailureType.cache:
+        errorType = ContentErrorType.localStorageError;
         break;
+      case FailureType.validation:
+        errorType = ContentErrorType.validation;
+        break;
+      case FailureType.sync:
+         errorType = ContentErrorType.syncError;
+         break;
+      case FailureType.notFound:
+        errorType = ContentErrorType.notFound;
+        break;
+      case FailureType.unknown:
+      case FailureType.conflict:
       default:
-        type = ContentErrorType.unknown;
-        details = 'An unexpected error occurred';
+        errorType = ContentErrorType.unknown;
+        break;
     }
 
     return ContentError(
-      type: type,
+      type: errorType,
       message: failure.message,
-      details: details,
+      details: failure.userFriendlyMessage,
+      originalError: failure.originalException,
+      stackTrace: failure.stackTrace,
     );
   }
 
   factory ContentError.fromException(dynamic exception, [StackTrace? stack]) {
-    if (kDebugMode) {
-      print('ContentError.fromException: $exception');
-      if (stack != null) print(stack);
-    }
-
-    String message;
-    ContentErrorType type;
-
-    if (exception is NetworkFailure) {
-      return ContentError.fromFailure(exception);
-    }
-
-    if (exception.toString().contains('NetworkException') ||
-        exception.toString().contains('SocketException')) {
-      type = ContentErrorType.network;
-      message = 'Network connection error';
-    } else if (exception.toString().contains('TimeoutException')) {
-      type = ContentErrorType.network;
-      message = 'Request timed out';
-    } else if (exception.toString().contains('FormatException')) {
-      type = ContentErrorType.validation;
-      message = 'Invalid data format';
-    } else if (exception.toString().contains('404')) {
-      type = ContentErrorType.notFound;
-      message = 'Content not found';
-    } else if (exception.toString().contains('401') ||
-        exception.toString().contains('403')) {
-      type = ContentErrorType.unauthorized;
-      message = 'Access denied';
-    } else if (exception.toString().contains('500') ||
-        exception.toString().contains('502') ||
-        exception.toString().contains('503')) {
-      type = ContentErrorType.serverError;
-      message = 'Server error';
-    } else {
-      type = ContentErrorType.unknown;
-      message = exception.toString();
-    }
-
-    return ContentError(
-      type: type,
-      message: message,
-      originalError: exception,
-      stackTrace: stack,
-    );
+    final failure = AppFailure.fromException(exception, stack);
+    return ContentError.fromFailure(failure);
   }
 
   String get userFriendlyMessage {
@@ -137,18 +102,11 @@ class ContentError {
   }
 
   bool get isRetryable {
-    switch (type) {
-      case ContentErrorType.network:
-      case ContentErrorType.serverError:
-      case ContentErrorType.syncError:
-        return true;
-      case ContentErrorType.notFound:
-      case ContentErrorType.unauthorized:
-      case ContentErrorType.validation:
-      case ContentErrorType.localStorageError:
-      case ContentErrorType.unknown:
-        return false;
-    }
+    return const [
+      ContentErrorType.network,
+      ContentErrorType.serverError,
+      ContentErrorType.syncError,
+    ].contains(type);
   }
 }
 
@@ -165,41 +123,21 @@ class ContentErrorHandler extends _$ContentErrorHandler {
 
   void logError(ContentError error) {
     _errorHistory.add(error);
-
-    // Keep history size limited
     if (_errorHistory.length > maxHistorySize) {
       _errorHistory.removeAt(0);
     }
-
-    // Update state to trigger UI updates if needed
     state = List.from(_errorHistory);
 
-    // Log to console in debug mode
     if (kDebugMode) {
       print('ContentError [${error.type}]: ${error.message}');
       if (error.details != null) print('Details: ${error.details}');
       if (error.stackTrace != null) print(error.stackTrace);
     }
-
-    // TODO: Send to crash reporting service in production
   }
 
   void clearErrors() {
     _errorHistory.clear();
     state = [];
-  }
-
-  List<ContentError> getRecentErrors({int count = 10}) {
-    final start = (_errorHistory.length - count).clamp(0, _errorHistory.length);
-    return _errorHistory.sublist(start);
-  }
-
-  ContentError? getLastError() {
-    return _errorHistory.isNotEmpty ? _errorHistory.last : null;
-  }
-
-  List<ContentError> getErrorsByType(ContentErrorType type) {
-    return _errorHistory.where((error) => error.type == type).toList();
   }
 }
 
@@ -214,50 +152,5 @@ extension AsyncValueErrorHandling<T> on AsyncValue<T> {
       },
       orElse: () => this,
     );
-  }
-}
-
-// Retry helper
-class RetryHelper {
-  static const int maxRetries = 3;
-  static const Duration initialDelay = Duration(seconds: 1);
-
-  static Future<T> withRetry<T>({
-    required Future<T> Function() operation,
-    required ContentErrorHandler errorHandler,
-    int maxAttempts = maxRetries,
-    bool Function(dynamic)? retryIf,
-  }) async {
-    int attempt = 0;
-    Duration delay = initialDelay;
-
-    while (attempt < maxAttempts) {
-      try {
-        return await operation();
-      } catch (e, stack) {
-        attempt++;
-
-        final error = ContentError.fromException(e, stack);
-
-        // Check if we should retry
-        final shouldRetry = retryIf?.call(e) ?? error.isRetryable;
-
-        if (attempt >= maxAttempts || !shouldRetry) {
-          errorHandler.logError(error);
-          rethrow;
-        }
-
-        // Log retry attempt
-        if (kDebugMode) {
-          print('Retry attempt $attempt/$maxAttempts after ${delay.inSeconds}s');
-        }
-
-        // Wait before retrying with exponential backoff
-        await Future.delayed(delay);
-        delay *= 2; // Exponential backoff
-      }
-    }
-
-    throw Exception('Max retries exceeded');
   }
 }

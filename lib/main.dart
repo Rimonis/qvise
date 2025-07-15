@@ -100,7 +100,7 @@ class _MyAppState extends ConsumerState<MyApp> {
           print('Theme loading error: $error');
           print(stackTrace);
         }
-        return _AppMaterialRouter(themeMode: ThemeMode.system);
+        return const _AppMaterialRouter(themeMode: ThemeMode.system);
       },
     );
   }

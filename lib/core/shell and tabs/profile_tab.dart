@@ -1,11 +1,12 @@
+// lib/core/shell and tabs/profile_tab.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/auth/presentation/application/auth_providers.dart';
 import 'package:qvise/core/theme/theme_mode_provider.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/app_colors.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
-import 'package:flutter/scheduler.dart';
 
 // Provider for premium status (for testing)
 final premiumStatusProvider = StateProvider<bool>((ref) => false);
@@ -182,49 +183,9 @@ class ProfileTab extends ConsumerWidget {
               ),
               child: Column(
                 children: [
-                  // Theme selector - Using simple ListTile since ThemeModeListTile needs to be generated
-                  Consumer(
-  builder: (context, ref, child) {
-    final themeModeAsync = ref.watch(themeModeNotifierProvider);
-    
-    return themeModeAsync.when(
-      data: (themeMode) => IconButton(
-        icon: Icon(_getThemeIcon(themeMode)),
-        onPressed: () async {
-          // Clear any existing snackbars before toggling theme
-          ScaffoldMessenger.of(context).clearSnackBars();
-          
-          // Schedule the theme change for the next frame
-          SchedulerBinding.instance.scheduleFrameCallback((_) {
-            if (context.mounted) {
-              ref.read(themeModeNotifierProvider.notifier).toggleTheme();
-            }
-          });
-        },
-        tooltip: 'Toggle theme (${_getThemeName(themeMode)})',
-      ),
-      loading: () => const IconButton(
-        icon: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-        onPressed: null,
-        tooltip: 'Loading theme...',
-      ),
-      error: (error, _) => IconButton(
-        icon: const Icon(Icons.error_outline),
-        onPressed: () {
-          ref.read(themeModeNotifierProvider.notifier).refreshTheme();
-        },
-        tooltip: 'Theme error - tap to retry',
-      ),
-    );
-  },
-),
+                  const ThemeModeListTile(),
                   Divider(height: 1, color: context.dividerColor),
                   
-                  // Premium Toggle (for testing)
                   ListTile(
                     leading: Icon(
                       isPremium ? Icons.star : Icons.star_outline,
@@ -241,7 +202,6 @@ class ProfileTab extends ConsumerWidget {
                   ),
                   Divider(height: 1, color: context.dividerColor),
                   
-                  // Account Settings
                   ListTile(
                     leading: const Icon(Icons.settings),
                     title: const Text('Account Settings'),
@@ -255,7 +215,6 @@ class ProfileTab extends ConsumerWidget {
                   ),
                   Divider(height: 1, color: context.dividerColor),
                   
-                  // Privacy
                   ListTile(
                     leading: const Icon(Icons.privacy_tip),
                     title: const Text('Privacy'),
@@ -269,7 +228,6 @@ class ProfileTab extends ConsumerWidget {
                   ),
                   Divider(height: 1, color: context.dividerColor),
                   
-                  // Help & Support
                   ListTile(
                     leading: const Icon(Icons.help),
                     title: const Text('Help & Support'),
@@ -286,7 +244,6 @@ class ProfileTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
             
-            // Add Theme Toggle Button for quick access
             Container(
               width: double.infinity,
               padding: AppSpacing.paddingAllMd,
@@ -304,44 +261,12 @@ class ProfileTab extends ConsumerWidget {
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),
-                  // Custom theme toggle button since ThemeToggleButton needs to be generated
-                  Consumer(
-                    builder: (context, ref, child) {
-                      final themeModeAsync = ref.watch(themeModeNotifierProvider);
-                      
-                      return themeModeAsync.when(
-                        data: (themeMode) => IconButton(
-                          icon: Icon(_getThemeIcon(themeMode)),
-                          onPressed: () {
-                            ref.read(themeModeNotifierProvider.notifier).toggleTheme();
-                          },
-                          tooltip: 'Toggle theme (${_getThemeName(themeMode)})',
-                        ),
-                        loading: () => const IconButton(
-                          icon: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          onPressed: null,
-                          tooltip: 'Loading theme...',
-                        ),
-                        error: (error, _) => IconButton(
-                          icon: const Icon(Icons.error_outline),
-                          onPressed: () {
-                            ref.read(themeModeNotifierProvider.notifier).refreshTheme();
-                          },
-                          tooltip: 'Theme error - tap to retry',
-                        ),
-                      );
-                    },
-                  ),
+                  const ThemeToggleButton(),
                 ],
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
             
-            // Logout Button
             SizedBox(
               width: double.infinity,
               height: AppSpacing.buttonHeight,
@@ -357,12 +282,11 @@ class ProfileTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             
-            // App version info
-            Text(
+            const Text(
               'Qvise v1.0.0',
               style: TextStyle(
                 fontSize: 12,
-                color: context.textTertiaryColor,
+                color: AppColors.textTertiary,
               ),
             ),
           ],
@@ -410,7 +334,7 @@ class ProfileTab extends ConsumerWidget {
           ],
         ),
       ),
-      error: (error) => Center(
+      error: (failure) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -421,7 +345,7 @@ class ProfileTab extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
               child: Text(
-                error,
+                failure.userFriendlyMessage,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: AppColors.error),
               ),
@@ -439,34 +363,6 @@ class ProfileTab extends ConsumerWidget {
     );
   }
 
-  // Helper functions for theme management
-  IconData _getThemeIcon(ThemeMode mode) {
-    return switch (mode) {
-      ThemeMode.light => Icons.light_mode,
-      ThemeMode.dark => Icons.dark_mode,
-      ThemeMode.system => Icons.brightness_auto,
-    };
-  }
-
-  String _getThemeName(ThemeMode mode) {
-    return switch (mode) {
-      ThemeMode.light => 'Light',
-      ThemeMode.dark => 'Dark',
-      ThemeMode.system => 'System',
-    };
-  }
-
-  void _showThemeDialog(BuildContext context, WidgetRef ref, ThemeMode currentMode) {
-  // Clear any existing snackbars before showing dialog
-  ScaffoldMessenger.of(context).clearSnackBars();
-  
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) => const ThemeModeDialog(),
-  );
-}
-
   Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
     try {
       await ref.read(authProvider.notifier).signOut();
@@ -478,11 +374,11 @@ class ProfileTab extends ConsumerWidget {
           ),
         );
       }
-    } catch (e) {
+    } on AppFailure catch (failure) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(failure.userFriendlyMessage),
             backgroundColor: AppColors.error,
           ),
         );
