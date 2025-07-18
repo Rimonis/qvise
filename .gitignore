@@ -20,6 +20,8 @@ build/
 
 # Firebase config
 lib/firebase_options.dart
+firebase.json
+android/app/google-services.json
 
 # Android
 android/.gradle/

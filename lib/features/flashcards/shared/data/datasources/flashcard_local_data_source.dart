@@ -4,7 +4,7 @@ import 'package:qvise/core/data/datasources/transactional_data_source.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/flashcard_model.dart';
 
-abstract class FlashcardLocalDataSource {
+abstract class FlashcardLocalDataSource extends TransactionalDataSource {
   Future<void> initDatabase();
   Future<FlashcardModel> createFlashcard(FlashcardModel flashcard);
   Future<FlashcardModel> updateFlashcard(FlashcardModel flashcard);

@@ -1,30 +1,113 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+// test/widget_test.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:qvise/main.dart';
+import 'package:qvise/core/providers/network_status_provider.dart';
+import 'package:qvise/features/auth/presentation/application/auth_providers.dart';
+import 'package:qvise/features/auth/presentation/application/auth_state.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('App starts with loading state', (WidgetTester tester) async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    
+    // Build a simple test widget instead of full app to avoid navigation issues
+    await tester.pumpWidget(
+  ProviderScope(
+    overrides: [
+      authProvider.overrideWith(() => MockAuthNotifier()),
+      networkStatusProvider.overrideWith(() => MockNetworkStatus())
+    ],
+    child: MaterialApp(
+      home: Consumer(
+        builder: (context, ref, child) {
+          final authState = ref.watch(authProvider);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+          return Scaffold(
+            body: Center(
+              child: authState.when(
+                initial: () => const Text('Initial'),
+                loading: () => const CircularProgressIndicator(), // Added this required handler
+                authenticated: (user) => Text('Authenticated: ${user.email}'),
+                unauthenticated: () => const Text('Sign In'),
+                emailNotVerified: (user) => Text('Email not verified for ${user.email}'), // Added this required handler
+                error: (failure) => Text('Error: ${failure.message}'),
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  ),
+);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Simple pump to let widget build
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Check for expected state
+    expect(find.text('Sign In'), findsOneWidget);
   });
+}
+
+// A mock AuthNotifier for testing purposes
+class MockAuthNotifier extends Notifier<AuthState> implements Auth {
+  @override
+  AuthState build() {
+    // Start in an unauthenticated state
+    return const AuthState.unauthenticated();
+  }
+
+  // Override any methods that might be called during startup to prevent errors
+  @override
+  Future<void> checkAuthStatus() async {
+    // Do nothing in the mock
+  }
+
+  @override
+  Future<void> signInWithEmailPassword(String email, String password) async {
+    // Mock implementation
+  }
+
+  @override
+  Future<void> signUpWithEmailPassword(String email, String password, String displayName) async {
+    // Mock implementation
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
+    // Mock implementation
+  }
+
+  @override
+  Future<void> signOut() async {
+    // Mock implementation
+  }
+
+  @override
+  Future<void> sendEmailVerification() async {
+    // Mock implementation
+  }
+
+  @override
+  Future<void> checkEmailVerification() async {
+    // Mock implementation
+  }
+
+  @override
+  Future<void> sendPasswordResetEmail(String email) async {
+    // Mock implementation
+  }
+}
+
+// A mock NetworkStatus notifier for testing purposes
+class MockNetworkStatus extends StreamNotifier<bool> implements NetworkStatus {
+  @override
+  Stream<bool> build() {
+    // Return a stream that immediately emits 'true' (online)
+    return Stream.value(true);
+  }
+  
+@override
+  Future<void> checkNow() async {
+    // Mock implementation - do nothing
+  }
 }

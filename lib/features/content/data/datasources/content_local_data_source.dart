@@ -6,7 +6,7 @@ import '../models/subject_model.dart';
 import '../models/topic_model.dart';
 import '../models/lesson_model.dart';
 
-abstract class ContentLocalDataSource {
+abstract class ContentLocalDataSource extends TransactionalDataSource {
   Future<void> initDatabase();
   Future<List<SubjectModel>> getSubjects(String userId);
   Future<SubjectModel?> getSubject(String userId, String subjectName);

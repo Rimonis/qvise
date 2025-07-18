@@ -1,5 +1,6 @@
 // lib/core/data/database/app_database.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:qvise/core/data/migrations/add_sync_fields_migration.dart';
 import 'package:sqflite/sqflite.dart';
@@ -7,8 +8,15 @@ import 'package:sqflite/sqflite.dart';
 class AppDatabase {
   static Database? _database;
 
+  /// A setter for overriding the database instance in tests.
+  @visibleForTesting
+  static void setDatabase(Database? db) {
+    _database = db;
+  }
+
   static Future<Database> get database async {
-    _database ??= await _initDB();
+    if (_database != null) return _database!;
+    _database = await _initDB();
     return _database!;
   }
 
