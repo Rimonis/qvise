@@ -1,7 +1,7 @@
 // lib/features/content/data/datasources/content_local_data_source.dart
 
+import 'package:qvise/core/data/datasources/transactional_data_source.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
 import '../models/subject_model.dart';
 import '../models/topic_model.dart';
 import '../models/lesson_model.dart';
@@ -16,113 +16,18 @@ abstract class ContentLocalDataSource {
   Future<TopicModel?> getTopic(String userId, String subjectName, String topicName);
   Future<void> insertOrUpdateTopic(TopicModel topic);
   Future<void> deleteTopic(String userId, String subjectName, String topicName);
-  Future<List<LessonModel>> getLessonsByTopic(
-      String userId, String subjectName, String topicName);
+  Future<List<LessonModel>> getLessonsByTopic(String userId, String subjectName, String topicName);
   Future<List<LessonModel>> getAllLessons(String userId);
   Future<List<LessonModel>> getUnsyncedLessons(String userId);
   Future<LessonModel?> getLesson(String lessonId);
   Future<void> insertOrUpdateLesson(LessonModel lesson);
   Future<void> deleteLesson(String lessonId);
   Future<void> markLessonAsSynced(String lessonId);
-  Future<void> updateSubjectProficiency(
-      String userId, String subjectName, double proficiency);
-  Future<void> updateTopicProficiency(
-      String userId, String subjectName, String topicName, double proficiency);
+  Future<void> updateSubjectProficiency(String userId, String subjectName, double proficiency);
+  Future<void> updateTopicProficiency(String userId, String subjectName, String topicName, double proficiency);
 }
 
-class ContentLocalDataSourceImpl implements ContentLocalDataSource {
-  Database? _database;
-
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDB();
-    return _database!;
-  }
-
-  Future<Database> _initDB() async {
-    final path = join(await getDatabasesPath(), 'qvise_content.db');
-
-    return await openDatabase(
-      path,
-      version: 2,
-      onCreate: _createDB,
-      onUpgrade: _upgradeDB,
-    );
-  }
-
-  Future<void> _createDB(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE subjects(
-        name TEXT NOT NULL,
-        userId TEXT NOT NULL,
-        proficiency REAL NOT NULL,
-        lessonCount INTEGER NOT NULL,
-        topicCount INTEGER NOT NULL,
-        lastStudied INTEGER NOT NULL,
-        createdAt INTEGER NOT NULL,
-        PRIMARY KEY (userId, name)
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE topics(
-        name TEXT NOT NULL,
-        subjectName TEXT NOT NULL,
-        userId TEXT NOT NULL,
-        proficiency REAL NOT NULL,
-        lessonCount INTEGER NOT NULL,
-        lastStudied INTEGER NOT NULL,
-        createdAt INTEGER NOT NULL,
-        PRIMARY KEY (userId, subjectName, name)
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE lessons(
-        id TEXT PRIMARY KEY,
-        userId TEXT NOT NULL,
-        subjectName TEXT NOT NULL,
-        topicName TEXT NOT NULL,
-        title TEXT,
-        createdAt INTEGER NOT NULL,
-        lockedAt INTEGER,
-        nextReviewDate INTEGER NOT NULL,
-        lastReviewedAt INTEGER,
-        reviewStage INTEGER NOT NULL,
-        proficiency REAL NOT NULL,
-        isLocked INTEGER NOT NULL DEFAULT 0,
-        isSynced INTEGER NOT NULL DEFAULT 0,
-        flashcardCount INTEGER NOT NULL DEFAULT 0,
-        fileCount INTEGER NOT NULL DEFAULT 0,
-        noteCount INTEGER NOT NULL DEFAULT 0
-      )
-    ''');
-
-    await db.execute('CREATE INDEX idx_lessons_user ON lessons(userId)');
-    await db.execute(
-        'CREATE INDEX idx_lessons_subject_topic ON lessons(userId, subjectName, topicName)');
-    await db.execute('CREATE INDEX idx_lessons_sync ON lessons(isSynced)');
-    await db.execute(
-        'CREATE INDEX idx_lessons_review ON lessons(nextReviewDate)');
-    await db.execute('CREATE INDEX idx_lessons_locked ON lessons(isLocked)');
-  }
-
-  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute('ALTER TABLE lessons ADD COLUMN lockedAt INTEGER');
-      await db
-          .execute('ALTER TABLE lessons ADD COLUMN isLocked INTEGER NOT NULL DEFAULT 0');
-      await db.execute(
-          'ALTER TABLE lessons ADD COLUMN flashcardCount INTEGER NOT NULL DEFAULT 0');
-      await db.execute(
-          'ALTER TABLE lessons ADD COLUMN fileCount INTEGER NOT NULL DEFAULT 0');
-      await db.execute(
-          'ALTER TABLE lessons ADD COLUMN noteCount INTEGER NOT NULL DEFAULT 0');
-
-      await db.execute('CREATE INDEX idx_lessons_locked ON lessons(isLocked)');
-    }
-  }
-
+class ContentLocalDataSourceImpl extends TransactionalDataSource implements ContentLocalDataSource {
   @override
   Future<void> initDatabase() async {
     await database;
@@ -133,11 +38,10 @@ class ContentLocalDataSourceImpl implements ContentLocalDataSource {
     final db = await database;
     final maps = await db.query(
       'subjects',
-      where: 'userId = ?',
+      where: 'userId = ? AND is_deleted = 0',
       whereArgs: [userId],
       orderBy: 'name ASC',
     );
-
     return maps.map((map) => SubjectModel.fromDatabase(map)).toList();
   }
 
@@ -146,11 +50,10 @@ class ContentLocalDataSourceImpl implements ContentLocalDataSource {
     final db = await database;
     final maps = await db.query(
       'subjects',
-      where: 'userId = ? AND name = ?',
+      where: 'userId = ? AND name = ? AND is_deleted = 0',
       whereArgs: [userId, subjectName],
       limit: 1,
     );
-
     if (maps.isEmpty) return null;
     return SubjectModel.fromDatabase(maps.first);
   }
@@ -168,38 +71,35 @@ class ContentLocalDataSourceImpl implements ContentLocalDataSource {
   @override
   Future<void> deleteSubject(String userId, String subjectName) async {
     final db = await database;
-    await db.delete(
+    await db.update(
       'subjects',
+      {'is_deleted': 1},
       where: 'userId = ? AND name = ?',
       whereArgs: [userId, subjectName],
     );
   }
 
   @override
-  Future<List<TopicModel>> getTopicsBySubject(
-      String userId, String subjectName) async {
+  Future<List<TopicModel>> getTopicsBySubject(String userId, String subjectName) async {
     final db = await database;
     final maps = await db.query(
       'topics',
-      where: 'userId = ? AND subjectName = ?',
+      where: 'userId = ? AND subjectName = ? AND is_deleted = 0',
       whereArgs: [userId, subjectName],
       orderBy: 'name ASC',
     );
-
     return maps.map((map) => TopicModel.fromDatabase(map)).toList();
   }
 
   @override
-  Future<TopicModel?> getTopic(
-      String userId, String subjectName, String topicName) async {
+  Future<TopicModel?> getTopic(String userId, String subjectName, String topicName) async {
     final db = await database;
     final maps = await db.query(
       'topics',
-      where: 'userId = ? AND subjectName = ? AND name = ?',
+      where: 'userId = ? AND subjectName = ? AND name = ? AND is_deleted = 0',
       whereArgs: [userId, subjectName, topicName],
       limit: 1,
     );
-
     if (maps.isEmpty) return null;
     return TopicModel.fromDatabase(maps.first);
   }
@@ -215,27 +115,25 @@ class ContentLocalDataSourceImpl implements ContentLocalDataSource {
   }
 
   @override
-  Future<void> deleteTopic(
-      String userId, String subjectName, String topicName) async {
+  Future<void> deleteTopic(String userId, String subjectName, String topicName) async {
     final db = await database;
-    await db.delete(
+    await db.update(
       'topics',
+      {'is_deleted': 1},
       where: 'userId = ? AND subjectName = ? AND name = ?',
       whereArgs: [userId, subjectName, topicName],
     );
   }
 
   @override
-  Future<List<LessonModel>> getLessonsByTopic(
-      String userId, String subjectName, String topicName) async {
+  Future<List<LessonModel>> getLessonsByTopic(String userId, String subjectName, String topicName) async {
     final db = await database;
     final maps = await db.query(
       'lessons',
-      where: 'userId = ? AND subjectName = ? AND topicName = ?',
+      where: 'userId = ? AND subjectName = ? AND topicName = ? AND is_deleted = 0',
       whereArgs: [userId, subjectName, topicName],
       orderBy: 'createdAt DESC',
     );
-
     return maps.map((map) => LessonModel.fromDatabase(map)).toList();
   }
 
@@ -244,11 +142,10 @@ class ContentLocalDataSourceImpl implements ContentLocalDataSource {
     final db = await database;
     final maps = await db.query(
       'lessons',
-      where: 'userId = ?',
+      where: 'userId = ? AND is_deleted = 0',
       whereArgs: [userId],
       orderBy: 'nextReviewDate ASC',
     );
-
     return maps.map((map) => LessonModel.fromDatabase(map)).toList();
   }
 
@@ -257,10 +154,9 @@ class ContentLocalDataSourceImpl implements ContentLocalDataSource {
     final db = await database;
     final maps = await db.query(
       'lessons',
-      where: 'userId = ? AND isSynced = 0',
+      where: 'userId = ? AND isSynced = 0 AND is_deleted = 0',
       whereArgs: [userId],
     );
-
     return maps.map((map) => LessonModel.fromDatabase(map)).toList();
   }
 
@@ -269,11 +165,10 @@ class ContentLocalDataSourceImpl implements ContentLocalDataSource {
     final db = await database;
     final maps = await db.query(
       'lessons',
-      where: 'id = ?',
+      where: 'id = ? AND is_deleted = 0',
       whereArgs: [lessonId],
       limit: 1,
     );
-
     if (maps.isEmpty) return null;
     return LessonModel.fromDatabase(maps.first);
   }
@@ -291,8 +186,9 @@ class ContentLocalDataSourceImpl implements ContentLocalDataSource {
   @override
   Future<void> deleteLesson(String lessonId) async {
     final db = await database;
-    await db.delete(
+    await db.update(
       'lessons',
+      {'is_deleted': 1},
       where: 'id = ?',
       whereArgs: [lessonId],
     );
@@ -310,8 +206,7 @@ class ContentLocalDataSourceImpl implements ContentLocalDataSource {
   }
 
   @override
-  Future<void> updateSubjectProficiency(
-      String userId, String subjectName, double proficiency) async {
+  Future<void> updateSubjectProficiency(String userId, String subjectName, double proficiency) async {
     final db = await database;
     await db.update(
       'subjects',
@@ -322,8 +217,7 @@ class ContentLocalDataSourceImpl implements ContentLocalDataSource {
   }
 
   @override
-  Future<void> updateTopicProficiency(String userId, String subjectName,
-      String topicName, double proficiency) async {
+  Future<void> updateTopicProficiency(String userId, String subjectName, String topicName, double proficiency) async {
     final db = await database;
     await db.update(
       'topics',

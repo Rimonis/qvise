@@ -27,5 +27,4 @@ abstract class ContentRepository {
   Future<Either<AppFailure, bool>> hasUnsyncedLessons();
   Future<Either<AppFailure, void>> recalculateProficiencies();
   Future<Either<AppFailure, void>> lockLesson(String lessonId);
-  Future<Either<AppFailure, void>> updateLessonContentCount(String lessonId);
 }

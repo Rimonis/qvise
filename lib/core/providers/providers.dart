@@ -1,3 +1,4 @@
+// lib/core/providers/providers.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:firebase_core/firebase_core.dart';
@@ -18,6 +19,9 @@ import '../../features/auth/domain/usecases/sign_up_with_email_password.dart';
 import '../../features/auth/domain/usecases/send_email_verification.dart';
 import '../../features/auth/domain/usecases/check_email_verification.dart';
 import '../../features/auth/domain/usecases/reset_password.dart';
+
+// Export the new data providers file for easy access
+export '../data/providers/data_providers.dart';
 
 part 'providers.g.dart';
 

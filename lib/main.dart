@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qvise/core/application/sync_coordinator.dart';
+import 'package:qvise/core/data/migrations/database_migration.dart';
 import 'package:qvise/core/providers/network_status_provider.dart';
 import 'package:qvise/core/routes/app_router.dart';
 import 'package:qvise/core/widgets/error_boundary.dart';
@@ -18,6 +19,12 @@ import 'package:qvise/firebase_options.dart';
 void main() async {
   runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
+
+    if (await DatabaseMigration.needsMigration()) {
+      print('Migrating to unified database...');
+      await DatabaseMigration.migrateToUnifiedDatabase();
+      print('Migration complete!');
+    }
 
     FlutterError.onError = (FlutterErrorDetails details) {
       if (kDebugMode) {
@@ -106,7 +113,6 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 }
 
-// Separated MaterialApp widget to prevent unnecessary rebuilds
 class _AppMaterialRouter extends ConsumerStatefulWidget {
   final ThemeMode themeMode;
 
@@ -124,17 +130,14 @@ class _AppMaterialRouterState extends ConsumerState<_AppMaterialRouter> {
   @override
   void initState() {
     super.initState();
-    // Cache the router to prevent rebuilds
     _router = ref.read(routerProvider);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Force a frame to ensure clean theme transitions
     SchedulerBinding.instance.ensureVisualUpdate();
     
     return MaterialApp.router(
-      // Add key to force rebuild on theme change
       key: ValueKey(widget.themeMode),
       routerConfig: _router,
       debugShowCheckedModeBanner: false,
@@ -142,15 +145,12 @@ class _AppMaterialRouterState extends ConsumerState<_AppMaterialRouter> {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: widget.themeMode,
-      // Add animation duration for theme transitions
       themeAnimationDuration: const Duration(milliseconds: 300),
       themeAnimationCurve: Curves.easeInOut,
       builder: (context, child) {
-        // Wrap with error boundary for each route
         return ErrorBoundary(
           errorBuilder: (details) => _ErrorScreen(details: details),
           child: GestureDetector(
-            // Dismiss keyboard when tapping outside text fields
             onTap: () {
               FocusManager.instance.primaryFocus?.unfocus();
             },
@@ -162,7 +162,6 @@ class _AppMaterialRouterState extends ConsumerState<_AppMaterialRouter> {
   }
 }
 
-// Custom error screen for production
 class _ErrorScreen extends StatelessWidget {
   final FlutterErrorDetails details;
 
@@ -225,8 +224,6 @@ class _ErrorScreen extends StatelessWidget {
                 ],
                 ElevatedButton(
                   onPressed: () {
-                    // In a real app, you might want to restart or navigate to home
-                    // For now, we'll just show a message
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Please restart the app'),

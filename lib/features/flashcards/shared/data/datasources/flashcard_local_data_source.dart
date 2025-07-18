@@ -1,7 +1,7 @@
 // lib/features/flashcards/shared/data/datasources/flashcard_local_data_source.dart
 
+import 'package:qvise/core/data/datasources/transactional_data_source.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
 import '../models/flashcard_model.dart';
 
 abstract class FlashcardLocalDataSource {
@@ -12,8 +12,7 @@ abstract class FlashcardLocalDataSource {
   Future<void> deleteFlashcardsByLesson(String lessonId);
   Future<FlashcardModel?> getFlashcard(String id);
   Future<List<FlashcardModel>> getFlashcardsByLesson(String lessonId);
-  Future<List<FlashcardModel>> getFlashcardsByLessonAndTag(
-      String lessonId, String tagId);
+  Future<List<FlashcardModel>> getFlashcardsByLessonAndTag(String lessonId, String tagId);
   Future<List<FlashcardModel>> getFavoriteFlashcards(String userId);
   Future<List<FlashcardModel>> getFlashcardsNeedingAttention(String userId);
   Future<int> countFlashcardsByLesson(String lessonId);
@@ -22,66 +21,7 @@ abstract class FlashcardLocalDataSource {
   Future<void> toggleFavorite(String flashcardId, bool isFavorite);
 }
 
-class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
-  Database? _database;
-
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDB();
-    return _database!;
-  }
-
-  Future<Database> _initDB() async {
-    final path = join(await getDatabasesPath(), 'qvise_flashcards.db');
-
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: (db, version) async {
-        await _createTables(db);
-      },
-    );
-  }
-
-  Future<void> _createTables(Database db) async {
-    await db.execute('''
-      CREATE TABLE flashcards (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        lesson_id TEXT NOT NULL,
-        
-        front_content TEXT NOT NULL,
-        back_content TEXT NOT NULL,
-        
-        tag_id TEXT NOT NULL,
-        tag_name TEXT NOT NULL,
-        tag_emoji TEXT NOT NULL,
-        tag_color TEXT NOT NULL,
-        tag_category TEXT NOT NULL,
-        
-        difficulty REAL DEFAULT 0.5 CHECK (difficulty >= 0.0 AND difficulty <= 1.0),
-        mastery_level REAL DEFAULT 0.0 CHECK (mastery_level >= 0.0 AND mastery_level <= 1.0),
-        review_count INTEGER DEFAULT 0,
-        correct_count INTEGER DEFAULT 0,
-        
-        is_favorite INTEGER DEFAULT 0 CHECK (is_favorite IN (0, 1)),
-        is_active INTEGER DEFAULT 1 CHECK (is_active IN (0, 1)),
-        notes TEXT,
-        hints TEXT,
-        
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        last_reviewed_at TEXT,
-        sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('synced', 'pending', 'conflict'))
-      )
-    ''');
-
-    await db.execute('CREATE INDEX idx_flashcards_lesson ON flashcards(lesson_id)');
-    await db.execute('CREATE INDEX idx_flashcards_user_lesson ON flashcards(user_id, lesson_id)');
-    await db.execute('CREATE INDEX idx_flashcards_tag ON flashcards(tag_id)');
-    await db.execute('CREATE INDEX idx_flashcards_sync ON flashcards(sync_status)');
-  }
-
+class FlashcardLocalDataSourceImpl extends TransactionalDataSource implements FlashcardLocalDataSource {
   @override
   Future<void> initDatabase() async {
     await database;
@@ -111,8 +51,9 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
   @override
   Future<void> deleteFlashcard(String id) async {
     final db = await database;
-    await db.delete(
+    await db.update(
       'flashcards',
+      {'is_deleted': 1},
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -121,8 +62,9 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
   @override
   Future<void> deleteFlashcardsByLesson(String lessonId) async {
     final db = await database;
-    await db.delete(
+    await db.update(
       'flashcards',
+      {'is_deleted': 1},
       where: 'lesson_id = ?',
       whereArgs: [lessonId],
     );
@@ -133,7 +75,7 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
     final db = await database;
     final result = await db.query(
       'flashcards',
-      where: 'id = ?',
+      where: 'id = ? AND is_deleted = 0',
       whereArgs: [id],
     );
     if (result.isEmpty) return null;
@@ -145,7 +87,7 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
     final db = await database;
     final result = await db.query(
       'flashcards',
-      where: 'lesson_id = ? AND is_active = 1',
+      where: 'lesson_id = ? AND is_active = 1 AND is_deleted = 0',
       whereArgs: [lessonId],
       orderBy: 'created_at ASC',
     );
@@ -153,14 +95,11 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
   }
 
   @override
-  Future<List<FlashcardModel>> getFlashcardsByLessonAndTag(
-    String lessonId,
-    String tagId,
-  ) async {
+  Future<List<FlashcardModel>> getFlashcardsByLessonAndTag(String lessonId, String tagId) async {
     final db = await database;
     final result = await db.query(
       'flashcards',
-      where: 'lesson_id = ? AND tag_id = ? AND is_active = 1',
+      where: 'lesson_id = ? AND tag_id = ? AND is_active = 1 AND is_deleted = 0',
       whereArgs: [lessonId, tagId],
       orderBy: 'created_at ASC',
     );
@@ -172,7 +111,7 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
     final db = await database;
     final result = await db.query(
       'flashcards',
-      where: 'user_id = ? AND is_favorite = 1 AND is_active = 1',
+      where: 'user_id = ? AND is_favorite = 1 AND is_active = 1 AND is_deleted = 0',
       whereArgs: [userId],
       orderBy: 'updated_at DESC',
     );
@@ -180,8 +119,7 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
   }
 
   @override
-  Future<List<FlashcardModel>> getFlashcardsNeedingAttention(
-      String userId) async {
+  Future<List<FlashcardModel>> getFlashcardsNeedingAttention(String userId) async {
     final db = await database;
     final result = await db.rawQuery('''
       SELECT * FROM flashcards 
@@ -189,6 +127,7 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
         AND review_count >= 3 
         AND CAST(correct_count AS REAL) / review_count < 0.6
         AND is_active = 1
+        AND is_deleted = 0
       ORDER BY CAST(correct_count AS REAL) / review_count ASC
     ''', [userId]);
     return result.map((map) => FlashcardModel.fromMap(map)).toList();
@@ -199,20 +138,19 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
     final db = await database;
     final result = await db.rawQuery('''
       SELECT COUNT(*) as count FROM flashcards 
-      WHERE lesson_id = ? AND is_active = 1
+      WHERE lesson_id = ? AND is_active = 1 AND is_deleted = 0
     ''', [lessonId]);
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
   @override
-  Future<List<FlashcardModel>> searchFlashcards(
-      String userId, String query) async {
+  Future<List<FlashcardModel>> searchFlashcards(String userId, String query) async {
     final db = await database;
     final searchTerm = '%$query%';
     final result = await db.query(
       'flashcards',
       where: '''
-        user_id = ? AND is_active = 1 AND (
+        user_id = ? AND is_active = 1 AND is_deleted = 0 AND (
           front_content LIKE ? OR 
           back_content LIKE ? OR
           notes LIKE ?
@@ -229,7 +167,7 @@ class FlashcardLocalDataSourceImpl implements FlashcardLocalDataSource {
     final db = await database;
     final result = await db.query(
       'flashcards',
-      where: 'sync_status = ?',
+      where: 'sync_status = ? AND is_deleted = 0',
       whereArgs: ['pending'],
       orderBy: 'updated_at ASC',
     );

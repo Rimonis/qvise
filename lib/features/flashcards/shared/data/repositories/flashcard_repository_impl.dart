@@ -4,8 +4,8 @@ import 'package:dartz/dartz.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:qvise/core/data/repositories/base_repository.dart';
+import 'package:qvise/core/data/unit_of_work.dart';
 import 'package:qvise/core/error/app_failure.dart';
-import 'package:qvise/features/content/domain/repositories/content_repository.dart';
 import '../../domain/entities/flashcard.dart';
 import '../../domain/repositories/flashcard_repository.dart';
 import '../datasources/flashcard_local_data_source.dart';
@@ -15,14 +15,14 @@ import '../models/flashcard_model.dart';
 class FlashcardRepositoryImpl extends BaseRepository implements FlashcardRepository {
   final FlashcardLocalDataSource localDataSource;
   final FlashcardRemoteDataSource remoteDataSource;
-  final ContentRepository contentRepository;
+  final IUnitOfWork unitOfWork;
   final InternetConnectionChecker connectionChecker;
   final firebase_auth.FirebaseAuth firebaseAuth;
 
   FlashcardRepositoryImpl({
     required this.localDataSource,
     required this.remoteDataSource,
-    required this.contentRepository,
+    required this.unitOfWork,
     required this.connectionChecker,
     required this.firebaseAuth,
   });
@@ -30,31 +30,45 @@ class FlashcardRepositoryImpl extends BaseRepository implements FlashcardReposit
   @override
   Future<Either<AppFailure, Flashcard>> createFlashcard(Flashcard flashcard) async {
     return guard(() async {
-      await localDataSource.initDatabase();
-      final flashcardModel = FlashcardModel.fromEntity(flashcard);
-      final createdModel = await localDataSource.createFlashcard(flashcardModel);
+      await unitOfWork.transaction(() async {
+        final flashcardModel = FlashcardModel.fromEntity(flashcard);
+        await unitOfWork.flashcard.createFlashcard(flashcardModel);
+
+        final count = await unitOfWork.flashcard.countFlashcardsByLesson(flashcard.lessonId);
+        final lesson = await unitOfWork.content.getLesson(flashcard.lessonId);
+        if (lesson != null) {
+          await unitOfWork.content.insertOrUpdateLesson(lesson.copyWith(flashcardCount: count));
+        }
+      });
+      
+      final createdFlashcard = await localDataSource.getFlashcard(flashcard.id);
 
       if (await connectionChecker.hasConnection) {
         try {
-          final remoteModel = await remoteDataSource.createFlashcard(createdModel);
+          final remoteModel = await remoteDataSource.createFlashcard(createdFlashcard!);
           await localDataSource.updateFlashcard(remoteModel.copyWith(syncStatus: 'synced'));
         } catch (e) {
           // Non-critical, will sync later
         }
       }
-      await contentRepository.updateLessonContentCount(flashcard.lessonId);
-      return createdModel.toEntity();
+      return createdFlashcard!.toEntity();
     });
   }
 
   @override
   Future<Either<AppFailure, void>> deleteFlashcard(String id) async {
     return guard(() async {
-      await localDataSource.initDatabase();
       final flashcard = await localDataSource.getFlashcard(id);
       if (flashcard == null) throw AppFailure(type: FailureType.cache, message: 'Flashcard not found');
 
-      await localDataSource.deleteFlashcard(id);
+      await unitOfWork.transaction(() async {
+        await unitOfWork.flashcard.deleteFlashcard(id);
+        final count = await unitOfWork.flashcard.countFlashcardsByLesson(flashcard.lessonId);
+        final lesson = await unitOfWork.content.getLesson(flashcard.lessonId);
+        if (lesson != null) {
+          await unitOfWork.content.insertOrUpdateLesson(lesson.copyWith(flashcardCount: count));
+        }
+      });
 
       if (await connectionChecker.hasConnection) {
         try {
@@ -63,7 +77,6 @@ class FlashcardRepositoryImpl extends BaseRepository implements FlashcardReposit
           // Non-critical
         }
       }
-      await contentRepository.updateLessonContentCount(flashcard.lessonId);
     });
   }
 
