@@ -29,9 +29,17 @@ abstract class ContentLocalDataSource {
       String userId, String subjectName, double proficiency);
   Future<void> updateTopicProficiency(
       String userId, String subjectName, String topicName, double proficiency);
+
+  // New methods for sync service
   Future<List<LessonModel>> getModifiedSince(DateTime since);
   Future<List<LessonModel>> getUnpushedChanges();
   Future<void> markAsSynced(String lessonId);
+  Future<List<SubjectModel>> getModifiedSubjectsSince(DateTime since);
+  Future<List<SubjectModel>> getUnpushedSubjects();
+  Future<void> markSubjectAsSynced(String userId, String name);
+  Future<List<TopicModel>> getModifiedTopicsSince(DateTime since);
+  Future<List<TopicModel>> getUnpushedTopics();
+  Future<void> markTopicAsSynced(String userId, String subjectName, String name);
 }
 
 class ContentLocalDataSourceImpl extends TransactionalDataSource
@@ -264,12 +272,71 @@ class ContentLocalDataSourceImpl extends TransactionalDataSource
 
   @override
   Future<void> markAsSynced(String lessonId) async {
+    return markLessonAsSynced(lessonId);
+  }
+
+  @override
+  Future<List<SubjectModel>> getModifiedSubjectsSince(DateTime since) async {
+    final db = await database;
+    final results = await db.query(
+      'subjects',
+      where: 'updated_at > ? AND is_deleted = 0',
+      whereArgs: [since.millisecondsSinceEpoch],
+    );
+    return results.map((map) => SubjectModel.fromDatabase(map)).toList();
+  }
+
+  @override
+  Future<List<SubjectModel>> getUnpushedSubjects() async {
+    final db = await database;
+    final results = await db.query(
+      'subjects',
+      where: 'isSynced = 0 AND is_deleted = 0',
+    );
+    return results.map((map) => SubjectModel.fromDatabase(map)).toList();
+  }
+
+  @override
+  Future<void> markSubjectAsSynced(String userId, String name) async {
     final db = await database;
     await db.update(
-      'lessons',
+      'subjects',
       {'isSynced': 1},
-      where: 'id = ?',
-      whereArgs: [lessonId],
+      where: 'userId = ? AND name = ?',
+      whereArgs: [userId, name],
+    );
+  }
+
+  @override
+  Future<List<TopicModel>> getModifiedTopicsSince(DateTime since) async {
+    final db = await database;
+    final results = await db.query(
+      'topics',
+      where: 'updated_at > ? AND is_deleted = 0',
+      whereArgs: [since.millisecondsSinceEpoch],
+    );
+    return results.map((map) => TopicModel.fromDatabase(map)).toList();
+  }
+
+  @override
+  Future<List<TopicModel>> getUnpushedTopics() async {
+    final db = await database;
+    final results = await db.query(
+      'topics',
+      where: 'isSynced = 0 AND is_deleted = 0',
+    );
+    return results.map((map) => TopicModel.fromDatabase(map)).toList();
+  }
+
+  @override
+  Future<void> markTopicAsSynced(
+      String userId, String subjectName, String name) async {
+    final db = await database;
+    await db.update(
+      'topics',
+      {'isSynced': 1},
+      where: 'userId = ? AND subjectName = ? AND name = ?',
+      whereArgs: [userId, subjectName, name],
     );
   }
 }

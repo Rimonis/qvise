@@ -20,6 +20,11 @@ abstract class FlashcardLocalDataSource {
   Future<List<FlashcardModel>> searchFlashcards(String userId, String query);
   Future<List<FlashcardModel>> getPendingSyncFlashcards();
   Future<void> toggleFavorite(String flashcardId, bool isFavorite);
+
+  // New methods for sync service
+  Future<List<FlashcardModel>> getModifiedSince(DateTime since);
+  Future<List<FlashcardModel>> getUnpushedChanges();
+  Future<void> markAsSynced(String id);
 }
 
 class FlashcardLocalDataSourceImpl extends TransactionalDataSource
@@ -187,6 +192,39 @@ class FlashcardLocalDataSourceImpl extends TransactionalDataSource
       {'is_favorite': isFavorite ? 1 : 0},
       where: 'id = ?',
       whereArgs: [flashcardId],
+    );
+  }
+
+  @override
+  Future<List<FlashcardModel>> getModifiedSince(DateTime since) async {
+    final db = await database;
+    final results = await db.query(
+      'flashcards',
+      where: 'updated_at > ? AND is_deleted = 0',
+      whereArgs: [since.toIso8601String()],
+    );
+    return results.map((map) => FlashcardModel.fromMap(map)).toList();
+  }
+
+  @override
+  Future<List<FlashcardModel>> getUnpushedChanges() async {
+    final db = await database;
+    final results = await db.query(
+      'flashcards',
+      where: 'sync_status = ? AND is_deleted = 0',
+      whereArgs: ['pending'],
+    );
+    return results.map((map) => FlashcardModel.fromMap(map)).toList();
+  }
+
+  @override
+  Future<void> markAsSynced(String id) async {
+    final db = await database;
+    await db.update(
+      'flashcards',
+      {'sync_status': 'synced'},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 }

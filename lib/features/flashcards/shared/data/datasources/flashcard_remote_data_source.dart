@@ -1,6 +1,7 @@
 // lib/features/flashcards/shared/data/datasources/flashcard_remote_data_source.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:qvise/core/sync/utils/batch_helpers.dart';
 import '../models/flashcard_model.dart';
 
 abstract class FlashcardRemoteDataSource {
@@ -14,6 +15,12 @@ abstract class FlashcardRemoteDataSource {
       {DateTime? since});
   Future<void> syncFlashcards(List<FlashcardModel> flashcards);
   Future<void> toggleFavorite(String flashcardId, bool isFavorite);
+
+  // New methods for sync service
+  Future<List<FlashcardModel>> getFlashcardsByIds(List<String> ids);
+  Future<void> batchUpdateFlashcards(List<FlashcardModel> flashcards);
+  Future<List<FlashcardModel>> getFlashcardsModifiedSince(
+      DateTime since, String userId);
 }
 
 class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
@@ -21,31 +28,33 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
 
   FlashcardRemoteDataSourceImpl({required this.firestore});
 
+  CollectionReference<Map<String, dynamic>> get _flashcardsCollection =>
+      firestore.collection('flashcards');
+
   @override
   Future<FlashcardModel> createFlashcard(FlashcardModel flashcard) async {
-    final docRef = firestore.collection('flashcards').doc(flashcard.id);
+    final docRef = _flashcardsCollection.doc(flashcard.id);
     await docRef.set(flashcard.toJson());
     return flashcard.copyWith(syncStatus: 'synced');
   }
 
   @override
   Future<FlashcardModel> updateFlashcard(FlashcardModel flashcard) async {
-    final docRef = firestore.collection('flashcards').doc(flashcard.id);
-    final updatedModel = flashcard.copyWith(
-        updatedAt: DateTime.now(), syncStatus: 'synced');
+    final docRef = _flashcardsCollection.doc(flashcard.id);
+    final updatedModel =
+        flashcard.copyWith(updatedAt: DateTime.now(), syncStatus: 'synced');
     await docRef.update(updatedModel.toJson());
     return updatedModel;
   }
 
   @override
   Future<void> deleteFlashcard(String id) async {
-    await firestore.collection('flashcards').doc(id).delete();
+    await _flashcardsCollection.doc(id).delete();
   }
 
   @override
   Future<void> deleteFlashcardsByLesson(String lessonId) async {
-    final querySnapshot = await firestore
-        .collection('flashcards')
+    final querySnapshot = await _flashcardsCollection
         .where('lessonId', isEqualTo: lessonId)
         .get();
     final batch = firestore.batch();
@@ -57,7 +66,7 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
 
   @override
   Future<FlashcardModel?> getFlashcard(String id) async {
-    final doc = await firestore.collection('flashcards').doc(id).get();
+    final doc = await _flashcardsCollection.doc(id).get();
     if (!doc.exists || doc.data() == null) {
       return null;
     }
@@ -66,8 +75,7 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
 
   @override
   Future<List<FlashcardModel>> getFlashcardsByLesson(String lessonId) async {
-    final querySnapshot = await firestore
-        .collection('flashcards')
+    final querySnapshot = await _flashcardsCollection
         .where('lessonId', isEqualTo: lessonId)
         .where('isActive', isEqualTo: true)
         .orderBy('createdAt', descending: false)
@@ -81,8 +89,7 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
   @override
   Future<List<FlashcardModel>> getFlashcardsByUser(String userId,
       {DateTime? since}) async {
-    Query query = firestore
-        .collection('flashcards')
+    Query query = _flashcardsCollection
         .where('userId', isEqualTo: userId)
         .where('isActive', isEqualTo: true);
     if (since != null) {
@@ -99,7 +106,7 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
   Future<void> syncFlashcards(List<FlashcardModel> flashcards) async {
     final batch = firestore.batch();
     for (final flashcard in flashcards) {
-      final docRef = firestore.collection('flashcards').doc(flashcard.id);
+      final docRef = _flashcardsCollection.doc(flashcard.id);
       batch.set(docRef, flashcard.copyWith(syncStatus: 'synced').toJson());
     }
     await batch.commit();
@@ -107,9 +114,43 @@ class FlashcardRemoteDataSourceImpl implements FlashcardRemoteDataSource {
 
   @override
   Future<void> toggleFavorite(String flashcardId, bool isFavorite) async {
-    await firestore
-        .collection('flashcards')
-        .doc(flashcardId)
-        .update({'isFavorite': isFavorite});
+    await _flashcardsCollection.doc(flashcardId).update({'isFavorite': isFavorite});
+  }
+
+  @override
+  Future<List<FlashcardModel>> getFlashcardsByIds(List<String> ids) async {
+    return BatchHelpers.batchProcess<String, FlashcardModel>(
+      items: ids,
+      processBatch: (batch) async {
+        final snapshot = await _flashcardsCollection
+            .where(FieldPath.documentId, whereIn: batch)
+            .get();
+        return snapshot.docs
+            .map((doc) => FlashcardModel.fromJson(doc.data() as Map<String, dynamic>))
+            .toList();
+      },
+    );
+  }
+
+  @override
+  Future<void> batchUpdateFlashcards(List<FlashcardModel> flashcards) async {
+    final batch = firestore.batch();
+    for (final flashcard in flashcards) {
+      final docRef = _flashcardsCollection.doc(flashcard.id);
+      batch.set(docRef, flashcard.toJson(), SetOptions(merge: true));
+    }
+    await batch.commit();
+  }
+
+  @override
+  Future<List<FlashcardModel>> getFlashcardsModifiedSince(
+      DateTime since, String userId) async {
+    final snapshot = await _flashcardsCollection
+        .where('userId', isEqualTo: userId)
+        .where('updatedAt', isGreaterThan: Timestamp.fromDate(since))
+        .get();
+    return snapshot.docs
+        .map((doc) => FlashcardModel.fromJson(doc.data() as Map<String, dynamic>))
+        .toList();
   }
 }

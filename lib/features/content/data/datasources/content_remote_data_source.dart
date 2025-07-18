@@ -3,6 +3,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qvise/core/sync/utils/batch_helpers.dart';
 import '../models/lesson_model.dart';
+import '../models/subject_model.dart';
+import '../models/topic_model.dart';
 
 abstract class ContentRemoteDataSource {
   Future<LessonModel> createLesson(LessonModel lesson);
@@ -14,10 +16,20 @@ abstract class ContentRemoteDataSource {
   Future<List<LessonModel>> getUserLessons(String userId);
   Future<void> syncLessons(List<LessonModel> lessons);
   Future<void> lockLesson(String lessonId);
+
+  // New methods for sync service
   Future<List<LessonModel>> getLessonsByIds(List<String> ids);
   Future<List<LessonModel>> getLessonsModifiedSince(
       DateTime since, String userId);
   Future<void> batchUpdateLessons(List<LessonModel> lessons);
+  Future<List<SubjectModel>> getSubjectsByIds(List<String> ids);
+  Future<List<TopicModel>> getTopicsByIds(List<String> ids);
+  Future<void> batchUpdateSubjects(List<SubjectModel> subjects);
+  Future<void> batchUpdateTopics(List<TopicModel> topics);
+  Future<List<SubjectModel>> getSubjectsModifiedSince(
+      DateTime since, String userId);
+  Future<List<TopicModel>> getTopicsModifiedSince(
+      DateTime since, String userId);
 }
 
 class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
@@ -29,6 +41,10 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
 
   CollectionReference<Map<String, dynamic>> get _lessonsCollection =>
       _firestore.collection('lessons');
+  CollectionReference<Map<String, dynamic>> get _subjectsCollection =>
+      _firestore.collection('subjects');
+  CollectionReference<Map<String, dynamic>> get _topicsCollection =>
+      _firestore.collection('topics');
 
   @override
   Future<LessonModel> createLesson(LessonModel lesson) async {
@@ -106,8 +122,7 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
           .get();
 
       return querySnapshot.docs
-          .map((doc) => LessonModel.fromFirestore(
-              doc.id, doc.data() as Map<String, dynamic>))
+          .map((doc) => LessonModel.fromFirestore(doc.id, doc.data()))
           .toList();
     } catch (e) {
       throw Exception('Failed to get user lessons: $e');
@@ -154,8 +169,7 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
             .where(FieldPath.documentId, whereIn: batch)
             .get();
         return snapshot.docs
-            .map((doc) => LessonModel.fromFirestore(
-                doc.id, doc.data() as Map<String, dynamic>))
+            .map((doc) => LessonModel.fromFirestore(doc.id, doc.data()))
             .toList();
       },
     );
@@ -169,8 +183,7 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
         .where('updated_at', isGreaterThan: Timestamp.fromDate(since))
         .get();
     return snapshot.docs
-        .map((doc) => LessonModel.fromFirestore(
-            doc.id, doc.data() as Map<String, dynamic>))
+        .map((doc) => LessonModel.fromFirestore(doc.id, doc.data()))
         .toList();
   }
 
@@ -182,5 +195,78 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       batch.set(docRef, lesson.toFirestore(), SetOptions(merge: true));
     }
     await batch.commit();
+  }
+
+  @override
+  Future<List<SubjectModel>> getSubjectsByIds(List<String> ids) async {
+    return BatchHelpers.batchProcess<String, SubjectModel>(
+        items: ids,
+        processBatch: (batch) async {
+          final snapshot = await _subjectsCollection
+              .where(FieldPath.documentId, whereIn: batch)
+              .get();
+          return snapshot.docs
+              .map((doc) => SubjectModel.fromJson(doc.data()))
+              .toList();
+        });
+  }
+
+  @override
+  Future<List<TopicModel>> getTopicsByIds(List<String> ids) async {
+    return BatchHelpers.batchProcess<String, TopicModel>(
+        items: ids,
+        processBatch: (batch) async {
+          final snapshot = await _topicsCollection
+              .where(FieldPath.documentId, whereIn: batch)
+              .get();
+          return snapshot.docs
+              .map((doc) => TopicModel.fromJson(doc.data()))
+              .toList();
+        });
+  }
+
+  @override
+  Future<void> batchUpdateSubjects(List<SubjectModel> subjects) async {
+    final batch = _firestore.batch();
+    for (final subject in subjects) {
+      final docRef = _subjectsCollection.doc('${subject.userId}_${subject.name}');
+      batch.set(docRef, subject.toJson(), SetOptions(merge: true));
+    }
+    await batch.commit();
+  }
+
+  @override
+  Future<void> batchUpdateTopics(List<TopicModel> topics) async {
+    final batch = _firestore.batch();
+    for (final topic in topics) {
+      final docRef = _topicsCollection
+          .doc('${topic.userId}_${topic.subjectName}_${topic.name}');
+      batch.set(docRef, topic.toJson(), SetOptions(merge: true));
+    }
+    await batch.commit();
+  }
+
+  @override
+  Future<List<SubjectModel>> getSubjectsModifiedSince(
+      DateTime since, String userId) async {
+    final snapshot = await _subjectsCollection
+        .where('userId', isEqualTo: userId)
+        .where('updated_at', isGreaterThan: Timestamp.fromDate(since))
+        .get();
+    return snapshot.docs
+        .map((doc) => SubjectModel.fromJson(doc.data()))
+        .toList();
+  }
+
+  @override
+  Future<List<TopicModel>> getTopicsModifiedSince(
+      DateTime since, String userId) async {
+    final snapshot = await _topicsCollection
+        .where('userId', isEqualTo: userId)
+        .where('updated_at', isGreaterThan: Timestamp.fromDate(since))
+        .get();
+    return snapshot.docs
+        .map((doc) => TopicModel.fromJson(doc.data()))
+        .toList();
   }
 }
