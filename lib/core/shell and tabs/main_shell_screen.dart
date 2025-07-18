@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/core/application/sync_coordinator.dart';
-import 'package:qvise/core/application/sync_state.dart';
 import 'package:qvise/features/content/presentation/providers/tab_navigation_provider.dart';
 import 'browse_tab.dart';
 import 'create_tab.dart';
@@ -18,41 +17,39 @@ class MainShellScreen extends ConsumerStatefulWidget {
   ConsumerState<MainShellScreen> createState() => _MainShellScreenState();
 }
 
-class _MainShellScreenState extends ConsumerState<MainShellScreen> with TickerProviderStateMixin {
+class _MainShellScreenState extends ConsumerState<MainShellScreen>
+    with TickerProviderStateMixin {
   late final List<GlobalKey<NavigatorState>> _navigatorKeys;
   late final PageController _pageController;
-  
+
   @override
   void initState() {
     super.initState();
-    
     _navigatorKeys = List.generate(5, (index) => GlobalKey<NavigatorState>());
-    
     final initialIndex = ref.read(currentTabIndexProvider);
     _pageController = PageController(initialPage: initialIndex);
   }
-  
+
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
 
-  Future<bool> _onWillPop() async {
+  Future<bool> _canPop() async {
     final currentIndex = ref.read(currentTabIndexProvider);
     final NavigatorState? navigator = _navigatorKeys[currentIndex].currentState;
-    
+
     if (navigator != null && navigator.canPop()) {
       navigator.pop();
       return false;
     }
-    
-    if (currentIndex != 2) {
+
+    if (currentIndex != 2) { // Home tab index
       ref.read(currentTabIndexProvider.notifier).state = 2;
-      _pageController.jumpToPage(2);
       return false;
     }
-    
+
     final shouldExit = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -74,52 +71,41 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> with TickerPr
         ],
       ),
     );
-    
     return shouldExit ?? false;
-  }
-
-  void _onTabSelected(int index) {
-    ref.read(currentTabIndexProvider.notifier).state = index;
-    
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     ref.listen<int>(currentTabIndexProvider, (previous, next) {
       if (_pageController.hasClients && _pageController.page?.round() != next) {
-        _pageController.animateToPage(
-          next,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
+        _pageController.jumpToPage(next);
       }
     });
-    
+
     final currentIndex = ref.watch(currentTabIndexProvider);
     final syncState = ref.watch(syncCoordinatorProvider);
-
-    final List<Widget> tabs = [
-      Navigator(key: _navigatorKeys[0], onGenerateRoute: (settings) => MaterialPageRoute(builder: (context) => const BrowseTab())),
-      Navigator(key: _navigatorKeys[1], onGenerateRoute: (settings) => MaterialPageRoute(builder: (context) => const CreateTab())),
-      Navigator(key: _navigatorKeys[2], onGenerateRoute: (settings) => MaterialPageRoute(builder: (context) => const HomeTab())),
-      Navigator(key: _navigatorKeys[3], onGenerateRoute: (settings) => MaterialPageRoute(builder: (context) => const AnalyticsTab())),
-      Navigator(key: _navigatorKeys[4], onGenerateRoute: (settings) => MaterialPageRoute(builder: (context) => const ProfileTab())),
+    final tabs = [
+      const BrowseTab(),
+      const CreateTab(),
+      const HomeTab(),
+      const AnalyticsTab(),
+      const ProfileTab(),
     ];
+    final tabTitles = ['Browse', 'Create', 'Home', 'Analytics', 'Profile'];
 
-    final List<String> tabTitles = ['Browse', 'Create', 'Home', 'Analytics', 'Profile'];
-
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        final shouldPop = await _canPop();
+        if (shouldPop && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
       child: Scaffold(
         appBar: AppBar(
           title: Text(tabTitles[currentIndex]),
           centerTitle: true,
-          automaticallyImplyLeading: false,
           elevation: 0,
           actions: [
             Padding(
@@ -127,14 +113,17 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> with TickerPr
               child: syncState.when(
                 idle: () => const SizedBox.shrink(),
                 syncing: () => const SizedBox(
-                  width: 20,
-                  height: 20,
+                  width: 20, height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                success: () => const Icon(Icons.check_circle, color: Colors.green),
-                error: (message) => Tooltip(
-                  message: message,
+                success: (_) => const Icon(Icons.check_circle, color: Colors.green),
+                error: (failure) => Tooltip(
+                  message: failure.userFriendlyMessage,
                   child: const Icon(Icons.error, color: Colors.red),
+                ),
+                hasConflicts: (conflicts) => Tooltip(
+                  message: "${conflicts.length} items have sync conflicts.",
+                  child: const Icon(Icons.warning, color: Colors.orange),
                 ),
               ),
             ),
@@ -143,19 +132,24 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> with TickerPr
         body: PageView(
           controller: _pageController,
           physics: const NeverScrollableScrollPhysics(),
-          children: tabs,
+          children: tabs.asMap().entries.map((entry) {
+            return Navigator(
+              key: _navigatorKeys[entry.key],
+              onGenerateRoute: (settings) => MaterialPageRoute(
+                builder: (context) => entry.value,
+              ),
+            );
+          }).toList(),
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: currentIndex,
-          onDestinationSelected: _onTabSelected,
-          animationDuration: const Duration(milliseconds: 300),
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          onDestinationSelected: (index) => ref.read(currentTabIndexProvider.notifier).state = index,
           destinations: const [
-            NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'Browse', tooltip: 'Browse lessons'),
-            NavigationDestination(icon: Icon(Icons.edit_outlined), selectedIcon: Icon(Icons.edit), label: 'Create', tooltip: 'Create and edit lessons'),
-            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home', tooltip: 'Due lessons'),
-            NavigationDestination(icon: Icon(Icons.analytics_outlined), selectedIcon: Icon(Icons.analytics), label: 'Analytics', tooltip: 'View analytics'),
-            NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile', tooltip: 'Your profile'),
+            NavigationDestination(icon: Icon(Icons.explore_outlined), label: 'Browse'),
+            NavigationDestination(icon: Icon(Icons.add_circle_outline), label: 'Create'),
+            NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
+            NavigationDestination(icon: Icon(Icons.analytics_outlined), label: 'Analytics'),
+            NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
           ],
         ),
       ),

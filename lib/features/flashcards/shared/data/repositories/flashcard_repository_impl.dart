@@ -12,7 +12,8 @@ import '../datasources/flashcard_local_data_source.dart';
 import '../datasources/flashcard_remote_data_source.dart';
 import '../models/flashcard_model.dart';
 
-class FlashcardRepositoryImpl extends BaseRepository implements FlashcardRepository {
+class FlashcardRepositoryImpl extends BaseRepository
+    implements FlashcardRepository {
   final FlashcardLocalDataSource localDataSource;
   final FlashcardRemoteDataSource remoteDataSource;
   final IUnitOfWork unitOfWork;
@@ -28,25 +29,30 @@ class FlashcardRepositoryImpl extends BaseRepository implements FlashcardReposit
   });
 
   @override
-  Future<Either<AppFailure, Flashcard>> createFlashcard(Flashcard flashcard) async {
+  Future<Either<AppFailure, Flashcard>> createFlashcard(
+      Flashcard flashcard) async {
     return guard(() async {
       await unitOfWork.transaction(() async {
         final flashcardModel = FlashcardModel.fromEntity(flashcard);
         await unitOfWork.flashcard.createFlashcard(flashcardModel);
 
-        final count = await unitOfWork.flashcard.countFlashcardsByLesson(flashcard.lessonId);
+        final count =
+            await unitOfWork.flashcard.countFlashcardsByLesson(flashcard.lessonId);
         final lesson = await unitOfWork.content.getLesson(flashcard.lessonId);
         if (lesson != null) {
-          await unitOfWork.content.insertOrUpdateLesson(lesson.copyWith(flashcardCount: count));
+          await unitOfWork.content
+              .insertOrUpdateLesson(lesson.copyWith(flashcardCount: count));
         }
       });
-      
+
       final createdFlashcard = await localDataSource.getFlashcard(flashcard.id);
 
       if (await connectionChecker.hasConnection) {
         try {
-          final remoteModel = await remoteDataSource.createFlashcard(createdFlashcard!);
-          await localDataSource.updateFlashcard(remoteModel.copyWith(syncStatus: 'synced'));
+          final remoteModel =
+              await remoteDataSource.createFlashcard(createdFlashcard!);
+          await localDataSource
+              .updateFlashcard(remoteModel.copyWith(syncStatus: 'synced'));
         } catch (e) {
           // Non-critical, will sync later
         }
@@ -59,14 +65,19 @@ class FlashcardRepositoryImpl extends BaseRepository implements FlashcardReposit
   Future<Either<AppFailure, void>> deleteFlashcard(String id) async {
     return guard(() async {
       final flashcard = await localDataSource.getFlashcard(id);
-      if (flashcard == null) throw AppFailure(type: FailureType.cache, message: 'Flashcard not found');
+      if (flashcard == null) {
+        throw const AppFailure(
+            type: FailureType.cache, message: 'Flashcard not found');
+      }
 
       await unitOfWork.transaction(() async {
         await unitOfWork.flashcard.deleteFlashcard(id);
-        final count = await unitOfWork.flashcard.countFlashcardsByLesson(flashcard.lessonId);
+        final count =
+            await unitOfWork.flashcard.countFlashcardsByLesson(flashcard.lessonId);
         final lesson = await unitOfWork.content.getLesson(flashcard.lessonId);
         if (lesson != null) {
-          await unitOfWork.content.insertOrUpdateLesson(lesson.copyWith(flashcardCount: count));
+          await unitOfWork.content
+              .insertOrUpdateLesson(lesson.copyWith(flashcardCount: count));
         }
       });
 
@@ -81,7 +92,8 @@ class FlashcardRepositoryImpl extends BaseRepository implements FlashcardReposit
   }
 
   @override
-  Future<Either<AppFailure, Flashcard>> updateFlashcard(Flashcard flashcard) async {
+  Future<Either<AppFailure, Flashcard>> updateFlashcard(
+      Flashcard flashcard) async {
     return guard(() async {
       await localDataSource.initDatabase();
       final flashcardModel = FlashcardModel.fromEntity(flashcard);
@@ -90,7 +102,8 @@ class FlashcardRepositoryImpl extends BaseRepository implements FlashcardReposit
       if (await connectionChecker.hasConnection) {
         try {
           final remoteModel = await remoteDataSource.updateFlashcard(updatedModel);
-          await localDataSource.updateFlashcard(remoteModel.copyWith(syncStatus: 'synced'));
+          await localDataSource
+              .updateFlashcard(remoteModel.copyWith(syncStatus: 'synced'));
         } catch (e) {
           // Non-critical
         }
@@ -109,43 +122,52 @@ class FlashcardRepositoryImpl extends BaseRepository implements FlashcardReposit
   }
 
   @override
-  Future<Either<AppFailure, List<Flashcard>>> getFlashcardsByLesson(String lessonId) async {
+  Future<Either<AppFailure, List<Flashcard>>> getFlashcardsByLesson(
+      String lessonId) async {
     return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels = await localDataSource.getFlashcardsByLesson(lessonId);
+      final flashcardModels =
+          await localDataSource.getFlashcardsByLesson(lessonId);
       return flashcardModels.map((model) => model.toEntity()).toList();
     });
   }
 
   @override
-  Future<Either<AppFailure, List<Flashcard>>> getFlashcardsByLessonAndTag(String lessonId, String tagId) async {
+  Future<Either<AppFailure, List<Flashcard>>> getFlashcardsByLessonAndTag(
+      String lessonId, String tagId) async {
     return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels = await localDataSource.getFlashcardsByLessonAndTag(lessonId, tagId);
+      final flashcardModels =
+          await localDataSource.getFlashcardsByLessonAndTag(lessonId, tagId);
       return flashcardModels.map((model) => model.toEntity()).toList();
     });
   }
 
   @override
-  Future<Either<AppFailure, List<Flashcard>>> getFavoriteFlashcards(String userId) async {
+  Future<Either<AppFailure, List<Flashcard>>> getFavoriteFlashcards(
+      String userId) async {
     return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels = await localDataSource.getFavoriteFlashcards(userId);
+      final flashcardModels =
+          await localDataSource.getFavoriteFlashcards(userId);
       return flashcardModels.map((model) => model.toEntity()).toList();
     });
   }
 
   @override
-  Future<Either<AppFailure, List<Flashcard>>> getFlashcardsNeedingAttention(String userId) async {
+  Future<Either<AppFailure, List<Flashcard>>> getFlashcardsNeedingAttention(
+      String userId) async {
     return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels = await localDataSource.getFlashcardsNeedingAttention(userId);
+      final flashcardModels =
+          await localDataSource.getFlashcardsNeedingAttention(userId);
       return flashcardModels.map((model) => model.toEntity()).toList();
     });
   }
 
   @override
-  Future<Either<AppFailure, int>> countFlashcardsByLesson(String lessonId) async {
+  Future<Either<AppFailure, int>> countFlashcardsByLesson(
+      String lessonId) async {
     return guard(() async {
       await localDataSource.initDatabase();
       return await localDataSource.countFlashcardsByLesson(lessonId);
@@ -153,18 +175,24 @@ class FlashcardRepositoryImpl extends BaseRepository implements FlashcardReposit
   }
 
   @override
-  Future<Either<AppFailure, List<Flashcard>>> searchFlashcards(String userId, String query) async {
+  Future<Either<AppFailure, List<Flashcard>>> searchFlashcards(
+      String userId, String query) async {
     return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels = await localDataSource.searchFlashcards(userId, query);
+      final flashcardModels =
+          await localDataSource.searchFlashcards(userId, query);
       return flashcardModels.map((model) => model.toEntity()).toList();
     });
   }
 
   @override
-  Future<Either<AppFailure, void>> syncFlashcardsToRemote(List<String> flashcardIds) async {
+  Future<Either<AppFailure, void>> syncFlashcardsToRemote(
+      List<String> flashcardIds) async {
     return guard(() async {
-      if (!await connectionChecker.hasConnection) throw AppFailure(type: FailureType.network, message: 'No internet connection');
+      if (!await connectionChecker.hasConnection) {
+        throw const AppFailure(
+            type: FailureType.network, message: 'No internet connection');
+      }
 
       final flashcardModels = <FlashcardModel>[];
       for (final id in flashcardIds) {
@@ -175,17 +203,23 @@ class FlashcardRepositoryImpl extends BaseRepository implements FlashcardReposit
 
       await remoteDataSource.syncFlashcards(flashcardModels);
       for (final model in flashcardModels) {
-        await localDataSource.updateFlashcard(model.copyWith(syncStatus: 'synced'));
+        await localDataSource
+            .updateFlashcard(model.copyWith(syncStatus: 'synced'));
       }
     });
   }
 
   @override
-  Future<Either<AppFailure, void>> syncFlashcardsFromRemote(String lessonId) async {
+  Future<Either<AppFailure, void>> syncFlashcardsFromRemote(
+      String lessonId) async {
     return guard(() async {
-      if (!await connectionChecker.hasConnection) throw AppFailure(type: FailureType.network, message: 'No internet connection');
+      if (!await connectionChecker.hasConnection) {
+        throw const AppFailure(
+            type: FailureType.network, message: 'No internet connection');
+      }
 
-      final remoteFlashcards = await remoteDataSource.getFlashcardsByLesson(lessonId);
+      final remoteFlashcards =
+          await remoteDataSource.getFlashcardsByLesson(lessonId);
       for (final remoteModel in remoteFlashcards) {
         final localModel = await localDataSource.getFlashcard(remoteModel.id);
         if (localModel == null || localModel.syncStatus == 'synced') {
@@ -196,10 +230,12 @@ class FlashcardRepositoryImpl extends BaseRepository implements FlashcardReposit
   }
 
   @override
-  Future<Either<AppFailure, List<Flashcard>>> getPendingSyncFlashcards() async {
+  Future<Either<AppFailure, List<Flashcard>>>
+      getPendingSyncFlashcards() async {
     return guard(() async {
       await localDataSource.initDatabase();
-      final flashcardModels = await localDataSource.getPendingSyncFlashcards();
+      final flashcardModels =
+          await localDataSource.getPendingSyncFlashcards();
       return flashcardModels.map((model) => model.toEntity()).toList();
     });
   }
@@ -209,9 +245,13 @@ class FlashcardRepositoryImpl extends BaseRepository implements FlashcardReposit
     return guard(() async {
       final flashcardEither = await getFlashcard(flashcardId);
       final flashcard = flashcardEither.getOrElse(() => null);
-      if (flashcard == null) throw AppFailure(type: FailureType.cache, message: 'Flashcard not found');
-      
-      final updatedFlashcard = flashcard.copyWith(isFavorite: !flashcard.isFavorite);
+      if (flashcard == null) {
+        throw const AppFailure(
+            type: FailureType.cache, message: 'Flashcard not found');
+      }
+
+      final updatedFlashcard =
+          flashcard.copyWith(isFavorite: !flashcard.isFavorite);
       await updateFlashcard(updatedFlashcard);
     });
   }

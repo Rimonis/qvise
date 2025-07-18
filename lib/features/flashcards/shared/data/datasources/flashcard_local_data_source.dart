@@ -12,7 +12,8 @@ abstract class FlashcardLocalDataSource {
   Future<void> deleteFlashcardsByLesson(String lessonId);
   Future<FlashcardModel?> getFlashcard(String id);
   Future<List<FlashcardModel>> getFlashcardsByLesson(String lessonId);
-  Future<List<FlashcardModel>> getFlashcardsByLessonAndTag(String lessonId, String tagId);
+  Future<List<FlashcardModel>> getFlashcardsByLessonAndTag(
+      String lessonId, String tagId);
   Future<List<FlashcardModel>> getFavoriteFlashcards(String userId);
   Future<List<FlashcardModel>> getFlashcardsNeedingAttention(String userId);
   Future<int> countFlashcardsByLesson(String lessonId);
@@ -21,7 +22,8 @@ abstract class FlashcardLocalDataSource {
   Future<void> toggleFavorite(String flashcardId, bool isFavorite);
 }
 
-class FlashcardLocalDataSourceImpl extends TransactionalDataSource implements FlashcardLocalDataSource {
+class FlashcardLocalDataSourceImpl extends TransactionalDataSource
+    implements FlashcardLocalDataSource {
   @override
   Future<void> initDatabase() async {
     await database;
@@ -95,7 +97,8 @@ class FlashcardLocalDataSourceImpl extends TransactionalDataSource implements Fl
   }
 
   @override
-  Future<List<FlashcardModel>> getFlashcardsByLessonAndTag(String lessonId, String tagId) async {
+  Future<List<FlashcardModel>> getFlashcardsByLessonAndTag(
+      String lessonId, String tagId) async {
     final db = await database;
     final result = await db.query(
       'flashcards',
@@ -119,7 +122,8 @@ class FlashcardLocalDataSourceImpl extends TransactionalDataSource implements Fl
   }
 
   @override
-  Future<List<FlashcardModel>> getFlashcardsNeedingAttention(String userId) async {
+  Future<List<FlashcardModel>> getFlashcardsNeedingAttention(
+      String userId) async {
     final db = await database;
     final result = await db.rawQuery('''
       SELECT * FROM flashcards 
@@ -144,7 +148,8 @@ class FlashcardLocalDataSourceImpl extends TransactionalDataSource implements Fl
   }
 
   @override
-  Future<List<FlashcardModel>> searchFlashcards(String userId, String query) async {
+  Future<List<FlashcardModel>> searchFlashcards(
+      String userId, String query) async {
     final db = await database;
     final searchTerm = '%$query%';
     final result = await db.query(

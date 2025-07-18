@@ -1,107 +1,59 @@
 // lib/core/application/sync_coordinator.dart
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/core/application/sync_state.dart';
 import 'package:qvise/core/error/app_failure.dart';
-import 'package:qvise/features/flashcards/shared/domain/repositories/flashcard_repository.dart';
-import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_providers.dart';
+import 'package:qvise/core/providers/providers.dart';
+import 'package:qvise/core/sync/services/sync_service.dart';
 
-final syncCoordinatorProvider = StateNotifierProvider<SyncCoordinator, SyncState>((ref) {
+final syncCoordinatorProvider =
+    StateNotifierProvider<SyncCoordinator, SyncState>((ref) {
   return SyncCoordinator(ref);
 });
 
 class SyncCoordinator extends StateNotifier<SyncState> {
   final Ref _ref;
-  bool _isSyncing = false;
-  int _retryCount = 0;
-  static const int _maxRetries = 3;
+  SyncService? _syncService;
 
-  SyncCoordinator(this._ref) : super(const SyncState.idle());
-
-  Future<void> syncAll() async {
-    if (_isSyncing) return;
-
-    _isSyncing = true;
-    state = const SyncState.syncing();
-    if (kDebugMode) {
-      print('🔄 SyncCoordinator: Starting sync...');
-    }
-
-    try {
-      // For now, we only sync flashcards. This can be expanded later.
-      await _syncFlashcards();
-
-      state = const SyncState.success();
-      await Future.delayed(const Duration(seconds: 2)); // Keep success state for a moment
-      state = const SyncState.idle();
-      _retryCount = 0; // Reset retry count on success
-       if (kDebugMode) {
-        print('✅ SyncCoordinator: Sync completed successfully.');
-      }
-
-    } on AppFailure catch (failure) {
-      if (kDebugMode) {
-        print('❌ SyncCoordinator: Sync failed. Error: ${failure.message}');
-      }
-      _handleSyncError(failure);
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ SyncCoordinator: Sync failed. Error: $e');
-      }
-      _handleSyncError(AppFailure.fromException(e));
-    } finally {
-      _isSyncing = false;
-    }
+  SyncCoordinator(this._ref) : super(const SyncState.idle()) {
+    _ref.listen(syncServiceProvider.future, (_, next) async {
+      _syncService = await next;
+    });
   }
 
-  Future<void> _syncFlashcards() async {
-    final repository = _ref.read(flashcardRepositoryProvider);
-    final pendingFlashcardsResult = await repository.getPendingSyncFlashcards();
+  Future<void> syncAll() async {
+    if (state.whenOrNull(syncing: () => true) ?? false) return;
+    if (_syncService == null) return;
 
-    await pendingFlashcardsResult.fold(
-      (failure) => throw failure,
-      (pendingCards) async {
-        if (pendingCards.isNotEmpty) {
-           if (kDebugMode) {
-            print('🔄 SyncCoordinator: Found ${pendingCards.length} pending flashcards to sync.');
-          }
-          final idsToSync = pendingCards.map((card) => card.id).toList();
-          final syncResult = await repository.syncFlashcardsToRemote(idsToSync);
-          syncResult.fold(
-            (failure) => throw failure,
-            (_) => null,
-          );
+    state = const SyncState.syncing();
+
+    final result = await _syncService!.performSync();
+
+    result.fold(
+      (failure) {
+        state = SyncState.error(failure);
+        if (failure.isRetryable) {
+          Future.delayed(const Duration(seconds: 30), syncAll);
+        }
+      },
+      (report) {
+        if (report.hasUnresolvedConflicts) {
+          state = SyncState.hasConflicts(report.unresolvedConflicts);
+        } else if (report.isSuccessful) {
+          state = SyncState.success(report);
         } else {
-           if (kDebugMode) {
-            print('👍 SyncCoordinator: No pending flashcards to sync.');
-          }
+          state = const SyncState.error(AppFailure(
+              type: FailureType.sync,
+              message: 'Sync completed with errors'));
         }
       },
     );
-  }
 
-  void _handleSyncError(AppFailure failure) {
-    if (failure.isRetryable && _retryCount < _maxRetries) {
-      _retryCount++;
-      final delay = Duration(seconds: (5 * _retryCount)); // Exponential backoff
-      if (kDebugMode) {
-        print('🔁 SyncCoordinator: Retrying sync in ${delay.inSeconds} seconds...');
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && (state.whenOrNull(hasConflicts: (_) => true) ?? false) == false) {
+        state = const SyncState.idle();
       }
-      Future.delayed(delay, syncAll);
-      state = SyncState.error('Sync failed. Retrying... ($_retryCount/$_maxRetries)');
-    } else {
-      if (kDebugMode) {
-        print('🚫 SyncCoordinator: Max retries reached or non-retryable error. Sync failed.');
-      }
-      state = SyncState.error(failure.userFriendlyMessage);
-      // Keep error state for a while before going idle
-      Future.delayed(const Duration(seconds: 10), () {
-        if (mounted && state is Error) {
-          state = const SyncState.idle();
-        }
-      });
-    }
+    });
   }
 }

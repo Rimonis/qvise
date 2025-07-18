@@ -1,6 +1,7 @@
 // lib/features/content/data/datasources/content_remote_data_source.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:qvise/core/sync/utils/batch_helpers.dart';
 import '../models/lesson_model.dart';
 
 abstract class ContentRemoteDataSource {
@@ -13,6 +14,10 @@ abstract class ContentRemoteDataSource {
   Future<List<LessonModel>> getUserLessons(String userId);
   Future<void> syncLessons(List<LessonModel> lessons);
   Future<void> lockLesson(String lessonId);
+  Future<List<LessonModel>> getLessonsByIds(List<String> ids);
+  Future<List<LessonModel>> getLessonsModifiedSince(
+      DateTime since, String userId);
+  Future<void> batchUpdateLessons(List<LessonModel> lessons);
 }
 
 class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
@@ -67,7 +72,6 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       for (final doc in querySnapshot.docs) {
         batch.delete(doc.reference);
       }
-
       await batch.commit();
     } catch (e) {
       throw Exception('Failed to delete lessons by topic: $e');
@@ -75,7 +79,8 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
   }
 
   @override
-  Future<void> deleteLessonsBySubject(String userId, String subjectName) async {
+  Future<void> deleteLessonsBySubject(
+      String userId, String subjectName) async {
     try {
       final querySnapshot = await _lessonsCollection
           .where('userId', isEqualTo: userId)
@@ -86,7 +91,6 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       for (final doc in querySnapshot.docs) {
         batch.delete(doc.reference);
       }
-
       await batch.commit();
     } catch (e) {
       throw Exception('Failed to delete lessons by subject: $e');
@@ -102,8 +106,8 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
           .get();
 
       return querySnapshot.docs
-          .map((doc) =>
-              LessonModel.fromFirestore(doc.id, doc.data() as Map<String, dynamic>))
+          .map((doc) => LessonModel.fromFirestore(
+              doc.id, doc.data() as Map<String, dynamic>))
           .toList();
     } catch (e) {
       throw Exception('Failed to get user lessons: $e');
@@ -114,7 +118,6 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
   Future<void> syncLessons(List<LessonModel> lessons) async {
     try {
       final batch = _firestore.batch();
-
       for (final lesson in lessons) {
         if (lesson.id.isEmpty) {
           final docRef = _lessonsCollection.doc();
@@ -124,7 +127,6 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
               _lessonsCollection.doc(lesson.id), lesson.toFirestore());
         }
       }
-
       await batch.commit();
     } catch (e) {
       throw Exception('Failed to sync lessons: $e');
@@ -141,5 +143,44 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
     } catch (e) {
       throw Exception('Failed to lock lesson: $e');
     }
+  }
+
+  @override
+  Future<List<LessonModel>> getLessonsByIds(List<String> ids) async {
+    return BatchHelpers.batchProcess<String, LessonModel>(
+      items: ids,
+      processBatch: (batch) async {
+        final snapshot = await _lessonsCollection
+            .where(FieldPath.documentId, whereIn: batch)
+            .get();
+        return snapshot.docs
+            .map((doc) => LessonModel.fromFirestore(
+                doc.id, doc.data() as Map<String, dynamic>))
+            .toList();
+      },
+    );
+  }
+
+  @override
+  Future<List<LessonModel>> getLessonsModifiedSince(
+      DateTime since, String userId) async {
+    final snapshot = await _lessonsCollection
+        .where('userId', isEqualTo: userId)
+        .where('updated_at', isGreaterThan: Timestamp.fromDate(since))
+        .get();
+    return snapshot.docs
+        .map((doc) => LessonModel.fromFirestore(
+            doc.id, doc.data() as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<void> batchUpdateLessons(List<LessonModel> lessons) async {
+    final batch = _firestore.batch();
+    for (final lesson in lessons) {
+      final docRef = _lessonsCollection.doc(lesson.id);
+      batch.set(docRef, lesson.toFirestore(), SetOptions(merge: true));
+    }
+    await batch.commit();
   }
 }

@@ -36,9 +36,42 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   String get _userId => firebaseAuth.currentUser?.uid ?? '';
 
   @override
+  Future<Either<AppFailure, Lesson>> updateLesson(Lesson lesson) async {
+    return guard(() async {
+      final localLesson = await localDataSource.getLesson(lesson.id);
+      final newVersion = (localLesson?.version ?? 1) + 1;
+
+      final lessonModel = LessonModel.fromEntity(lesson).copyWith(
+        version: newVersion,
+        updatedAt: DateTime.now(),
+        isSynced: false,
+      );
+
+      await localDataSource.insertOrUpdateLesson(lessonModel);
+
+      // Attempt to sync immediately if online
+      if (await connectionChecker.hasConnection) {
+        try {
+          await remoteDataSource.updateLesson(lessonModel);
+          await localDataSource.markLessonAsSynced(lesson.id);
+        } catch (e) {
+          // Non-critical error, sync coordinator will handle it later
+          print('Failed to immediately sync updated lesson: $e');
+        }
+      }
+
+      await recalculateProficiencies();
+      return lessonModel.toEntity();
+    });
+  }
+
+  @override
   Future<Either<AppFailure, List<Subject>>> getSubjects() async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
       final subjects = await localDataSource.getSubjects(_userId);
       return subjects.map((s) => s.toEntity()).toList();
     });
@@ -47,35 +80,53 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   @override
   Future<Either<AppFailure, Subject?>> getSubject(String subjectName) async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
       final subject = await localDataSource.getSubject(_userId, subjectName);
       return subject?.toEntity();
     });
   }
 
   @override
-  Future<Either<AppFailure, List<Topic>>> getTopicsBySubject(String subjectName) async {
+  Future<Either<AppFailure, List<Topic>>> getTopicsBySubject(
+      String subjectName) async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
-      final topics = await localDataSource.getTopicsBySubject(_userId, subjectName);
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
+      final topics =
+          await localDataSource.getTopicsBySubject(_userId, subjectName);
       return topics.map((t) => t.toEntity()).toList();
     });
   }
 
   @override
-  Future<Either<AppFailure, Topic?>> getTopic(String subjectName, String topicName) async {
+  Future<Either<AppFailure, Topic?>> getTopic(
+      String subjectName, String topicName) async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
-      final topic = await localDataSource.getTopic(_userId, subjectName, topicName);
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
+      final topic =
+          await localDataSource.getTopic(_userId, subjectName, topicName);
       return topic?.toEntity();
     });
   }
 
   @override
-  Future<Either<AppFailure, List<Lesson>>> getLessonsByTopic(String subjectName, String topicName) async {
+  Future<Either<AppFailure, List<Lesson>>> getLessonsByTopic(
+      String subjectName, String topicName) async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
-      final lessons = await localDataSource.getLessonsByTopic(_userId, subjectName, topicName);
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
+      final lessons =
+          await localDataSource.getLessonsByTopic(_userId, subjectName, topicName);
       return lessons.map((l) => l.toEntity()).toList();
     });
   }
@@ -83,7 +134,10 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   @override
   Future<Either<AppFailure, List<Lesson>>> getAllLessons() async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
       final lessons = await localDataSource.getAllLessons(_userId);
       return lessons.map((l) => l.toEntity()).toList();
     });
@@ -92,11 +146,17 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   @override
   Future<Either<AppFailure, List<Lesson>>> getDueLessons() async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
       final lessons = await localDataSource.getAllLessons(_userId);
       final now = DateTime.now();
       return lessons
-          .where((lesson) => lesson.isLocked && (lesson.nextReviewDate.isBefore(now) || lesson.nextReviewDate.isAtSameMomentAs(now)))
+          .where((lesson) =>
+              lesson.isLocked &&
+              (lesson.nextReviewDate.isBefore(now) ||
+                  lesson.nextReviewDate.isAtSameMomentAs(now)))
           .map((l) => l.toEntity())
           .toList();
     });
@@ -111,10 +171,18 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   }
 
   @override
-  Future<Either<AppFailure, Lesson>> createLesson(CreateLessonParams params) async {
+  Future<Either<AppFailure, Lesson>> createLesson(
+      CreateLessonParams params) async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
-      if (!await connectionChecker.hasConnection) throw const AppFailure(type: FailureType.network, message: 'Network connection required to create lessons');
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
+      if (!await connectionChecker.hasConnection) {
+        throw const AppFailure(
+            type: FailureType.network,
+            message: 'Network connection required to create lessons');
+      }
 
       final now = DateTime.now();
       final lessonModel = LessonModel(
@@ -124,6 +192,7 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         topicName: params.topicName,
         title: params.lessonTitle,
         createdAt: now,
+        updatedAt: now,
         nextReviewDate: now.add(const Duration(days: 1)),
         reviewStage: 0,
         proficiency: 0.0,
@@ -139,29 +208,22 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   }
 
   @override
-  Future<Either<AppFailure, Lesson>> updateLesson(Lesson lesson) async {
-    return guard(() async {
-      final lessonModel = LessonModel.fromEntity(lesson);
-      await localDataSource.insertOrUpdateLesson(lessonModel);
-
-      if (await connectionChecker.hasConnection) {
-        await remoteDataSource.updateLesson(lessonModel);
-        await localDataSource.markLessonAsSynced(lesson.id);
-      }
-      await recalculateProficiencies();
-      return lesson;
-    });
-  }
-
-  @override
   Future<Either<AppFailure, void>> deleteLesson(String lessonId) async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
-      if (!await connectionChecker.hasConnection) throw const AppFailure(type: FailureType.network, message: 'Network connection required');
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
+      if (!await connectionChecker.hasConnection) {
+        throw const AppFailure(
+            type: FailureType.network, message: 'Network connection required');
+      }
 
       final lesson = await localDataSource.getLesson(lessonId);
-      if (lesson == null) throw const AppFailure(type: FailureType.cache, message: 'Lesson not found');
-      
+      if (lesson == null) {
+        throw const AppFailure(type: FailureType.cache, message: 'Lesson not found');
+      }
+
       await unitOfWork.transaction(() async {
         await unitOfWork.flashcard.deleteFlashcardsByLesson(lessonId);
         await unitOfWork.content.deleteLesson(lessonId);
@@ -170,7 +232,6 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
       try {
         await remoteDataSource.deleteLesson(lessonId);
       } catch (e) {
-        // Log this but don't fail the operation
         print('Non-critical failure: Could not delete remote lesson $lessonId: $e');
       }
 
@@ -179,24 +240,33 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   }
 
   @override
-  Future<Either<AppFailure, void>> deleteTopic(String subjectName, String topicName) async {
+  Future<Either<AppFailure, void>> deleteTopic(
+      String subjectName, String topicName) async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
-      if (!await connectionChecker.hasConnection) throw const AppFailure(type: FailureType.network, message: 'Network connection required');
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
+      if (!await connectionChecker.hasConnection) {
+        throw const AppFailure(
+            type: FailureType.network, message: 'Network connection required');
+      }
 
       await unitOfWork.transaction(() async {
-        final lessons = await unitOfWork.content.getLessonsByTopic(_userId, subjectName, topicName);
+        final lessons = await unitOfWork.content
+            .getLessonsByTopic(_userId, subjectName, topicName);
         for (final lesson in lessons) {
           await unitOfWork.flashcard.deleteFlashcardsByLesson(lesson.id);
           await unitOfWork.content.deleteLesson(lesson.id);
         }
         await unitOfWork.content.deleteTopic(_userId, subjectName, topicName);
       });
-      
+
       try {
         await remoteDataSource.deleteLessonsByTopic(_userId, subjectName, topicName);
-      } catch(e) {
-        print('Non-critical failure: Could not delete remote lessons for topic $topicName: $e');
+      } catch (e) {
+        print(
+            'Non-critical failure: Could not delete remote lessons for topic $topicName: $e');
       }
 
       await _cleanupEmptySubject(subjectName);
@@ -206,13 +276,21 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   @override
   Future<Either<AppFailure, void>> deleteSubject(String subjectName) async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
-      if (!await connectionChecker.hasConnection) throw const AppFailure(type: FailureType.network, message: 'Network connection required');
-      
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
+      if (!await connectionChecker.hasConnection) {
+        throw const AppFailure(
+            type: FailureType.network, message: 'Network connection required');
+      }
+
       await unitOfWork.transaction(() async {
-        final topics = await unitOfWork.content.getTopicsBySubject(_userId, subjectName);
+        final topics =
+            await unitOfWork.content.getTopicsBySubject(_userId, subjectName);
         for (final topic in topics) {
-          final lessons = await unitOfWork.content.getLessonsByTopic(_userId, subjectName, topic.name);
+          final lessons = await unitOfWork.content
+              .getLessonsByTopic(_userId, subjectName, topic.name);
           for (final lesson in lessons) {
             await unitOfWork.flashcard.deleteFlashcardsByLesson(lesson.id);
             await unitOfWork.content.deleteLesson(lesson.id);
@@ -221,20 +299,27 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         }
         await unitOfWork.content.deleteSubject(_userId, subjectName);
       });
-      
+
       try {
         await remoteDataSource.deleteLessonsBySubject(_userId, subjectName);
       } catch (e) {
-        print('Non-critical failure: Could not delete remote lessons for subject $subjectName: $e');
+        print(
+            'Non-critical failure: Could not delete remote lessons for subject $subjectName: $e');
       }
     });
   }
-  
+
   @override
   Future<Either<AppFailure, void>> syncLessons() async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
-      if (!await connectionChecker.hasConnection) throw const AppFailure(type: FailureType.network, message: 'No internet connection');
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
+      if (!await connectionChecker.hasConnection) {
+        throw const AppFailure(
+            type: FailureType.network, message: 'No internet connection');
+      }
 
       final unsyncedLessons = await localDataSource.getUnsyncedLessons(_userId);
       if (unsyncedLessons.isNotEmpty) {
@@ -255,7 +340,10 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   @override
   Future<Either<AppFailure, bool>> hasUnsyncedLessons() async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
       final unsyncedLessons = await localDataSource.getUnsyncedLessons(_userId);
       return unsyncedLessons.isNotEmpty;
     });
@@ -264,42 +352,64 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   @override
   Future<Either<AppFailure, void>> recalculateProficiencies() async {
     return guard(() async {
-      if (_userId.isEmpty) throw const AppFailure(type: FailureType.auth, message: 'User not authenticated');
+      if (_userId.isEmpty) {
+        throw const AppFailure(
+            type: FailureType.auth, message: 'User not authenticated');
+      }
       final subjects = await localDataSource.getSubjects(_userId);
 
       for (final subject in subjects) {
-        final topics = await localDataSource.getTopicsBySubject(_userId, subject.name);
+        final topics =
+            await localDataSource.getTopicsBySubject(_userId, subject.name);
         double totalSubjectProficiency = 0;
         for (final topic in topics) {
-          final lessons = await localDataSource.getLessonsByTopic(_userId, subject.name, topic.name);
+          final lessons = await localDataSource.getLessonsByTopic(
+              _userId, subject.name, topic.name);
           if (lessons.isNotEmpty) {
-            final topicProficiency = lessons.fold<double>(0, (sum, lesson) => sum + lesson.proficiency) / lessons.length;
-            await localDataSource.updateTopicProficiency(_userId, subject.name, topic.name, topicProficiency);
+            final topicProficiency = lessons.fold<double>(
+                    0, (sum, lesson) => sum + lesson.proficiency) /
+                lessons.length;
+            await localDataSource.updateTopicProficiency(
+                _userId, subject.name, topic.name, topicProficiency);
             totalSubjectProficiency += topicProficiency;
           }
         }
         if (topics.isNotEmpty) {
           final subjectProficiency = totalSubjectProficiency / topics.length;
-          await localDataSource.updateSubjectProficiency(_userId, subject.name, subjectProficiency);
+          await localDataSource.updateSubjectProficiency(
+              _userId, subject.name, subjectProficiency);
         }
       }
     });
   }
-  
+
   @override
   Future<Either<AppFailure, void>> lockLesson(String lessonId) async {
     return guard(() async {
       final lesson = await localDataSource.getLesson(lessonId);
-      if (lesson == null) throw const AppFailure(type: FailureType.cache, message: 'Lesson not found');
-      final updatedLesson = lesson.copyWith(isLocked: true, lockedAt: DateTime.now());
+      if (lesson == null) {
+        throw const AppFailure(type: FailureType.cache, message: 'Lesson not found');
+      }
+      final updatedLesson = lesson.copyWith(
+          isLocked: true,
+          lockedAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          version: lesson.version + 1,
+          isSynced: false);
       await localDataSource.insertOrUpdateLesson(updatedLesson);
       if (await connectionChecker.hasConnection) {
-        await remoteDataSource.updateLesson(updatedLesson);
+        try {
+          await remoteDataSource.updateLesson(updatedLesson);
+          await localDataSource.markLessonAsSynced(lessonId);
+        } catch (e) {
+          // Sync coordinator will handle
+        }
       }
     });
   }
 
-  Future<void> _updateContentHierarchy(String subjectName, String topicName, DateTime now) async {
+  Future<void> _updateContentHierarchy(
+      String subjectName, String topicName, DateTime now) async {
     var topic = await localDataSource.getTopic(_userId, subjectName, topicName);
     if (topic == null) {
       topic = TopicModel(
@@ -328,22 +438,29 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         createdAt: now,
       );
     } else {
-      final topicCount = (await localDataSource.getTopicsBySubject(_userId, subjectName)).length;
-      subject = subject.copyWith(lessonCount: subject.lessonCount + 1, topicCount: topicCount, lastStudied: now);
+      final topicCount =
+          (await localDataSource.getTopicsBySubject(_userId, subjectName)).length;
+      subject = subject.copyWith(
+          lessonCount: subject.lessonCount + 1,
+          topicCount: topicCount,
+          lastStudied: now);
     }
     await localDataSource.insertOrUpdateSubject(subject);
     await recalculateProficiencies();
   }
 
-  Future<void> _cleanupEmptyTopicAndSubject(String subjectName, String topicName) async {
-    final topicLessons = await localDataSource.getLessonsByTopic(_userId, subjectName, topicName);
+  Future<void> _cleanupEmptyTopicAndSubject(
+      String subjectName, String topicName) async {
+    final topicLessons =
+        await localDataSource.getLessonsByTopic(_userId, subjectName, topicName);
     if (topicLessons.isEmpty) {
       await localDataSource.deleteTopic(_userId, subjectName, topicName);
       await _cleanupEmptySubject(subjectName);
     } else {
       final topic = await localDataSource.getTopic(_userId, subjectName, topicName);
       if (topic != null) {
-        await localDataSource.insertOrUpdateTopic(topic.copyWith(lessonCount: topicLessons.length));
+        await localDataSource
+            .insertOrUpdateTopic(topic.copyWith(lessonCount: topicLessons.length));
       }
       await _updateSubjectCounts(subjectName);
       await recalculateProficiencies();
@@ -351,7 +468,8 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   }
 
   Future<void> _cleanupEmptySubject(String subjectName) async {
-    final subjectTopics = await localDataSource.getTopicsBySubject(_userId, subjectName);
+    final subjectTopics =
+        await localDataSource.getTopicsBySubject(_userId, subjectName);
     if (subjectTopics.isEmpty) {
       await localDataSource.deleteSubject(_userId, subjectName);
     } else {
@@ -363,13 +481,16 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   Future<void> _updateSubjectCounts(String subjectName) async {
     final subject = await localDataSource.getSubject(_userId, subjectName);
     if (subject != null) {
-      final topics = await localDataSource.getTopicsBySubject(_userId, subjectName);
+      final topics =
+          await localDataSource.getTopicsBySubject(_userId, subjectName);
       int totalLessons = 0;
       for (final topic in topics) {
-        final lessons = await localDataSource.getLessonsByTopic(_userId, subjectName, topic.name);
+        final lessons = await localDataSource.getLessonsByTopic(
+            _userId, subjectName, topic.name);
         totalLessons += lessons.length;
       }
-      await localDataSource.insertOrUpdateSubject(subject.copyWith(topicCount: topics.length, lessonCount: totalLessons));
+      await localDataSource.insertOrUpdateSubject(subject.copyWith(
+          topicCount: topics.length, lessonCount: totalLessons));
     }
   }
 
@@ -379,7 +500,8 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
 
     for (final lesson in lessons) {
       subjectMap.putIfAbsent(lesson.subjectName, () => {});
-      subjectMap[lesson.subjectName]!.putIfAbsent(lesson.topicName, () => []);
+      subjectMap[lesson.subjectName]!
+          .putIfAbsent(lesson.topicName, () => []);
       subjectMap[lesson.subjectName]![lesson.topicName]!.add(lesson);
     }
 
@@ -394,7 +516,8 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         final topicLessons = topicEntry.value;
         totalLessons += topicLessons.length;
         for (final lesson in topicLessons) {
-          if (lesson.lastReviewedAt != null && lesson.lastReviewedAt!.isAfter(lastStudied)) {
+          if (lesson.lastReviewedAt != null &&
+              lesson.lastReviewedAt!.isAfter(lastStudied)) {
             lastStudied = lesson.lastReviewedAt!;
           }
         }
@@ -405,7 +528,9 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
           proficiency: 0.0,
           lessonCount: topicLessons.length,
           lastStudied: lastStudied,
-          createdAt: topicLessons.map((l) => l.createdAt).reduce((a, b) => a.isBefore(b) ? a : b),
+          createdAt: topicLessons
+              .map((l) => l.createdAt)
+              .reduce((a, b) => a.isBefore(b) ? a : b),
         );
         await localDataSource.insertOrUpdateTopic(topic);
       }

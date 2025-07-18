@@ -1,6 +1,7 @@
 // lib/core/data/database/app_database.dart
 
 import 'package:path/path.dart';
+import 'package:qvise/core/data/migrations/add_sync_fields_migration.dart';
 import 'package:sqflite/sqflite.dart';
 
 class AppDatabase {
@@ -16,9 +17,44 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createAllTables,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  static Future<void> _onUpgrade(
+      Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createConflictsTable(db);
+      await AddSyncFieldsMigration.migrate(db);
+    }
+  }
+
+  static Future<void> _createConflictsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE conflicts (
+        id TEXT PRIMARY KEY,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        local_data TEXT NOT NULL,
+        remote_data TEXT NOT NULL,
+        local_version INTEGER NOT NULL,
+        remote_version INTEGER NOT NULL,
+        local_updated_at TEXT NOT NULL,
+        remote_updated_at TEXT NOT NULL,
+        detected_at TEXT NOT NULL,
+        resolved_at TEXT,
+        status TEXT NOT NULL DEFAULT 'unresolved',
+        resolution_type TEXT,
+        resolved_by TEXT,
+        metadata TEXT,
+        CHECK (status IN ('unresolved', 'resolved'))
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_conflicts_status ON conflicts(status)');
+    await db.execute(
+        'CREATE INDEX idx_conflicts_entity ON conflicts(entity_type, entity_id)');
   }
 
   static Future<void> _createAllTables(Database db, int version) async {
@@ -33,6 +69,7 @@ class AppDatabase {
         createdAt INTEGER NOT NULL,
         version INTEGER NOT NULL DEFAULT 1,
         is_deleted INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER,
         PRIMARY KEY (userId, name)
       )
     ''');
@@ -48,6 +85,7 @@ class AppDatabase {
         createdAt INTEGER NOT NULL,
         version INTEGER NOT NULL DEFAULT 1,
         is_deleted INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER,
         PRIMARY KEY (userId, subjectName, name)
       )
     ''');
@@ -71,7 +109,8 @@ class AppDatabase {
         fileCount INTEGER NOT NULL DEFAULT 0,
         noteCount INTEGER NOT NULL DEFAULT 0,
         version INTEGER NOT NULL DEFAULT 1,
-        is_deleted INTEGER NOT NULL DEFAULT 0
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER
       )
     ''');
 
@@ -109,13 +148,17 @@ class AppDatabase {
       )
     ''');
 
+    await _createConflictsTable(db);
+
     await db.execute('CREATE INDEX idx_lessons_user ON lessons(userId)');
-    await db.execute('CREATE INDEX idx_lessons_subject_topic ON lessons(userId, subjectName, topicName)');
+    await db.execute(
+        'CREATE INDEX idx_lessons_subject_topic ON lessons(userId, subjectName, topicName)');
     await db.execute('CREATE INDEX idx_lessons_sync ON lessons(isSynced)');
     await db.execute('CREATE INDEX idx_lessons_review ON lessons(nextReviewDate)');
     await db.execute('CREATE INDEX idx_lessons_locked ON lessons(isLocked)');
     await db.execute('CREATE INDEX idx_flashcards_lesson ON flashcards(lesson_id)');
-    await db.execute('CREATE INDEX idx_flashcards_user_lesson ON flashcards(user_id, lesson_id)');
+    await db.execute(
+        'CREATE INDEX idx_flashcards_user_lesson ON flashcards(user_id, lesson_id)');
     await db.execute('CREATE INDEX idx_flashcards_tag ON flashcards(tag_id)');
     await db.execute('CREATE INDEX idx_flashcards_sync ON flashcards(sync_status)');
   }

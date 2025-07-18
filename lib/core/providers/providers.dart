@@ -5,8 +5,14 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:qvise/core/sync/data/datasources/conflict_local_datasource.dart';
+import 'package:qvise/core/sync/services/conflict_resolver.dart';
+import 'package:qvise/core/sync/services/sync_service.dart';
+import 'package:qvise/features/content/presentation/providers/content_providers.dart';
+import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_providers.dart';
 import 'package:qvise/firebase_options.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/auth/data/datasources/auth_local_data_source.dart';
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
@@ -19,9 +25,7 @@ import '../../features/auth/domain/usecases/sign_up_with_email_password.dart';
 import '../../features/auth/domain/usecases/send_email_verification.dart';
 import '../../features/auth/domain/usecases/check_email_verification.dart';
 import '../../features/auth/domain/usecases/reset_password.dart';
-
-// Export the new data providers file for easy access
-export '../data/providers/data_providers.dart';
+import 'data_providers.dart'; // Correctly import the data providers
 
 part 'providers.g.dart';
 
@@ -31,12 +35,15 @@ InternetConnectionChecker internetConnectionChecker(Ref ref) {
   return InternetConnectionChecker();
 }
 
+@Riverpod(keepAlive: true)
+Future<SharedPreferences> sharedPreferences(Ref ref) {
+  return SharedPreferences.getInstance();
+}
+
 // Firebase
 @Riverpod(keepAlive: true)
 Future<void> firebaseInitialization(Ref ref) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 }
 
 @Riverpod(keepAlive: true)
@@ -64,19 +71,6 @@ AsyncValue<firebase_auth.User?> currentUser(Ref ref) {
   return ref.watch(authStateChangesProvider);
 }
 
-@Riverpod()
-bool isAuthenticated(Ref ref) {
-  final user = ref.watch(currentUserProvider);
-  return user.valueOrNull != null;
-}
-
-// Database
-@Riverpod(keepAlive: true)
-Future<AuthLocalDataSource> authLocalDataSource(Ref ref) async {
-  final database = await AuthLocalDataSourceImpl.createDatabase();
-  return AuthLocalDataSourceImpl(database: database);
-}
-
 // Data sources
 @Riverpod(keepAlive: true)
 AuthRemoteDataSource authRemoteDataSource(Ref ref) {
@@ -84,6 +78,12 @@ AuthRemoteDataSource authRemoteDataSource(Ref ref) {
     firebaseAuth: ref.watch(firebaseAuthProvider),
     googleSignIn: ref.watch(googleSignInProvider),
   );
+}
+
+@Riverpod(keepAlive: true)
+Future<AuthLocalDataSource> authLocalDataSource(Ref ref) async {
+  final database = await AuthLocalDataSourceImpl.createDatabase();
+  return AuthLocalDataSourceImpl(database: database);
 }
 
 // Repositories
@@ -127,7 +127,6 @@ Future<SignOut> signOut(Ref ref) async {
   return SignOut(repository);
 }
 
-// Email verification use cases
 @Riverpod(keepAlive: true)
 Future<SendEmailVerification> sendEmailVerification(Ref ref) async {
   final repository = await ref.watch(authRepositoryProvider.future);
@@ -140,9 +139,37 @@ Future<CheckEmailVerification> checkEmailVerification(Ref ref) async {
   return CheckEmailVerification(repository);
 }
 
-// Password reset use case
 @Riverpod(keepAlive: true)
 Future<ResetPassword> resetPassword(Ref ref) async {
   final repository = await ref.watch(authRepositoryProvider.future);
   return ResetPassword(repository);
+}
+
+// Sync Providers
+@Riverpod(keepAlive: true)
+ConflictLocalDataSource conflictDataSource(Ref ref) {
+  return ConflictLocalDataSourceImpl();
+}
+
+@Riverpod(keepAlive: true)
+Future<SyncService> syncService(Ref ref) async {
+  final prefs = await ref.watch(sharedPreferencesProvider.future);
+  final user = ref.watch(currentUserProvider).valueOrNull;
+
+  return SyncService(
+    unitOfWork: ref.watch(unitOfWorkProvider),
+    remoteContent: ref.watch(contentRemoteDataSourceProvider),
+    remoteFlashcard: ref.watch(flashcardRemoteDataSourceProvider),
+    conflictDataSource: ref.watch(conflictDataSourceProvider),
+    prefs: prefs,
+    userId: user?.uid ?? '',
+  );
+}
+
+@Riverpod(keepAlive: true)
+ConflictResolver conflictResolver(Ref ref) {
+  return ConflictResolver(
+    unitOfWork: ref.watch(unitOfWorkProvider),
+    conflictDataSource: ref.watch(conflictDataSourceProvider),
+  );
 }

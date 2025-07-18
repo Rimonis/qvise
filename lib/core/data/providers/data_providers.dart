@@ -22,10 +22,10 @@ ContentLocalDataSource contentLocalDataSource(ContentLocalDataSourceRef ref) {
 }
 
 @Riverpod(keepAlive: true)
-FlashcardLocalDataSource flashcardLocalDataSource(FlashcardLocalDataSourceRef ref) {
+FlashcardLocalDataSource flashcardLocalDataSource(
+    FlashcardLocalDataSourceRef ref) {
   return FlashcardLocalDataSourceImpl();
 }
-
 
 // --- Unit of Work Provider ---
 @Riverpod(keepAlive: true)
