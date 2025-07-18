@@ -35,3 +35,4 @@ IUnitOfWork unitOfWork(UnitOfWorkRef ref) {
     flashcard: ref.watch(flashcardLocalDataSourceProvider),
   );
 }
+

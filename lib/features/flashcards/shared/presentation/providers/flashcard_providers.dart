@@ -1,6 +1,7 @@
 // lib/features/flashcards/shared/presentation/providers/flashcard_providers.dart
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/core/data/providers/data_providers.dart';
 import 'package:qvise/core/providers/providers.dart';
 import 'package:qvise/features/flashcards/creation/domain/usecases/update_flashcard.dart';
 import 'package:qvise/features/flashcards/shared/domain/entities/flashcard.dart';

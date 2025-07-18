@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:qvise/core/data/providers/data_providers.dart';
 import 'package:qvise/core/sync/data/datasources/conflict_local_datasource.dart';
 import 'package:qvise/core/sync/services/conflict_resolver.dart';
 import 'package:qvise/core/sync/services/sync_service.dart';
@@ -25,7 +26,7 @@ import '../../features/auth/domain/usecases/sign_up_with_email_password.dart';
 import '../../features/auth/domain/usecases/send_email_verification.dart';
 import '../../features/auth/domain/usecases/check_email_verification.dart';
 import '../../features/auth/domain/usecases/reset_password.dart';
-import 'data_providers.dart'; // Correctly import the data providers
+
 
 part 'providers.g.dart';
 
@@ -161,6 +162,7 @@ Future<SyncService> syncService(Ref ref) async {
     remoteContent: ref.watch(contentRemoteDataSourceProvider),
     remoteFlashcard: ref.watch(flashcardRemoteDataSourceProvider),
     conflictDataSource: ref.watch(conflictDataSourceProvider),
+    conflictResolver: ref.watch(conflictResolverProvider),
     prefs: prefs,
     userId: user?.uid ?? '',
   );

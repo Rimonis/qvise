@@ -20,6 +20,7 @@ import '../domain/entities/sync_report.dart';
 import '../utils/batch_helpers.dart';
 import 'remote_entity_cache.dart';
 import 'sync_performance_monitor.dart';
+import 'conflict_resolver.dart';
 
 class SyncService {
   final IUnitOfWork _unitOfWork;
@@ -30,6 +31,7 @@ class SyncService {
   final String _userId;
   final RemoteEntityCache _cache;
   final DeviceInfoPlugin _deviceInfo;
+  final ConflictResolver _conflictResolver;
 
   bool _isSyncing = false;
   static const String _lastSyncKey = 'last_sync_timestamp';
@@ -42,6 +44,7 @@ class SyncService {
     required ConflictLocalDataSource conflictDataSource,
     required SharedPreferences prefs,
     required String userId,
+    required ConflictResolver conflictResolver,
     RemoteEntityCache? cache,
     DeviceInfoPlugin? deviceInfo,
   })  : _unitOfWork = unitOfWork,
@@ -50,6 +53,7 @@ class SyncService {
         _conflictDataSource = conflictDataSource,
         _prefs = prefs,
         _userId = userId,
+        _conflictResolver = conflictResolver,
         _cache = cache ?? RemoteEntityCache(),
         _deviceInfo = deviceInfo ?? DeviceInfoPlugin();
 
@@ -82,6 +86,9 @@ class SyncService {
           'save-conflicts',
           () => _saveConflicts(conflicts),
         );
+        // Attempt to auto-resolve conflicts
+        final resolvedCount = await _conflictResolver.autoResolveConflicts();
+        report.conflictsResolved = resolvedCount;
       }
 
       // 3. Push and pull changes in parallel
