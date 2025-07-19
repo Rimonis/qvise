@@ -1,231 +1,136 @@
+// lib/features/content/presentation/widgets/unlocked_lesson_card.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qvise/features/content/domain/entities/lesson.dart';
+import 'package:qvise/features/content/presentation/screens/lesson_screen.dart';
+import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_count_provider.dart';
+import 'package:qvise/features/files/presentation/providers/file_providers.dart';
+import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
-import '../../domain/entities/lesson.dart';
 
-class UnlockedLessonCard extends StatelessWidget {
+class UnlockedLessonCard extends ConsumerWidget {
   final Lesson lesson;
-  final VoidCallback onTap;
-  final VoidCallback? onDelete;
+  final VoidCallback? onTap;
+  final VoidCallback? onLessonUpdated;
 
   const UnlockedLessonCard({
     super.key,
     required this.lesson,
-    required this.onTap,
-    this.onDelete,
+    this.onTap,
+    this.onLessonUpdated,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final hasContent = lesson.totalContentCount > 0;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final flashcardCount = ref.watch(flashcardCountProvider(lesson.id));
+    final filesAsync = ref.watch(lessonFilesProvider(lesson.id));
+    final fileCount = filesAsync.maybeWhen(
+      data: (files) => files.length,
+      orElse: () => 0,
+    );
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: hasContent
-            ? BorderSide(color: context.successColor.withOpacity(0.5), width: 1)
-            : BorderSide.none,
-      ),
       child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
+        onTap: onTap ?? () => _navigateToLesson(context),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+        child: Padding(
+          padding: AppSpacing.paddingAllMd,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with tags and status
+              // Header
               Row(
                 children: [
-                  // Subject tag
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: context.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: context.primaryColor.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Text(
-                      lesson.subjectName,
-                      style: context.textTheme.bodySmall
-                          ?.copyWith(color: context.primaryColor),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Topic tag
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: context.secondaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: context.secondaryColor.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Text(
-                      lesson.topicName,
-                      style: context.textTheme.bodySmall
-                          ?.copyWith(color: context.secondaryColor),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          lesson.displayTitle,
+                          style: context.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          '${lesson.subjectName} › ${lesson.topicName}',
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: context.textSecondaryColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const Spacer(),
-                  // Status indicator
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
+                    ),
                     decoration: BoxDecoration(
-                      color: hasContent
-                          ? context.successColor.withOpacity(0.1)
-                          : context.warningColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: hasContent
-                            ? context.successColor.withOpacity(0.3)
-                            : context.warningColor.withOpacity(0.3),
-                      ),
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          hasContent ? Icons.check_circle : Icons.edit,
-                          size: 12,
-                          color: hasContent
-                              ? context.successColor
-                              : context.warningColor,
+                          Icons.edit,
+                          size: 14,
+                          color: Colors.orange[700],
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: AppSpacing.xs),
                         Text(
-                          hasContent ? 'Ready' : 'Empty',
-                          style: context.textTheme.bodySmall?.copyWith(
-                            color: hasContent
-                                ? context.successColor
-                                : context.warningColor,
+                          'Editing',
+                          style: TextStyle(
+                            color: Colors.orange[700],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  if (onDelete != null) ...[
-                    const SizedBox(width: 8),
-                    PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'delete') {
-                          onDelete!();
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete,
-                                  color: context.errorColor, size: 20),
-                              const SizedBox(width: 8),
-                              Text('Delete',
-                                  style: TextStyle(color: context.errorColor)),
-                            ],
-                          ),
-                        ),
-                      ],
-                      icon: Icon(Icons.more_vert,
-                          size: 20, color: context.iconColor),
-                    ),
-                  ],
                 ],
               ),
-              const SizedBox(height: 12),
-
-              // Lesson title
-              Text(
-                lesson.displayTitle,
-                style: context.textTheme.titleLarge,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-
-              // Created date
+              const SizedBox(height: AppSpacing.md),
+              
+              // Content Stats
               Row(
                 children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 14,
-                    color: context.textSecondaryColor,
+                  _buildStatChip(
+                    context,
+                    icon: Icons.style,
+                    label: 'Flashcards',
+                    count: flashcardCount.asData?.value ?? 0,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Created ${lesson.dayCreated}',
-                    style: context.textTheme.bodySmall,
+                  const SizedBox(width: AppSpacing.sm),
+                  _buildStatChip(
+                    context,
+                    icon: Icons.attach_file,
+                    label: 'Files',
+                    count: fileCount,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _buildStatChip(
+                    context,
+                    icon: Icons.note,
+                    label: 'Notes',
+                    count: 0, // Notes not implemented yet
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-
-              // Content summary
-              Row(
-                children: [
-                  // Content indicators
-                  if (lesson.flashcardCount > 0) ...[
-                    _buildContentIndicator(
-                      context,
-                      Icons.style,
-                      lesson.flashcardCount.toString(),
-                      'Flashcards',
-                      context.primaryColor,
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  if (lesson.fileCount > 0) ...[
-                    _buildContentIndicator(
-                      context,
-                      Icons.attachment,
-                      lesson.fileCount.toString(),
-                      'Files',
-                      context.successColor,
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  if (lesson.noteCount > 0) ...[
-                    _buildContentIndicator(
-                      context,
-                      Icons.note,
-                      lesson.noteCount.toString(),
-                      'Notes',
-                      context.warningColor,
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-
-                  if (lesson.totalContentCount == 0) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: context.surfaceVariantColor,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'No content yet',
-                        style: context.textTheme.bodySmall
-                            ?.copyWith(fontStyle: FontStyle.italic),
-                      ),
-                    ),
-                  ],
-
-                  const Spacer(),
-
-                  // Edit indicator
-                  Icon(
-                    Icons.edit,
-                    size: 18,
-                    color: context.primaryColor,
-                  ),
-                ],
+              const SizedBox(height: AppSpacing.md),
+              
+              // Action Button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onTap ?? () => _navigateToLesson(context),
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Add Content'),
+                ),
               ),
             ],
           ),
@@ -234,32 +139,53 @@ class UnlockedLessonCard extends StatelessWidget {
     );
   }
 
-  Widget _buildContentIndicator(BuildContext context, IconData icon,
-      String count, String label, Color color) {
+  Widget _buildStatChip(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required int count,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
+        color: context.surfaceVariantColor,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
-            size: 12,
-            color: color,
+            size: 14,
+            color: context.textSecondaryColor,
           ),
-          const SizedBox(width: 3),
+          const SizedBox(width: AppSpacing.xs),
           Text(
-            count,
+            count.toString(),
             style: context.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _navigateToLesson(BuildContext context) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LessonScreen(lessonId: lesson.id), // Using unified screen
+      ),
+    );
+    
+    // If the lesson was modified, trigger the callback to refresh the parent
+    if (result == true || onLessonUpdated != null) {
+      onLessonUpdated?.call();
+    }
   }
 }

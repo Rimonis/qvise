@@ -1,7 +1,6 @@
 // lib/core/shell and tabs/profile_tab.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/auth/presentation/application/auth_providers.dart';
 import 'package:qvise/core/theme/theme_mode_provider.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
@@ -71,52 +70,18 @@ class ProfileTab extends ConsumerWidget {
                     user.displayName ?? 'User',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   
-                  // Email
+                  // User email
                   Text(
-                    user.email,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  
-                  // Subscription status
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isPremium ? Colors.amber.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-                      border: Border.all(
-                        color: isPremium ? Colors.amber.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isPremium ? Icons.star : Icons.person,
-                          size: 16,
-                          color: isPremium ? Colors.amber : Colors.white,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          isPremium ? 'Premium User' : 'Free User',
-                          style: TextStyle(
-                            color: isPremium ? Colors.amber : Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    user.email ?? '',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
                     ),
                   ),
                 ],
@@ -124,57 +89,7 @@ class ProfileTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             
-            // Email verification status
-            Container(
-              padding: AppSpacing.paddingAllMd,
-              decoration: BoxDecoration(
-                color: user.isEmailVerified 
-                    ? AppColors.successLight 
-                    : AppColors.warningLight,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                border: Border.all(
-                  color: user.isEmailVerified 
-                      ? AppColors.success.withValues(alpha: 0.3) 
-                      : AppColors.warning.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    user.isEmailVerified ? Icons.verified : Icons.warning,
-                    color: user.isEmailVerified ? AppColors.success : AppColors.warning,
-                    size: 24,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user.isEmailVerified ? 'Email Verified' : 'Email Not Verified',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: user.isEmailVerified ? AppColors.successDark : AppColors.warningDark,
-                          ),
-                        ),
-                        Text(
-                          user.isEmailVerified
-                              ? 'Your email address is verified'
-                              : 'Please verify your email address',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: user.isEmailVerified ? AppColors.successDark : AppColors.warningDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            
-            // Settings Section
+            // Settings List
             Container(
               decoration: BoxDecoration(
                 color: context.surfaceColor,
@@ -183,9 +98,6 @@ class ProfileTab extends ConsumerWidget {
               ),
               child: Column(
                 children: [
-                  const ThemeModeListTile(),
-                  Divider(height: 1, color: context.dividerColor),
-                  
                   ListTile(
                     leading: Icon(
                       isPremium ? Icons.star : Icons.star_outline,
@@ -202,15 +114,28 @@ class ProfileTab extends ConsumerWidget {
                   ),
                   Divider(height: 1, color: context.dividerColor),
                   
+                  // Theme Toggle
+                  ListTile(
+                    leading: const Icon(Icons.palette),
+                    title: const Text('Theme'),
+                    subtitle: const Text('Switch between light and dark mode'),
+                    trailing: const ThemeToggleButton(),
+                  ),
+                  Divider(height: 1, color: context.dividerColor),
+                  
                   ListTile(
                     leading: const Icon(Icons.settings),
                     title: const Text('Account Settings'),
                     subtitle: const Text('Manage your account preferences'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Account Settings - Coming Soon')),
-                      );
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Account Settings - Coming Soon')),
+                          );
+                        }
+                      });
                     },
                   ),
                   Divider(height: 1, color: context.dividerColor),
@@ -221,9 +146,13 @@ class ProfileTab extends ConsumerWidget {
                     subtitle: const Text('Data and privacy settings'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Privacy Settings - Coming Soon')),
-                      );
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Privacy Settings - Coming Soon')),
+                          );
+                        }
+                      });
                     },
                   ),
                   Divider(height: 1, color: context.dividerColor),
@@ -234,9 +163,13 @@ class ProfileTab extends ConsumerWidget {
                     subtitle: const Text('Get help and contact support'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Help & Support - Coming Soon')),
-                      );
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Help & Support - Coming Soon')),
+                          );
+                        }
+                      });
                     },
                   ),
                 ],
@@ -244,29 +177,7 @@ class ProfileTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
             
-            Container(
-              width: double.infinity,
-              padding: AppSpacing.paddingAllMd,
-              decoration: BoxDecoration(
-                color: context.surfaceVariantColor.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                border: Border.all(color: context.borderColor),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.palette),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Text(
-                    'Quick Theme Toggle',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const Spacer(),
-                  const ThemeToggleButton(),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            
+            // Sign Out Button
             SizedBox(
               width: double.infinity,
               height: AppSpacing.buttonHeight,
@@ -328,33 +239,37 @@ class ProfileTab extends ConsumerWidget {
           children: [
             Icon(Icons.person_off, color: context.textTertiaryColor, size: 100),
             const SizedBox(height: AppSpacing.lg),
-            const Text('Not Authenticated'),
+            Text(
+              'Not Signed In',
+              style: context.textTheme.headlineMedium,
+            ),
             const SizedBox(height: AppSpacing.sm),
-            const Text('Please sign in to view your profile'),
+            Text(
+              'Please sign in to view your profile',
+              style: context.textTheme.bodyLarge,
+            ),
           ],
         ),
       ),
-      error: (failure) => Center(
+      error: (error, stack) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, color: AppColors.error, size: 100),
+            const Icon(Icons.error_outline, size: 100, color: Colors.red),
             const SizedBox(height: AppSpacing.lg),
-            const Text('Error'),
+            Text(
+              'Authentication Error',
+              style: context.textTheme.headlineMedium,
+            ),
             const SizedBox(height: AppSpacing.sm),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Text(
-                failure.userFriendlyMessage,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.error),
-              ),
+            Text(
+              error.toString(),
+              style: context.textTheme.bodyLarge,
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.lg),
             ElevatedButton(
-              onPressed: () {
-                ref.read(authProvider.notifier).checkAuthStatus();
-              },
+              onPressed: () => ref.refresh(authProvider),
               child: const Text('Retry'),
             ),
           ],
@@ -363,26 +278,31 @@ class ProfileTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
-    try {
+  void _handleLogout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
       await ref.read(authProvider.notifier).signOut();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Logged out successfully'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } on AppFailure catch (failure) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(failure.userFriendlyMessage),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
     }
   }
 }

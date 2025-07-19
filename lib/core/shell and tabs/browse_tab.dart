@@ -1,12 +1,11 @@
+// lib/core/shell and tabs/browse_tab.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/core/providers/network_status_provider.dart';
 import 'package:qvise/features/content/domain/entities/subject.dart';
 import 'package:qvise/features/content/domain/entities/topic.dart';
 import 'package:qvise/features/content/domain/entities/lesson.dart';
 import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
-import 'package:qvise/features/content/presentation/providers/content_providers.dart';
 import 'package:qvise/features/content/presentation/providers/tab_navigation_provider.dart';
 import 'package:qvise/features/content/presentation/widgets/browse_subject_card.dart';
 import 'package:qvise/features/content/presentation/widgets/topic_tile.dart';
@@ -14,9 +13,7 @@ import 'package:qvise/features/content/presentation/widgets/lesson_card.dart';
 import 'package:qvise/features/content/presentation/widgets/content_loading_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
 import 'package:qvise/features/flashcards/presentation/screens/flashcard_preview_screen.dart';
-import 'package:qvise/features/files/presentation/providers/file_providers.dart';
-import 'package:qvise/features/files/presentation/widgets/file_list_item.dart';
-import 'package:qvise/core/theme/app_colors.dart';
+import 'package:qvise/features/content/presentation/screens/lesson_screen.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
 
@@ -27,31 +24,17 @@ class BrowseTab extends ConsumerStatefulWidget {
   ConsumerState<BrowseTab> createState() => _BrowseTabState();
 }
 
-class _BrowseTabState extends ConsumerState<BrowseTab> with TickerProviderStateMixin {
+class _BrowseTabState extends ConsumerState<BrowseTab> {
   String? _selectedSubject;
   String? _selectedTopic;
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final isOnline = ref.watch(networkStatusProvider).valueOrNull ?? false;
 
-    // The main structure is a Scaffold with an AppBar and TabBar.
-    // The body will change based on the navigation state (_selectedSubject, _selectedTopic).
+    // Navigate based on selection state
     if (_selectedSubject == null) {
-      return _buildMainBrowseView(isOnline);
+      return _buildSubjectsView(isOnline);
     } else if (_selectedTopic == null) {
       return _buildTopicsView(_selectedSubject!, isOnline);
     } else {
@@ -59,111 +42,61 @@ class _BrowseTabState extends ConsumerState<BrowseTab> with TickerProviderStateM
     }
   }
 
-  // Main view with tabs for Subjects and Starred Files
-  Widget _buildMainBrowseView(bool isOnline) {
+  // Main view showing all subjects
+  Widget _buildSubjectsView(bool isOnline) {
+    final subjectsAsync = ref.watch(subjectsNotifierProvider);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Browse'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.school), text: 'Subjects'),
-            Tab(icon: Icon(Icons.star), text: 'Starred Files'),
-          ],
+        centerTitle: false,
+      ),
+      body: subjectsAsync.when(
+        data: (subjects) {
+          if (subjects.isEmpty) {
+            return EmptyContentWidget(
+              icon: Icons.school,
+              title: 'No Subjects Yet',
+              description: 'Create your first lesson to get started!',
+              buttonText: 'Go to Create',
+              onButtonPressed: () {
+                ref.read(currentTabIndexProvider.notifier).state = 1; // Create tab
+              },
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () => ref.read(subjectsNotifierProvider.notifier).refresh(),
+            child: ListView.builder(
+              padding: AppSpacing.screenPaddingAll,
+              itemCount: subjects.length,
+              itemBuilder: (context, index) {
+                final subject = subjects[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: BrowseSubjectCard(
+                    subject: subject,
+                    onTap: () => setState(() => _selectedSubject = subject.name),
+                    onDelete: isOnline 
+                        ? () => _showDeleteSubjectDialog(subject) 
+                        : null,
+                  ),
+                );
+              },
+            ),
+          );
+        },
+        loading: () => const ContentLoadingWidget(message: 'Loading subjects...'),
+        error: (error, stack) => _buildErrorView(
+          error.toString(),
+          () => ref.invalidate(subjectsNotifierProvider),
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildSubjectsView(isOnline),
-          _buildStarredFilesView(isOnline),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSubjectsView(bool isOnline) {
-    final subjectsAsync = ref.watch(subjectsNotifierProvider);
-    return subjectsAsync.when(
-      data: (subjects) {
-        if (subjects.isEmpty) {
-          return EmptyContentWidget(
-            icon: Icons.school,
-            title: 'No Subjects Yet',
-            description: 'Create your first lesson to get started!',
-            buttonText: 'Go to Create',
-            onButtonPressed: () {
-              ref.read(currentTabIndexProvider.notifier).state = 1; // Create tab
-            },
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: () => ref.read(subjectsNotifierProvider.notifier).refresh(),
-          child: ListView.builder(
-            padding: AppSpacing.screenPaddingAll,
-            itemCount: subjects.length,
-            itemBuilder: (context, index) {
-              final subject = subjects[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                child: BrowseSubjectCard(
-                  subject: subject,
-                  onTap: () => setState(() => _selectedSubject = subject.name),
-                  onDelete: isOnline ? () => _showDeleteSubjectDialog(subject) : null,
-                ),
-              );
-            },
-          ),
-        );
-      },
-      loading: () => const ContentLoadingWidget(message: 'Loading subjects...'),
-      error: (error, stack) => _buildErrorView(
-        error.toString(),
-        () => ref.invalidate(subjectsNotifierProvider),
-      ),
-    );
-  }
-
-  Widget _buildStarredFilesView(bool isOnline) {
-    final starredFilesAsync = ref.watch(starredFilesProvider);
-
-    return starredFilesAsync.when(
-      data: (files) {
-        if (files.isEmpty) {
-          return const EmptyContentWidget(
-            icon: Icons.star_border,
-            title: 'No Starred Files',
-            description: 'Star files in your lessons to see them here.',
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: () async => ref.read(starredFilesProvider.notifier).refresh(),
-          child: ListView.builder(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            itemCount: files.length,
-            itemBuilder: (context, index) {
-              final file = files[index];
-              return FileListItem(
-                file: file,
-                onDeleted: () {
-                  ref.read(starredFilesProvider.notifier).refresh();
-                },
-              );
-            },
-          ),
-        );
-      },
-      loading: () => const ContentLoadingWidget(message: 'Loading starred files...'),
-      error: (error, stack) => _buildErrorView(
-        error.toString(),
-        () => ref.invalidate(starredFilesProvider),
       ),
     );
   }
 
   // View for topics within a selected subject
   Widget _buildTopicsView(String subjectName, bool isOnline) {
-    final topicsAsync = ref.watch(topicsNotifierProvider(subjectName));
+    final topicsAsync = ref.watch(topicsNotifierProvider(subjectName: subjectName));
 
     return Scaffold(
       appBar: AppBar(
@@ -187,18 +120,20 @@ class _BrowseTabState extends ConsumerState<BrowseTab> with TickerProviderStateM
             );
           }
           return RefreshIndicator(
-            onRefresh: () => ref.read(topicsNotifierProvider(subjectName).notifier).refresh(),
+            onRefresh: () => ref.read(topicsNotifierProvider(subjectName: subjectName).notifier).refresh(),
             child: ListView.builder(
               padding: AppSpacing.screenPaddingAll,
               itemCount: topics.length,
               itemBuilder: (context, index) {
                 final topic = topics[index];
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: TopicTile(
                     topic: topic,
                     onTap: () => setState(() => _selectedTopic = topic.name),
-                    onDelete: isOnline ? () => _showDeleteTopicDialog(subjectName, topic) : null,
+                    onDelete: isOnline 
+                        ? () => _showDeleteTopicDialog(topic) 
+                        : null,
                   ),
                 );
               },
@@ -208,7 +143,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> with TickerProviderStateM
         loading: () => const ContentLoadingWidget(message: 'Loading topics...'),
         error: (error, stack) => _buildErrorView(
           error.toString(),
-          () => ref.invalidate(topicsNotifierProvider(subjectName)),
+          () => ref.invalidate(topicsNotifierProvider(subjectName: subjectName)),
         ),
       ),
     );
@@ -224,41 +159,49 @@ class _BrowseTabState extends ConsumerState<BrowseTab> with TickerProviderStateM
           icon: const Icon(Icons.arrow_back),
           onPressed: () => setState(() => _selectedTopic = null),
         ),
-        title: Text(topicName),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(topicName, style: const TextStyle(fontSize: 18)),
+            Text(
+              subjectName,
+              style: TextStyle(
+                fontSize: 12,
+                color: context.textSecondaryColor,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
       body: lessonsAsync.when(
         data: (lessons) {
-          final lockedLessons = lessons.where((lesson) => lesson.isLocked).toList();
-          if (lockedLessons.isEmpty) {
-            return const EmptyContentWidget(
-              icon: Icons.lock_open,
-              title: 'No Locked Lessons',
-              description: 'All lessons in this topic are still being created.\nLocked lessons will appear here once ready for review.',
+          if (lessons.isEmpty) {
+            return EmptyContentWidget(
+              icon: Icons.book,
+              title: 'No Lessons Yet',
+              description: 'Create your first lesson in this topic!',
+              buttonText: 'Go to Create',
+              onButtonPressed: () {
+                ref.read(currentTabIndexProvider.notifier).state = 1; // Create tab
+              },
             );
           }
           return RefreshIndicator(
             onRefresh: () => ref.read(lessonsNotifierProvider(subjectName: subjectName, topicName: topicName).notifier).refresh(),
             child: ListView.builder(
               padding: AppSpacing.screenPaddingAll,
-              itemCount: lockedLessons.length,
+              itemCount: lessons.length,
               itemBuilder: (context, index) {
-                final lesson = lockedLessons[index];
+                final lesson = lessons[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: LessonCard(
                     lesson: lesson,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => FlashcardPreviewScreen(
-                            lessonId: lesson.id,
-                            allowEditing: false,
-                          ),
-                        ),
-                      );
-                    },
-                    onDelete: isOnline ? () => _showDeleteLessonDialog(lesson) : null,
+                    onTap: () => _navigateToLesson(lesson),
+                    onDelete: isOnline 
+                        ? () => _showDeleteLessonDialog(lesson) 
+                        : null,
                   ),
                 );
               },
@@ -274,270 +217,34 @@ class _BrowseTabState extends ConsumerState<BrowseTab> with TickerProviderStateM
     );
   }
 
-  // Dialogs and Helper methods from the original file
-  void _showDeleteSubjectDialog(Subject subject) async {
-    final allLessons = await ref.read(contentRepositoryProvider).getAllLessons();
-    bool hasLockedLessons = false;
-    allLessons.fold(
-      (l) => null,
-      (r) => hasLockedLessons = r.any(
-        (lesson) => lesson.subjectName == subject.name && lesson.isLocked,
-      ),
-    );
-
-    final TextEditingController confirmController = TextEditingController();
-
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          'Delete "${subject.name}"?',
-          style: context.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: context.textPrimaryColor,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This will permanently delete:',
-              style: context.textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: context.textPrimaryColor,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Container(
-              padding: AppSpacing.paddingAllSm,
-              decoration: BoxDecoration(
-                color: context.errorColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                border: Border.all(color: context.errorColor.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('• ${subject.topicCount} topics', style: context.textTheme.bodyMedium?.copyWith(color: AppColors.errorDark)),
-                  Text('• ${subject.lessonCount} lessons', style: context.textTheme.bodyMedium?.copyWith(color: AppColors.errorDark)),
-                  Text('• All flashcards in these lessons', style: context.textTheme.bodyMedium?.copyWith(color: AppColors.errorDark)),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            if (hasLockedLessons) ...[
-              Text('This subject contains locked lessons.', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold, color: context.errorColor)),
-              const SizedBox(height: AppSpacing.sm),
-              Text('Type CONFIRM to delete:', style: context.textTheme.bodyMedium),
-              const SizedBox(height: AppSpacing.sm),
-              TextField(
-                controller: confirmController,
-                textCapitalization: TextCapitalization.characters,
-                decoration: InputDecoration(
-                  hintText: 'Type CONFIRM here',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSmall)),
-                ),
-              ),
-            ] else
-              Text('This action cannot be undone.', style: context.textTheme.bodyMedium?.copyWith(color: context.errorColor)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (hasLockedLessons && confirmController.text != 'CONFIRM') {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please type CONFIRM to delete'), backgroundColor: AppColors.error),
-                  );
-                }
-                return;
-              }
-              Navigator.pop(dialogContext);
-              try {
-                await ref.read(subjectsNotifierProvider.notifier).deleteSubject(subject.name);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Subject deleted successfully')));
-                }
-              } on AppFailure catch (failure) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(failure.userFriendlyMessage), backgroundColor: AppColors.error),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteTopicDialog(String subjectName, Topic topic) async {
-    final allLessons = await ref.read(contentRepositoryProvider).getLessonsByTopic(subjectName, topic.name);
-    bool hasLockedLessons = false;
-    allLessons.fold((l) => null, (r) => hasLockedLessons = r.any((lesson) => lesson.isLocked));
-    final TextEditingController confirmController = TextEditingController();
-
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          'Delete "${topic.name}"?',
-          style: context.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: context.textPrimaryColor),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('This will permanently delete:', style: context.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500, color: context.textPrimaryColor)),
-            const SizedBox(height: AppSpacing.sm),
-            Container(
-              padding: AppSpacing.paddingAllSm,
-              decoration: BoxDecoration(
-                color: context.errorColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                border: Border.all(color: context.errorColor.withValues(alpha: 0.3)),
-              ),
-              child: Text('• ${topic.lessonCount} lessons\n• All flashcards in these lessons', style: context.textTheme.bodyMedium?.copyWith(color: AppColors.errorDark, height: 1.5)),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            if (hasLockedLessons) ...[
-              Text('This topic contains locked lessons.', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold, color: context.errorColor)),
-              const SizedBox(height: AppSpacing.sm),
-              Text('Type CONFIRM to delete:', style: context.textTheme.bodyMedium),
-              const SizedBox(height: AppSpacing.sm),
-              TextField(
-                controller: confirmController,
-                textCapitalization: TextCapitalization.characters,
-                decoration: InputDecoration(
-                  hintText: 'Type CONFIRM here',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSmall)),
-                ),
-              ),
-            ] else
-              Text('This action cannot be undone.', style: context.textTheme.bodyMedium?.copyWith(color: context.errorColor)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (hasLockedLessons && confirmController.text != 'CONFIRM') {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please type CONFIRM to delete'), backgroundColor: AppColors.error));
-                }
-                return;
-              }
-              Navigator.pop(dialogContext);
-              try {
-                await ref.read(topicsNotifierProvider(subjectName).notifier).deleteTopic(topic.name);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Topic deleted successfully')));
-                }
-              } on AppFailure catch (failure) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.userFriendlyMessage), backgroundColor: AppColors.error));
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteLessonDialog(Lesson lesson) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('Delete Lesson?', style: context.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: context.textPrimaryColor)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: AppSpacing.paddingAllSm,
-              decoration: BoxDecoration(
-                color: context.infoColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                border: Border.all(color: context.infoColor.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Title: ${lesson.displayTitle}', style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: context.textPrimaryColor)),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text('Created: ${_formatDate(lesson.createdAt)}', style: context.textTheme.bodySmall?.copyWith(color: context.textSecondaryColor)),
-                  Text('Proficiency: ${(lesson.proficiency * 100).toInt()}%', style: context.textTheme.bodySmall?.copyWith(color: context.textSecondaryColor)),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              padding: AppSpacing.paddingAllSm,
-              decoration: BoxDecoration(
-                color: context.errorColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                border: Border.all(color: context.errorColor.withValues(alpha: 0.3)),
-              ),
-              child: Text('This will also delete all flashcards in this lesson.\n\nThis action cannot be undone.', style: context.textTheme.bodyMedium?.copyWith(color: AppColors.errorDark, height: 1.5)),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              try {
-                await ref.read(lessonsNotifierProvider(subjectName: lesson.subjectName, topicName: lesson.topicName).notifier).deleteLesson(lesson.id);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lesson deleted successfully')));
-                }
-              } on AppFailure catch (failure) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.userFriendlyMessage), backgroundColor: AppColors.error));
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorView(String error, VoidCallback onRetry) {
+  Widget _buildErrorView(String message, VoidCallback onRetry) {
     return Center(
       child: Padding(
         padding: AppSpacing.screenPaddingAll,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: context.textTertiaryColor,
+            ),
             const SizedBox(height: AppSpacing.md),
-            Text('Something went wrong', style: context.textTheme.titleMedium?.copyWith(color: AppColors.error)),
-            Text(error, textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Something went wrong',
+              style: context.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              message,
+              style: context.textTheme.bodyMedium?.copyWith(
+                color: context.textSecondaryColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.lg),
             ElevatedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
@@ -549,7 +256,151 @@ class _BrowseTabState extends ConsumerState<BrowseTab> with TickerProviderStateM
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  // Navigation - now uses unified LessonScreen
+  void _navigateToLesson(Lesson lesson) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LessonScreen(lessonId: lesson.id),
+      ),
+    ).then((_) {
+      // Refresh data when returning from lesson screen
+      ref.invalidate(lessonsNotifierProvider(subjectName: _selectedSubject!, topicName: _selectedTopic!));
+    });
+  }
+
+  void _showDeleteSubjectDialog(Subject subject) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Subject'),
+        content: Text('Are you sure you want to delete "${subject.name}"? This will delete all topics and lessons in this subject.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await ref.read(subjectsNotifierProvider.notifier).deleteSubject(subject.name);
+                if (context.mounted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Subject "${subject.name}" deleted')),
+                      );
+                    }
+                  });
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to delete subject: $e')),
+                      );
+                    }
+                  });
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteTopicDialog(Topic topic) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Topic'),
+        content: Text('Are you sure you want to delete "${topic.name}"? This will delete all lessons in this topic.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await ref.read(topicsNotifierProvider(subjectName: _selectedSubject!).notifier).deleteTopic(topic.name);
+                if (context.mounted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Topic "${topic.name}" deleted')),
+                      );
+                    }
+                  });
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to delete topic: $e')),
+                      );
+                    }
+                  });
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteLessonDialog(Lesson lesson) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Lesson'),
+        content: Text('Are you sure you want to delete "${lesson.displayTitle}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await ref.read(lessonsNotifierProvider(subjectName: _selectedSubject!, topicName: _selectedTopic!).notifier).deleteLesson(lesson.id);
+                if (context.mounted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Lesson "${lesson.displayTitle}" deleted')),
+                      );
+                    }
+                  });
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to delete lesson: $e')),
+                      );
+                    }
+                  });
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 }
