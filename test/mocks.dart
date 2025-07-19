@@ -3,6 +3,7 @@ import 'package:mockito/annotations.dart';
 import 'package:qvise/features/content/data/datasources/content_local_data_source.dart';
 import 'package:qvise/features/content/data/datasources/content_remote_data_source.dart';
 import 'package:qvise/features/content/domain/repositories/content_repository.dart';
+import 'package:qvise/features/files/data/datasources/file_local_data_source.dart';
 import 'package:qvise/features/flashcards/shared/data/datasources/flashcard_local_data_source.dart';
 import 'package:qvise/features/flashcards/shared/data/datasources/flashcard_remote_data_source.dart';
 import 'package:qvise/features/flashcards/shared/domain/repositories/flashcard_repository.dart';
@@ -29,6 +30,7 @@ import 'package:sqflite/sqflite.dart';
   FirebaseAuth,
   User,
   Database,
-  Transaction
+  Transaction,
+  FileLocalDataSource
 ])
 void main() {}

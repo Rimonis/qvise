@@ -1,6 +1,7 @@
 // lib/features/files/data/repositories/file_repository_impl.dart
 import 'dart:io';
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -53,7 +54,7 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
   }) async {
     return guard(() async {
       final originalFile = File(localPath);
-      
+
       if (!await originalFile.exists()) {
         throw const AppFailure(
           type: FailureType.cache,
@@ -70,7 +71,7 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
       final newId = uuid.v4();
       final newFileName = '$newId$fileExtension';
       final permanentPath = p.join(appDir.path, 'files', newFileName);
-      
+
       // Ensure the directory exists
       await Directory(p.dirname(permanentPath)).create(recursive: true);
       final permanentFile = await originalFile.copy(permanentPath);
@@ -95,7 +96,7 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
       // Perform DB operations in a transaction
       await unitOfWork.transaction(() async {
         await unitOfWork.file.createFile(fileModel);
-        
+
         // Update lesson file count
         final lesson = await unitOfWork.content.getLesson(lessonId);
         if (lesson != null) {
@@ -104,7 +105,7 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
           );
         }
       });
-      
+
       // Attempt sync if premium (fire and forget)
       if (hasSubscription) {
         syncFiles();
@@ -128,7 +129,7 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
       // Perform DB operations in a transaction
       await unitOfWork.transaction(() async {
         await unitOfWork.file.deleteFile(fileId);
-        
+
         // Update lesson file count
         final lesson = await unitOfWork.content.getLesson(fileModel.lessonId);
         if (lesson != null) {
@@ -148,7 +149,7 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
           debugPrint('Failed to delete local file: $e');
         }
       }
-      
+
       // TODO: Add logic to queue deletion from remote storage if it was synced
       if (fileModel.remoteUrl != null) {
         try {
@@ -189,17 +190,17 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
       }
 
       final filesToSync = await localDataSource.getFilesForSync();
-      
+
       for (final file in filesToSync) {
         try {
           // Mark as uploading
           await localDataSource.updateFile(
             file.copyWith(syncStatus: 'uploading'),
           );
-          
+
           // Upload and get updated model
           final syncedFile = await remoteDataSource.uploadFile(file);
-          
+
           // Update local record with synced data
           await localDataSource.updateFile(syncedFile);
         } catch (e) {
@@ -227,15 +228,15 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
 
       final hasSubscription = await subscriptionService.hasActiveSubscription();
       final shouldQueueSync = fileModel.remoteUrl != null && hasSubscription;
-      
+
       final updatedModel = fileModel.copyWith(
         isStarred: isStarred ? 1 : 0,
         updatedAt: DateTime.now().millisecondsSinceEpoch,
         syncStatus: shouldQueueSync ? 'queued' : fileModel.syncStatus,
       );
-      
+
       await localDataSource.updateFile(updatedModel);
-      
+
       // Trigger sync if applicable (fire and forget)
       if (shouldQueueSync) {
         syncFiles();

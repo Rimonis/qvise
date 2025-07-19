@@ -112,7 +112,7 @@ class LessonFiles extends _$LessonFiles {
     final useCase = ref.read(createFileProvider);
     final params = CreateFileParams(lessonId: lessonId, localPath: localPath);
     final result = await useCase(params);
-    
+
     result.fold(
       (failure) => throw failure,
       (_) => ref.invalidateSelf(),
@@ -122,7 +122,7 @@ class LessonFiles extends _$LessonFiles {
   Future<void> deleteFile(String fileId) async {
     final useCase = ref.read(deleteFileProvider);
     final result = await useCase(fileId);
-    
+
     result.fold(
       (failure) => throw failure,
       (_) => ref.invalidateSelf(),
@@ -133,7 +133,7 @@ class LessonFiles extends _$LessonFiles {
     final useCase = ref.read(toggleFileStarredProvider);
     final params = ToggleFileStarredParams(fileId: fileId, isStarred: !currentStatus);
     final result = await useCase(params);
-    
+
     result.fold(
       (failure) => throw failure,
       (_) => ref.invalidateSelf(),
@@ -163,9 +163,4 @@ class StarredFiles extends _$StarredFiles {
 class MockFirebaseStorage {
   // This is a placeholder until firebase_storage is added to pubspec.yaml
   // Once the package is added, replace this with the actual FirebaseStorage.instance
-}
-
-// Extension to access the lessonId parameter in LessonFiles
-extension LessonFilesExtension on LessonFiles {
-  String get lessonId => arg as String;
 }

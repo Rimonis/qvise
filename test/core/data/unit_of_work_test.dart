@@ -15,18 +15,20 @@ void main() {
   late SqliteUnitOfWork unitOfWork;
   late MockContentLocalDataSource mockContentLocalDataSource;
   late MockFlashcardLocalDataSource mockFlashcardLocalDataSource;
+  late MockFileLocalDataSource mockFileLocalDataSource;
   late MockDatabase mockDatabase;
   late MockTransaction mockTransaction;
 
   setUp(() {
     mockContentLocalDataSource = MockContentLocalDataSource();
     mockFlashcardLocalDataSource = MockFlashcardLocalDataSource();
+    mockFileLocalDataSource = MockFileLocalDataSource();
     mockDatabase = MockDatabase();
     mockTransaction = MockTransaction();
     unitOfWork = SqliteUnitOfWork(
       content: mockContentLocalDataSource,
       flashcard: mockFlashcardLocalDataSource,
-      file: MockFileLocalDataSource(),
+      file: mockFileLocalDataSource,
     );
     // Inject the mock database before each test
     AppDatabase.setDatabase(mockDatabase);
