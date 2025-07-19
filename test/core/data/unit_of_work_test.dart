@@ -26,6 +26,7 @@ void main() {
     unitOfWork = SqliteUnitOfWork(
       content: mockContentLocalDataSource,
       flashcard: mockFlashcardLocalDataSource,
+      file: MockFileLocalDataSource(),
     );
     // Inject the mock database before each test
     AppDatabase.setDatabase(mockDatabase);
