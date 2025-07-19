@@ -4,11 +4,13 @@ import 'package:qvise/core/data/database/app_database.dart';
 import 'package:qvise/core/data/datasources/transactional_data_source.dart';
 import 'package:qvise/features/content/data/datasources/content_local_data_source.dart';
 import 'package:qvise/features/flashcards/shared/data/datasources/flashcard_local_data_source.dart';
+import 'package:qvise/features/files/data/datasources/file_local_data_source.dart';
 import 'package:sqflite/sqflite.dart';
 
 abstract class IUnitOfWork {
   ContentLocalDataSource get content;
   FlashcardLocalDataSource get flashcard;
+  FileLocalDataSource get file; // Added this line
   Future<T> transaction<T>(Future<T> Function() action);
 }
 
@@ -17,10 +19,13 @@ class SqliteUnitOfWork implements IUnitOfWork {
   final ContentLocalDataSource content;
   @override
   final FlashcardLocalDataSource flashcard;
+  @override
+  final FileLocalDataSource file; // Added this line
 
   SqliteUnitOfWork({
     required this.content,
     required this.flashcard,
+    required this.file, // Added this parameter
   });
 
   @override
@@ -30,6 +35,7 @@ class SqliteUnitOfWork implements IUnitOfWork {
       // Inject transaction into data sources
       (content as TransactionalDataSource).setTransaction(txn);
       (flashcard as TransactionalDataSource).setTransaction(txn);
+      (file as TransactionalDataSource).setTransaction(txn); // Added this line
 
       try {
         return await action();
@@ -37,6 +43,7 @@ class SqliteUnitOfWork implements IUnitOfWork {
         // Clean up
         (content as TransactionalDataSource).setTransaction(null);
         (flashcard as TransactionalDataSource).setTransaction(null);
+        (file as TransactionalDataSource).setTransaction(null); // Added this line
       }
     });
   }

@@ -25,7 +25,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3, // Increment version for files table
       onCreate: _createAllTables,
       onUpgrade: _onUpgrade,
     );
@@ -36,6 +36,9 @@ class AppDatabase {
     if (oldVersion < 2) {
       await _createConflictsTable(db);
       await AddSyncFieldsMigration.migrate(db);
+    }
+    if (oldVersion < 3) {
+      await _createFilesTable(db);
     }
   }
 
@@ -63,6 +66,32 @@ class AppDatabase {
     await db.execute('CREATE INDEX idx_conflicts_status ON conflicts(status)');
     await db.execute(
         'CREATE INDEX idx_conflicts_entity ON conflicts(entity_type, entity_id)');
+  }
+
+  static Future<void> _createFilesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE files(
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        lesson_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        remote_url TEXT,
+        is_starred INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER,
+        sync_status TEXT NOT NULL DEFAULT 'local_only',
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    ''');
+
+    // Create indexes for files table
+    await db.execute('CREATE INDEX idx_files_lesson ON files(lesson_id)');
+    await db.execute('CREATE INDEX idx_files_user_lesson ON files(user_id, lesson_id)');
+    await db.execute('CREATE INDEX idx_files_starred ON files(is_starred)');
+    await db.execute('CREATE INDEX idx_files_sync ON files(sync_status)');
   }
 
   static Future<void> _createAllTables(Database db, int version) async {
@@ -156,8 +185,12 @@ class AppDatabase {
       )
     ''');
 
+    // Create files table
+    await _createFilesTable(db);
+
     await _createConflictsTable(db);
 
+    // Create indexes
     await db.execute('CREATE INDEX idx_lessons_user ON lessons(userId)');
     await db.execute(
         'CREATE INDEX idx_lessons_subject_topic ON lessons(userId, subjectName, topicName)');

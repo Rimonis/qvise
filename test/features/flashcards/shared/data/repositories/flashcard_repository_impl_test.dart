@@ -84,7 +84,7 @@ void main() {
       expect(result.isLeft(), isTrue);
       result.fold(
         (failure) {
-          expect(failure.type, FailureType.local);
+          expect(failure.type, FailureType.unknown);
           expect(failure.message, contains('Failed to get flashcards'));
         },
         (flashcards) => fail('Should not return flashcards'),

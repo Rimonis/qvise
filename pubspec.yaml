@@ -43,6 +43,13 @@ dependencies:
   uuid: ^4.3.3 # ADDED
   device_info_plus: ^9.1.2 
 
+  file_picker: ^6.1.1
+  image_picker: ^1.0.4
+  open_file_plus: ^3.4.1
+  path_provider: ^2.1.1
+
+
+
   # Other
   flutter_localizations:
     sdk: flutter
