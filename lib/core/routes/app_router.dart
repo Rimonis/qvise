@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:qvise/core/shell%20and%20tabs/main_shell_screen.dart';
+import 'package:qvise/core/shell_and_tabs/main_shell_screen.dart';
 import 'package:qvise/features/auth/presentation/application/auth_providers.dart';
 import 'package:qvise/features/auth/presentation/application/auth_state.dart';
 import 'package:qvise/features/auth/presentation/screens/sign_in_screen.dart';

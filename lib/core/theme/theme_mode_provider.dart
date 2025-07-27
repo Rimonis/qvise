@@ -2,167 +2,81 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 part 'theme_mode_provider.g.dart';
 
-// Provider for the theme mode notifier
 @Riverpod(keepAlive: true)
 class ThemeModeNotifier extends _$ThemeModeNotifier {
-  static const String _themeModeKey = 'theme_mode';
-  SharedPreferences? _prefs;
+  static const String _key = 'theme_mode';
 
   @override
   Future<ThemeMode> build() async {
-    _prefs = await SharedPreferences.getInstance();
-    final savedThemeIndex = _prefs?.getInt(_themeModeKey);
-    
-    if (savedThemeIndex != null && savedThemeIndex < ThemeMode.values.length) {
-      return ThemeMode.values[savedThemeIndex];
+    final prefs = await SharedPreferences.getInstance();
+    final savedMode = prefs.getString(_key);
+    if (savedMode != null) {
+      return ThemeMode.values.firstWhere(
+        (mode) => mode.toString() == savedMode,
+        orElse: () => ThemeMode.system,
+      );
     }
-    
-    // Default to system theme
     return ThemeMode.system;
   }
 
-  Future<void> setThemeMode(ThemeMode themeMode) async {
-    await _prefs?.setInt(_themeModeKey, themeMode.index);
-    state = AsyncValue.data(themeMode);
+  /// Sets the new theme mode simply and directly.
+  Future<void> setThemeMode(ThemeMode mode) async {
+    // Set the state to loading to give feedback in the UI
+    state = const AsyncValue.loading();
+    
+    // Use AsyncValue.guard to handle potential errors during persistence
+    state = await AsyncValue.guard(() async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_key, mode.toString());
+      return mode;
+    });
   }
 
+  /// Cycles through the available theme modes.
   Future<void> toggleTheme() async {
-    final currentTheme = state.valueOrNull ?? ThemeMode.system;
-    final newTheme = switch (currentTheme) {
-      ThemeMode.system => ThemeMode.light,
+    final currentMode = state.valueOrNull ?? ThemeMode.system;
+    final platformBrightness =
+        SchedulerBinding.instance.platformDispatcher.platformBrightness;
+
+    final nextMode = switch (currentMode) {
       ThemeMode.light => ThemeMode.dark,
       ThemeMode.dark => ThemeMode.system,
+      ThemeMode.system =>
+        (platformBrightness == Brightness.dark) ? ThemeMode.light : ThemeMode.dark,
     };
-    await setThemeMode(newTheme);
+
+    await setThemeMode(nextMode);
   }
 
-  Future<void> refreshTheme() async {
+  /// Invalidates the provider to force a reload from storage.
+  void refreshTheme() {
     ref.invalidateSelf();
   }
 }
 
-// Utility functions
-IconData _getThemeIcon(ThemeMode themeMode) {
-  return switch (themeMode) {
-    ThemeMode.system => Icons.brightness_auto,
-    ThemeMode.light => Icons.brightness_high,
-    ThemeMode.dark => Icons.brightness_2,
-  };
-}
-
-String _getThemeName(ThemeMode themeMode) {
-  return switch (themeMode) {
-    ThemeMode.system => 'System',
-    ThemeMode.light => 'Light',
-    ThemeMode.dark => 'Dark',
-  };
-}
-
-// Theme picker dialog
-class ThemePickerDialog extends ConsumerWidget {
-  const ThemePickerDialog({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeModeAsync = ref.watch(themeModeNotifierProvider);
-
-    return AlertDialog(
-      title: const Text('Choose Theme'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: ThemeMode.values.map((themeMode) {
-          return themeModeAsync.when(
-            data: (currentTheme) => RadioListTile<ThemeMode>(
-              title: Row(
-                children: [
-                  Icon(_getThemeIcon(themeMode)),
-                  const SizedBox(width: 12),
-                  Text(_getThemeName(themeMode)),
-                ],
-              ),
-              value: themeMode,
-              groupValue: currentTheme,
-              onChanged: (value) async {
-                if (value != null) {
-                  await ref.read(themeModeNotifierProvider.notifier).setThemeMode(value);
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                }
-              },
-            ),
-            loading: () => const ListTile(
-              title: Text('Loading...'),
-              trailing: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-            error: (_, __) => const ListTile(
-              title: Text('Error loading theme'),
-              leading: Icon(Icons.error),
-            ),
-          );
-        }).toList(),
-      ),
-      actions: [
-        TextButton(
-          onPressed: context.mounted
-              ? () => Navigator.of(context).pop()
-              : null,
-          child: const Text('Cancel'),
-        ),
-      ],
-    );
-  }
-}
-
-// Quick theme toggle button
-class ThemeToggleButton extends ConsumerWidget {
-  const ThemeToggleButton({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeModeAsync = ref.watch(themeModeNotifierProvider);
-
-    return themeModeAsync.when(
-      data: (themeMode) => IconButton(
-        icon: Icon(_getThemeIcon(themeMode)),
-        onPressed: () async {
-          // Clear any existing snackbars before toggling theme
-          ScaffoldMessenger.of(context).clearSnackBars();
-          
-          // Schedule the theme change for the next frame to avoid conflicts
-          SchedulerBinding.instance.scheduleFrameCallback((_) {
-            if (context.mounted) {
-              ref.read(themeModeNotifierProvider.notifier).toggleTheme();
-            }
-          });
-        },
-        tooltip: 'Toggle theme (${_getThemeName(themeMode)})',
-      ),
-      loading: () => const IconButton(
-        icon: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-        onPressed: null,
-        tooltip: 'Loading theme...',
-      ),
-      error: (error, _) => IconButton(
-        icon: const Icon(Icons.error_outline),
-        onPressed: () {
-          ref.read(themeModeNotifierProvider.notifier).refreshTheme();
-        },
-        tooltip: 'Theme error - tap to retry',
-      ),
-    );
-  }
+@riverpod
+bool isDarkMode(Ref ref) {
+  final themeModeAsync = ref.watch(themeModeNotifierProvider);
+  return themeModeAsync.when(
+    data: (themeMode) {
+      return switch (themeMode) {
+        ThemeMode.dark => true,
+        ThemeMode.light => false,
+        ThemeMode.system =>
+          SchedulerBinding.instance.platformDispatcher.platformBrightness ==
+          Brightness.dark,
+      };
+    },
+    loading: () =>
+        SchedulerBinding.instance.platformDispatcher.platformBrightness ==
+        Brightness.dark,
+    error: (_, __) =>
+        SchedulerBinding.instance.platformDispatcher.platformBrightness ==
+        Brightness.dark,
+  );
 }

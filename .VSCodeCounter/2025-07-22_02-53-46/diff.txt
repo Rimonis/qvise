@@ -1,0 +1,43 @@
+Date : 2025-07-22 02:53:46
+Directory : d:\Codes\Test\Flutter\qvise\lib
+Total : 8 files,  302 codes, 5 comments, 47 blanks, all 354 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Dart     |          8 |        302 |          5 |         47 |        354 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                              | files      | code       | comment    | blank      | total      |
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                 |          8 |        302 |          5 |         47 |        354 |
+| core                                                                                              |          4 |       -349 |        -15 |        -21 |       -385 |
+| core\shell and tabs                                                                               |          3 |       -232 |         15 |         -1 |       -218 |
+| core\theme                                                                                        |          1 |       -117 |        -30 |        -20 |       -167 |
+| features                                                                                          |          4 |        651 |         20 |         68 |        739 |
+| features\content                                                                                  |          3 |        627 |         13 |         58 |        698 |
+| features\content\presentation                                                                     |          3 |        627 |         13 |         58 |        698 |
+| features\content\presentation\screens                                                             |          2 |        695 |         17 |         60 |        772 |
+| features\content\presentation\widgets                                                             |          1 |        -68 |         -4 |         -2 |        -74 |
+| features\files                                                                                    |          1 |         24 |          7 |         10 |         41 |
+| features\files\presentation                                                                       |          1 |         24 |          7 |         10 |         41 |
+| features\files\presentation\widgets                                                               |          1 |         24 |          7 |         10 |         41 |
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++---------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                          | language | code       | comment    | blank      | total      |
++---------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| d:\Codes\Test\Flutter\qvise\lib\core\shell and tabs\browse_tab.dart                               | Dart     |       -213 |          6 |         -3 |       -210 |
+| d:\Codes\Test\Flutter\qvise\lib\core\shell and tabs\create_tab.dart                               | Dart     |          3 |         10 |          3 |         16 |
+| d:\Codes\Test\Flutter\qvise\lib\core\shell and tabs\profile_tab.dart                              | Dart     |        -22 |         -1 |         -1 |        -24 |
+| d:\Codes\Test\Flutter\qvise\lib\core\theme\theme_mode_provider.dart                               | Dart     |       -117 |        -30 |        -20 |       -167 |
+| d:\Codes\Test\Flutter\qvise\lib\features\content\presentation\screens\lesson_screen.dart          | Dart     |        698 |         12 |         50 |        760 |
+| d:\Codes\Test\Flutter\qvise\lib\features\content\presentation\screens\unlocked_lesson_screen.dart | Dart     |         -3 |          5 |         10 |         12 |
+| d:\Codes\Test\Flutter\qvise\lib\features\content\presentation\widgets\unlocked_lesson_card.dart   | Dart     |        -68 |         -4 |         -2 |        -74 |
+| d:\Codes\Test\Flutter\qvise\lib\features\files\presentation\widgets\file_list_widget.dart         | Dart     |         24 |          7 |         10 |         41 |
+| Total                                                                                             |          |        302 |          5 |         47 |        354 |
++---------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
