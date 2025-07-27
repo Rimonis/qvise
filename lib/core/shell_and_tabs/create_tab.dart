@@ -1,14 +1,16 @@
-// lib/core/shell and tabs/create_tab.dart
+// lib/core/shell_and_tabs/create_tab.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:visibility_detector/visibility_detector.dart'; // Import the package
 import 'package:qvise/core/providers/network_status_provider.dart';
+import 'package:qvise/core/routes/route_names.dart';
 import 'package:qvise/features/content/domain/entities/lesson.dart';
 import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
-import 'package:qvise/features/content/presentation/screens/create_lesson_screen.dart';
-import 'package:qvise/features/content/presentation/screens/lesson_screen.dart';
-import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card.dart';
 import 'package:qvise/features/content/presentation/widgets/content_loading_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
+import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card.dart';
+import 'package:qvise/core/theme/app_colors.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
 
@@ -19,198 +21,196 @@ class CreateTab extends ConsumerStatefulWidget {
   ConsumerState<CreateTab> createState() => _CreateTabState();
 }
 
-class _CreateTabState extends ConsumerState<CreateTab> {
+class _CreateTabState extends ConsumerState<CreateTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  Future<void> _handleRefresh() async {
+    await ref.refresh(unlockedLessonsProvider.future);
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     final unlockedLessonsAsync = ref.watch(unlockedLessonsProvider);
-    final isOnline = ref.watch(networkStatusProvider).valueOrNull ?? false;
-    
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create'),
-        centerTitle: false,
-        actions: [
-          IconButton(
-            onPressed: isOnline ? _navigateToCreateLesson : null,
-            icon: const Icon(Icons.add),
-            tooltip: 'Create New Lesson',
-          ),
-        ],
-      ),
-      body: unlockedLessonsAsync.when(
-        data: (lessons) {
-          if (lessons.isEmpty) {
-            return _buildEmptyState();
-          }
-          
-          return RefreshIndicator(
-            onRefresh: () => ref.refresh(unlockedLessonsProvider.future),
-            child: CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: AppSpacing.screenPaddingAll,
-                  sliver: SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Unlocked Lessons',
-                          style: context.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          'Continue working on your lessons or create a new one',
-                          style: context.textTheme.bodyMedium?.copyWith(
-                            color: context.textSecondaryColor,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final lesson = lessons[index];
+    final isOnline = ref.watch(networkStatusProvider).asData?.value ?? false;
+
+    // THE FIX: Use VisibilityDetector to refresh data when the tab becomes visible.
+    return VisibilityDetector(
+      key: const Key('create_tab_visibility_detector'),
+      onVisibilityChanged: (visibilityInfo) {
+        // When the tab is fully visible, invalidate the provider to refetch.
+        if (visibilityInfo.visibleFraction == 1.0) {
+          ref.invalidate(unlockedLessonsProvider);
+        }
+      },
+      child: isOnline
+          ? unlockedLessonsAsync.when(
+              data: (unlockedLessons) {
+                if (unlockedLessons.isEmpty) {
+                  return EmptyContentWidget(
+                    icon: Icons.edit_note_sharp,
+                    title: 'Start Creating',
+                    description:
+                        'Create your first lesson and start building your knowledge base!',
+                    buttonText: 'Create Lesson',
+                    onButtonPressed: () => context.push(RouteNames.subjectSelection),
+                  );
+                }
+                return Scaffold(
+                  body: RefreshIndicator(
+                    onRefresh: _handleRefresh,
+                    child: ListView.builder(
+                      padding: AppSpacing.screenPaddingAll,
+                      itemCount: unlockedLessons.length,
+                      itemBuilder: (context, index) {
+                        final lesson = unlockedLessons[index];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: AppSpacing.md),
                           child: UnlockedLessonCard(
                             lesson: lesson,
-                            onTap: () => _navigateToLesson(lesson),
-                            onLessonUpdated: () => _refreshAfterLessonUpdate(lesson),
+                            onTap: () => context
+                                .push('${RouteNames.app}/lesson/${lesson.id}'),
+                            onDelete: () =>
+                                _showDeleteDialog(context, ref, lesson),
                           ),
                         );
                       },
-                      childCount: lessons.length,
                     ),
                   ),
+                  floatingActionButton: FloatingActionButton.extended(
+                    onPressed: () => context.push(RouteNames.subjectSelection),
+                    icon: const Icon(Icons.add),
+                    label: const Text('New Lesson'),
+                  ),
+                );
+              },
+              loading: () =>
+                  const ContentLoadingWidget(message: 'Loading lessons...'),
+              error: (error, stack) => Center(
+                child: Padding(
+                  padding: AppSpacing.screenPaddingAll,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          size: 64, color: AppColors.error),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Error: ${error.toString()}',
+                        textAlign: TextAlign.center,
+                        style: context.textTheme.titleMedium
+                            ?.copyWith(color: AppColors.error),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      ElevatedButton.icon(
+                        onPressed: () => ref.invalidate(unlockedLessonsProvider),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          );
-        },
-        loading: () => const ContentLoadingWidget(message: 'Loading lessons...'),
-        error: (error, stack) => _buildErrorState(error.toString()),
-      ),
-      floatingActionButton: isOnline
-          ? FloatingActionButton.extended(
-              onPressed: _navigateToCreateLesson,
-              icon: const Icon(Icons.add),
-              label: const Text('New Lesson'),
+              ),
             )
-          : null,
+          : _buildOfflineWidget(), // Extracted offline UI to a helper method
     );
   }
 
-  Widget _buildEmptyState() {
-    return EmptyContentWidget(
-      icon: Icons.create,
-      title: 'No Lessons Yet',
-      description: 'Create your first lesson to start learning!',
-      buttonText: 'Create Lesson',
-      onButtonPressed: _navigateToCreateLesson,
-    );
-  }
-
-  Widget _buildErrorState(String error) {
+  Widget _buildOfflineWidget() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'Error Loading Lessons',
-            style: context.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
+      child: Padding(
+        padding: AppSpacing.screenPaddingAll,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.wifi_off, size: 64, color: context.textTertiaryColor),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Internet connection required',
+              style: context.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            error,
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: context.textSecondaryColor,
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Please connect to the internet to create and edit lessons.',
+              textAlign: TextAlign.center,
+              style: context.textTheme.bodyLarge,
             ),
-            textAlign: TextAlign.center,
+            const SizedBox(height: AppSpacing.lg),
+            ElevatedButton.icon(
+              onPressed: () {
+                ref.read(networkStatusProvider.notifier).checkNow();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context, WidgetRef ref, Lesson lesson) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Lesson?'),
+        content: Text(
+          'Are you sure you want to delete "${lesson.displayTitle}"?\n\n'
+          'This will also delete all flashcards in this lesson.\n\n'
+          'This action cannot be undone.',
+          style: context.textTheme.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          ElevatedButton.icon(
-            onPressed: () {
-              ref.invalidate(unlockedLessonsProvider);
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              try {
+                await ref
+                    .read(lessonsNotifierProvider(
+                            subjectName: lesson.subjectName,
+                            topicName: lesson.topicName)
+                        .notifier)
+                    .deleteLesson(lesson.id);
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content:
+                          Text('Lesson and flashcards deleted successfully'),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete: ${e.toString()}'),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
             },
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
-  }
-
-  void _navigateToCreateLesson() async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const CreateLessonScreen(),
-      ),
-    );
-
-    // If a lesson was created, refresh the UI
-    if (result == true) {
-      _refreshAfterLessonCreation();
-    }
-  }
-
-  // Updated to use unified LessonScreen
-  void _navigateToLesson(Lesson lesson) async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => LessonScreen(lessonId: lesson.id),
-      ),
-    );
-
-    // Refresh when returning from lesson screen
-    if (result == true) {
-      _refreshAfterLessonUpdate(lesson);
-    }
-  }
-
-  void _refreshAfterLessonCreation() {
-    // Invalidate all relevant providers to refresh the UI
-    ref.invalidate(unlockedLessonsProvider);
-    ref.invalidate(subjectsNotifierProvider);
-    // Also invalidate any cached subject/topic providers
-    // Fixed: Changed from named parameter to positional parameter
-    ref.invalidate(topicsNotifierProvider);
-    ref.invalidate(lessonsNotifierProvider);
-    
-    // Show success message
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lesson created successfully!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    });
-  }
-
-  void _refreshAfterLessonUpdate(Lesson lesson) {
-    // Refresh providers related to the specific lesson
-    ref.invalidate(unlockedLessonsProvider);
-    ref.invalidate(lessonProvider(lesson.id));
-    
-    // Also refresh subject/topic level providers
-    ref.invalidate(subjectsNotifierProvider);
-    // Fixed: Changed from named parameter to positional parameter
-    ref.invalidate(topicsNotifierProvider(lesson.subjectName));
-    ref.invalidate(lessonsNotifierProvider(subjectName: lesson.subjectName, topicName: lesson.topicName));
   }
 }

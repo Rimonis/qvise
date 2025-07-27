@@ -1,136 +1,118 @@
 // lib/features/content/presentation/widgets/unlocked_lesson_card.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qvise/features/content/domain/entities/lesson.dart';
-import 'package:qvise/features/content/presentation/screens/lesson_screen.dart';
-import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_count_provider.dart';
-import 'package:qvise/features/files/presentation/providers/file_providers.dart';
+import 'package:qvise/core/theme/app_colors.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
+import 'package:qvise/features/content/domain/entities/lesson.dart';
 
-class UnlockedLessonCard extends ConsumerWidget {
+class UnlockedLessonCard extends StatelessWidget {
   final Lesson lesson;
-  final VoidCallback? onTap;
-  final VoidCallback? onLessonUpdated;
+  final VoidCallback onTap;
+  final VoidCallback? onDelete; // The onDelete callback is now correctly added
 
   const UnlockedLessonCard({
     super.key,
     required this.lesson,
-    this.onTap,
-    this.onLessonUpdated,
+    required this.onTap,
+    this.onDelete, // Added to the constructor
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final flashcardCount = ref.watch(flashcardCountProvider(lesson.id));
-    final filesAsync = ref.watch(lessonFilesProvider(lesson.id));
-    final fileCount = filesAsync.maybeWhen(
-      data: (files) => files.length,
-      orElse: () => 0,
-    );
-
+  Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: 1,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+        side: BorderSide(color: context.borderColor),
+      ),
       child: InkWell(
-        onTap: onTap ?? () => _navigateToLesson(context),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
         child: Padding(
-          padding: AppSpacing.paddingAllMd,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.md,
+            horizontal: AppSpacing.lg,
+          ),
+          child: Row(
             children: [
-              // Header
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          lesson.displayTitle,
-                          style: context.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          '${lesson.subjectName} › ${lesson.topicName}',
-                          style: context.textTheme.bodySmall?.copyWith(
-                            color: context.textSecondaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.xs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.edit,
-                          size: 14,
-                          color: Colors.orange[700],
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Text(
-                          'Editing',
-                          style: TextStyle(
-                            color: Colors.orange[700],
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              
-              // Content Stats
-              Row(
-                children: [
-                  _buildStatChip(
-                    context,
-                    icon: Icons.style,
-                    label: 'Flashcards',
-                    count: flashcardCount.asData?.value ?? 0,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  _buildStatChip(
-                    context,
-                    icon: Icons.attach_file,
-                    label: 'Files',
-                    count: fileCount,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  _buildStatChip(
-                    context,
-                    icon: Icons.note,
-                    label: 'Notes',
-                    count: 0, // Notes not implemented yet
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              
-              // Action Button
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: onTap ?? () => _navigateToLesson(context),
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Add Content'),
+              // Icon representing the lesson/content
+              Container(
+                padding: AppSpacing.paddingAllMd,
+                decoration: BoxDecoration(
+                  color: context.surfaceVariantColor,
+                  shape: BoxShape.circle,
                 ),
+                child: Icon(
+                  Icons.edit_note,
+                  color: context.primaryColor,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              // Lesson details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lesson.displayTitle,
+                      style: context.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      '${lesson.subjectName} > ${lesson.topicName}',
+                      style: context.textTheme.bodySmall
+                          ?.copyWith(color: context.textSecondaryColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        _buildStatChip(
+                          context,
+                          '${lesson.flashcardCount}',
+                          'Cards',
+                          Icons.style_outlined,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        _buildStatChip(
+                          context,
+                          '${(lesson.proficiency * 100).toInt()}%',
+                          'Mastery',
+                          Icons.psychology_alt_outlined,
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              // Trailing icons (edit and delete)
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 18,
+                  ),
+                  // The delete button is now correctly placed and functional
+                  if (onDelete != null)
+                    IconButton(
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: context.textTertiaryColor,
+                      ),
+                      onPressed: onDelete,
+                      tooltip: 'Delete Lesson',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                ],
               ),
             ],
           ),
@@ -140,23 +122,17 @@ class UnlockedLessonCard extends ConsumerWidget {
   }
 
   Widget _buildStatChip(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required int count,
-  }) {
+      BuildContext context, String value, String label, IconData icon) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: context.surfaceVariantColor,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
-        border: Border.all(color: context.borderColor),
+        color: context.surfaceVariantColor.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
@@ -165,27 +141,18 @@ class UnlockedLessonCard extends ConsumerWidget {
           ),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            count.toString(),
+            value,
             style: context.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.bold,
             ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            label,
+            style: context.textTheme.bodySmall,
           ),
         ],
       ),
     );
-  }
-
-  void _navigateToLesson(BuildContext context) async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => LessonScreen(lessonId: lesson.id), // Using unified screen
-      ),
-    );
-    
-    // If the lesson was modified, trigger the callback to refresh the parent
-    if (result == true || onLessonUpdated != null) {
-      onLessonUpdated?.call();
-    }
   }
 }
