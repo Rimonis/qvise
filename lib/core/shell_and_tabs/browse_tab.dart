@@ -2,12 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/core/providers/network_status_provider.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/content/domain/entities/subject.dart';
 import 'package:qvise/features/content/domain/entities/topic.dart';
 import 'package:qvise/features/content/domain/entities/lesson.dart';
 import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
 import 'package:qvise/features/content/presentation/providers/content_providers.dart';
 import 'package:qvise/features/content/presentation/providers/tab_navigation_provider.dart';
+import 'package:qvise/features/content/presentation/providers/content_error_handler.dart';
 import 'package:qvise/features/content/presentation/widgets/browse_subject_card.dart';
 import 'package:qvise/features/content/presentation/widgets/topic_tile.dart';
 import 'package:qvise/features/content/presentation/widgets/lesson_card.dart';
@@ -79,7 +81,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
   }
 
   Widget _buildSubjectsView(bool isOnline) {
-    final subjectsAsync = ref.watch(subjectsNotifierProvider);
+    final subjectsAsync = ref.watch(subjectsNotifierProvider).handleError(ref);
 
     return subjectsAsync.when(
       data: (subjects) {
@@ -123,13 +125,15 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
       },
       loading: () =>
           const ContentLoadingWidget(message: 'Loading subjects...'),
-      error: (error, stack) =>
-          _buildErrorView(() => ref.invalidate(subjectsNotifierProvider)),
+      error: (error, stack) => _buildErrorView(
+        message: _getErrorMessage(error), 
+        onRetry: () => ref.invalidate(subjectsNotifierProvider),
+      ),
     );
   }
 
   Widget _buildTopicsView(String subjectName, bool isOnline) {
-    final topicsAsync = ref.watch(topicsNotifierProvider(subjectName));
+    final topicsAsync = ref.watch(topicsNotifierProvider(subjectName)).handleError(ref);
 
     return Column(
       children: [
@@ -181,7 +185,9 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
             loading: () =>
                 const ContentLoadingWidget(message: 'Loading topics...'),
             error: (error, stack) => _buildErrorView(
-                () => ref.invalidate(topicsNotifierProvider(subjectName))),
+              message: _getErrorMessage(error),
+              onRetry: () => ref.invalidate(topicsNotifierProvider(subjectName)),
+            ),
           ),
         ),
       ],
@@ -189,7 +195,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
   }
 
   Widget _buildLessonsView(String subjectName, String topicName, bool isOnline) {
-    final lessonsAsync = ref.watch(lessonsNotifierProvider(subjectName: subjectName, topicName: topicName));
+    final lessonsAsync = ref.watch(lessonsNotifierProvider(subjectName: subjectName, topicName: topicName)).handleError(ref);
 
     return Column(
       children: [
@@ -245,8 +251,11 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
             },
             loading: () =>
                 const ContentLoadingWidget(message: 'Loading lessons...'),
-            error: (error, stack) => _buildErrorView(() => ref.invalidate(
-                lessonsNotifierProvider(subjectName: subjectName, topicName: topicName))),
+            error: (error, stack) => _buildErrorView(
+              message: _getErrorMessage(error),
+              onRetry: () => ref.invalidate(
+                lessonsNotifierProvider(subjectName: subjectName, topicName: topicName)),
+            ),
           ),
         ),
       ],
@@ -417,12 +426,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
             onPressed: () async {
               if (hasLockedLessons && confirmController.text != 'CONFIRM') {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please type CONFIRM to delete'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
+                  _showErrorSnackBar(context, 'Please type CONFIRM to delete');
                 }
                 return;
               }
@@ -440,12 +444,8 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: ${e.toString()}'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
+                  final errorMessage = _getErrorMessage(e);
+                  _showErrorSnackBar(context, errorMessage);
                 }
               }
             },
@@ -550,12 +550,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
             onPressed: () async {
               if (hasLockedLessons && confirmController.text != 'CONFIRM') {
                 if(context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please type CONFIRM to delete'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
+                  _showErrorSnackBar(context, 'Please type CONFIRM to delete');
                 }
                 return;
               }
@@ -573,12 +568,8 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                 }
               } catch (e) {
                 if(context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: ${e.toString()}'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
+                  final errorMessage = _getErrorMessage(e);
+                  _showErrorSnackBar(context, errorMessage);
                 }
               }
             },
@@ -683,12 +674,8 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
                 }
               } catch (e) {
                 if(context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: ${e.toString()}'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
+                  final errorMessage = _getErrorMessage(e);
+                  _showErrorSnackBar(context, errorMessage);
                 }
               }
             },
@@ -703,7 +690,7 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
     );
   }
 
-  Widget _buildErrorView(VoidCallback onRetry) {
+  Widget _buildErrorView({required String message, required VoidCallback onRetry}) {
     return Center(
       child: Padding(
         padding: AppSpacing.screenPaddingAll,
@@ -713,7 +700,8 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
             const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Something went wrong',
+              message,
+              textAlign: TextAlign.center,
               style: context.textTheme.titleMedium?.copyWith(
                 color: AppColors.error,
               ),
@@ -732,5 +720,28 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
 
   String _formatDate(DateTime date) {
     return DateFormat('dd/MM/yyyy').format(date);
+  }
+
+  /// Utility method to extract user-friendly error messages
+  String _getErrorMessage(dynamic error) {
+    if (error is AppFailure) {
+      return error.userFriendlyMessage;
+    } else if (error is ContentError) {
+      return error.userFriendlyMessage;
+    } else if (error is String) {
+      return error;
+    } else {
+      return 'Something went wrong. Please try again.';
+    }
+  }
+
+  /// Utility method to show error snackbars consistently
+  void _showErrorSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+      ),
+    );
   }
 }

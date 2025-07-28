@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:visibility_detector/visibility_detector.dart'; // Import the package
 import 'package:qvise/core/providers/network_status_provider.dart';
 import 'package:qvise/core/routes/route_names.dart';
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/content/domain/entities/lesson.dart';
 import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
+import 'package:qvise/features/content/presentation/providers/content_error_handler.dart';
 import 'package:qvise/features/content/presentation/widgets/content_loading_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card.dart';
@@ -34,7 +36,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final unlockedLessonsAsync = ref.watch(unlockedLessonsProvider);
+    final unlockedLessonsAsync = ref.watch(unlockedLessonsProvider).handleError(ref);
     final isOnline = ref.watch(networkStatusProvider).asData?.value ?? false;
 
     // THE FIX: Use VisibilityDetector to refresh data when the tab becomes visible.
@@ -89,30 +91,9 @@ class _CreateTabState extends ConsumerState<CreateTab>
               },
               loading: () =>
                   const ContentLoadingWidget(message: 'Loading lessons...'),
-              error: (error, stack) => Center(
-                child: Padding(
-                  padding: AppSpacing.screenPaddingAll,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 64, color: AppColors.error),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'Error: ${error.toString()}',
-                        textAlign: TextAlign.center,
-                        style: context.textTheme.titleMedium
-                            ?.copyWith(color: AppColors.error),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      ElevatedButton.icon(
-                        onPressed: () => ref.invalidate(unlockedLessonsProvider),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                ),
+              error: (error, stack) => _buildErrorView(
+                message: _getErrorMessage(error),
+                onRetry: () => ref.invalidate(unlockedLessonsProvider),
               ),
             )
           : _buildOfflineWidget(), // Extracted offline UI to a helper method
@@ -154,16 +135,85 @@ class _CreateTabState extends ConsumerState<CreateTab>
     );
   }
 
+  Widget _buildErrorView({required String message, required VoidCallback onRetry}) {
+    return Center(
+      child: Padding(
+        padding: AppSpacing.screenPaddingAll,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: context.textTheme.titleMedium?.copyWith(
+                color: AppColors.error,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showDeleteDialog(BuildContext context, WidgetRef ref, Lesson lesson) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Lesson?'),
-        content: Text(
-          'Are you sure you want to delete "${lesson.displayTitle}"?\n\n'
-          'This will also delete all flashcards in this lesson.\n\n'
-          'This action cannot be undone.',
-          style: context.textTheme.bodyMedium,
+        title: Text(
+          'Delete Lesson?',
+          style: context.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: context.textPrimaryColor,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: AppSpacing.paddingAllSm,
+              decoration: BoxDecoration(
+                color: context.infoColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                border: Border.all(
+                  color: context.infoColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                'Lesson: ${lesson.displayTitle}',
+                style: context.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: context.textPrimaryColor,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: AppSpacing.paddingAllSm,
+              decoration: BoxDecoration(
+                color: context.errorColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                border: Border.all(
+                  color: context.errorColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                'This will also delete all flashcards in this lesson.\n\nThis action cannot be undone.',
+                style: context.textTheme.bodyMedium?.copyWith(
+                  color: AppColors.errorDark,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -193,13 +243,8 @@ class _CreateTabState extends ConsumerState<CreateTab>
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to delete: ${e.toString()}'),
-                      backgroundColor: AppColors.error,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                  final errorMessage = _getErrorMessage(e);
+                  _showErrorSnackBar(context, errorMessage);
                 }
               }
             },
@@ -210,6 +255,30 @@ class _CreateTabState extends ConsumerState<CreateTab>
             child: const Text('Delete'),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Utility method to extract user-friendly error messages
+  String _getErrorMessage(dynamic error) {
+    if (error is AppFailure) {
+      return error.userFriendlyMessage;
+    } else if (error is ContentError) {
+      return error.userFriendlyMessage;
+    } else if (error is String) {
+      return error;
+    } else {
+      return 'Something went wrong. Please try again.';
+    }
+  }
+
+  /// Utility method to show error snackbars consistently
+  void _showErrorSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
