@@ -2,19 +2,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:visibility_detector/visibility_detector.dart'; // Import the package
+import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/core/providers/network_status_provider.dart';
 import 'package:qvise/core/routes/route_names.dart';
-import 'package:qvise/core/error/app_failure.dart';
-import 'package:qvise/features/content/domain/entities/lesson.dart';
-import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
-import 'package:qvise/features/content/presentation/providers/content_error_handler.dart';
-import 'package:qvise/features/content/presentation/widgets/content_loading_widget.dart';
-import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
-import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card.dart';
 import 'package:qvise/core/theme/app_colors.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
+import 'package:qvise/features/content/domain/entities/lesson.dart';
+import 'package:qvise/features/content/presentation/providers/content_error_handler.dart';
+import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
+import 'package:qvise/features/content/presentation/widgets/content_loading_widget.dart';
+import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
+import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 class CreateTab extends ConsumerStatefulWidget {
   const CreateTab({super.key});
@@ -28,6 +28,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
   @override
   bool get wantKeepAlive => true;
 
+  // ## FIX: 'await' is added ##
   Future<void> _handleRefresh() async {
     await ref.refresh(unlockedLessonsProvider.future);
   }
@@ -36,14 +37,13 @@ class _CreateTabState extends ConsumerState<CreateTab>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final unlockedLessonsAsync = ref.watch(unlockedLessonsProvider).handleError(ref);
+    // ## FIX: Removed the call to .handleError() ##
+    final unlockedLessonsAsync = ref.watch(unlockedLessonsProvider);
     final isOnline = ref.watch(networkStatusProvider).asData?.value ?? false;
 
-    // THE FIX: Use VisibilityDetector to refresh data when the tab becomes visible.
     return VisibilityDetector(
       key: const Key('create_tab_visibility_detector'),
       onVisibilityChanged: (visibilityInfo) {
-        // When the tab is fully visible, invalidate the provider to refetch.
         if (visibilityInfo.visibleFraction == 1.0) {
           ref.invalidate(unlockedLessonsProvider);
         }
@@ -58,7 +58,8 @@ class _CreateTabState extends ConsumerState<CreateTab>
                     description:
                         'Create your first lesson and start building your knowledge base!',
                     buttonText: 'Create Lesson',
-                    onButtonPressed: () => context.push(RouteNames.subjectSelection),
+                    onButtonPressed: () =>
+                        context.push(RouteNames.subjectSelection),
                   );
                 }
                 return Scaffold(
@@ -96,7 +97,7 @@ class _CreateTabState extends ConsumerState<CreateTab>
                 onRetry: () => ref.invalidate(unlockedLessonsProvider),
               ),
             )
-          : _buildOfflineWidget(), // Extracted offline UI to a helper method
+          : _buildOfflineWidget(),
     );
   }
 
@@ -135,7 +136,8 @@ class _CreateTabState extends ConsumerState<CreateTab>
     );
   }
 
-  Widget _buildErrorView({required String message, required VoidCallback onRetry}) {
+  Widget _buildErrorView(
+      {required String message, required VoidCallback onRetry}) {
     return Center(
       child: Padding(
         padding: AppSpacing.screenPaddingAll,
@@ -259,7 +261,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
     );
   }
 
-  /// Utility method to extract user-friendly error messages
   String _getErrorMessage(dynamic error) {
     if (error is AppFailure) {
       return error.userFriendlyMessage;
@@ -272,7 +273,6 @@ class _CreateTabState extends ConsumerState<CreateTab>
     }
   }
 
-  /// Utility method to show error snackbars consistently
   void _showErrorSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

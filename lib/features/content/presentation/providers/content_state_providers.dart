@@ -72,14 +72,22 @@ class SubjectsNotifier extends _$SubjectsNotifier {
     );
   }
 
+  // ## FIX: The 'handleError' call is removed and logic is handled directly ##
   Future<void> refresh() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
+    final newState = await AsyncValue.guard(() async {
       final getSubjectsUseCase = ref.read(getSubjectsProvider);
       final result = await getSubjectsUseCase();
-      return result.fold((l) => throw l.userFriendlyMessage, (r) => r);
+      return result.fold((l) => throw l, (r) => r);
     });
-    state = state.handleError(ref);
+
+    if (newState.hasError) {
+      final contentError = ContentError.fromException(newState.error, newState.stackTrace);
+      ref.read(contentErrorHandlerProvider.notifier).logError(contentError);
+      state = AsyncValue.error(contentError.userFriendlyMessage, newState.stackTrace ?? StackTrace.current);
+    } else {
+      state = newState;
+    }
   }
 
   Future<void> deleteSubject(String subjectName) async {
@@ -89,8 +97,8 @@ class SubjectsNotifier extends _$SubjectsNotifier {
 
     result.fold(
       (failure) => state = AsyncValue.error(failure.userFriendlyMessage, StackTrace.current),
-      (_) async {
-        await refresh();
+      (_) {
+        ref.invalidateSelf(); // Let the provider rebuild itself
         ref.invalidate(dueLessonsProvider);
         ref.invalidate(unlockedLessonsProvider);
       },
@@ -115,14 +123,22 @@ class TopicsNotifier extends _$TopicsNotifier {
     );
   }
 
+  // ## FIX: The 'handleError' call is removed and logic is handled directly ##
   Future<void> refresh() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      final getTopicsUseCase = ref.read(getTopicsBySubjectProvider);
-      final result = await getTopicsUseCase(subjectName);
-      return result.fold((l) => throw l.userFriendlyMessage, (r) => r);
+    final newState = await AsyncValue.guard(() async {
+        final getTopicsUseCase = ref.read(getTopicsBySubjectProvider);
+        final result = await getTopicsUseCase(subjectName);
+        return result.fold((l) => throw l, (r) => r);
     });
-    state = state.handleError(ref);
+
+    if (newState.hasError) {
+      final contentError = ContentError.fromException(newState.error, newState.stackTrace);
+      ref.read(contentErrorHandlerProvider.notifier).logError(contentError);
+      state = AsyncValue.error(contentError.userFriendlyMessage, newState.stackTrace ?? StackTrace.current);
+    } else {
+      state = newState;
+    }
   }
 
   Future<void> deleteTopic(String topicName) async {
@@ -132,8 +148,8 @@ class TopicsNotifier extends _$TopicsNotifier {
 
     result.fold(
       (failure) => state = AsyncValue.error(failure.userFriendlyMessage, StackTrace.current),
-      (_) async {
-        await refresh();
+      (_) {
+        ref.invalidateSelf();
         ref.invalidate(subjectsNotifierProvider);
         ref.invalidate(dueLessonsProvider);
         ref.invalidate(unlockedLessonsProvider);
@@ -159,14 +175,22 @@ class LessonsNotifier extends _$LessonsNotifier {
     );
   }
 
+  // ## FIX: The 'handleError' call is removed and logic is handled directly ##
   Future<void> refresh() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      final getLessonsUseCase = ref.read(getLessonsByTopicProvider);
-      final result = await getLessonsUseCase(subjectName, topicName);
-      return result.fold((l) => throw l.userFriendlyMessage, (r) => r);
+    final newState = await AsyncValue.guard(() async {
+        final getLessonsUseCase = ref.read(getLessonsByTopicProvider);
+        final result = await getLessonsUseCase(subjectName, topicName);
+        return result.fold((l) => throw l, (r) => r);
     });
-    state = state.handleError(ref);
+
+    if (newState.hasError) {
+      final contentError = ContentError.fromException(newState.error, newState.stackTrace);
+      ref.read(contentErrorHandlerProvider.notifier).logError(contentError);
+      state = AsyncValue.error(contentError.userFriendlyMessage, newState.stackTrace ?? StackTrace.current);
+    } else {
+      state = newState;
+    }
   }
 
   Future<void> createNewLesson(CreateLessonParams params) async {
@@ -176,8 +200,8 @@ class LessonsNotifier extends _$LessonsNotifier {
 
     result.fold(
       (failure) => state = AsyncValue.error(failure.userFriendlyMessage, StackTrace.current),
-      (_) async {
-        await refresh();
+      (_) {
+        ref.invalidateSelf();
         ref.invalidate(topicsNotifierProvider(params.subjectName));
         ref.invalidate(subjectsNotifierProvider);
         ref.invalidate(dueLessonsProvider);
@@ -193,8 +217,8 @@ class LessonsNotifier extends _$LessonsNotifier {
 
     result.fold(
       (failure) => state = AsyncValue.error(failure.userFriendlyMessage, StackTrace.current),
-      (_) async {
-        await refresh();
+      (_) {
+        ref.invalidateSelf();
         ref.invalidate(topicsNotifierProvider(subjectName));
         ref.invalidate(subjectsNotifierProvider);
         ref.invalidate(dueLessonsProvider);
@@ -209,8 +233,8 @@ class LessonsNotifier extends _$LessonsNotifier {
 
     result.fold(
       (failure) => state = AsyncValue.error(failure.userFriendlyMessage, StackTrace.current),
-      (_) async {
-        await refresh();
+      (_) {
+        ref.invalidateSelf();
         ref.invalidate(dueLessonsProvider);
         ref.invalidate(unlockedLessonsProvider);
       },

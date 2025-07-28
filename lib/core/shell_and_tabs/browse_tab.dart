@@ -38,21 +38,19 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
 
     return Scaffold(
       appBar: AppBar(
-        // The title changes based on the navigation level
         title: Text(
           _selectedTopic ?? _selectedSubject ?? 'Browse Subjects',
           style: context.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
-        // The back button appears only when navigating into topics or lessons
         leading: (_selectedSubject != null)
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () {
                   setState(() {
                     if (_selectedTopic != null) {
-                      _selectedTopic = null; // Go back from lessons to topics
+                      _selectedTopic = null;
                     } else {
-                      _selectedSubject = null; // Go back from topics to subjects
+                      _selectedSubject = null;
                     }
                   });
                 },
@@ -61,15 +59,13 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
         elevation: 0,
         backgroundColor: Colors.transparent,
       ),
-      // Use an AnimatedSwitcher for smoother transitions between views
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         child: _buildCurrentView(isOnline),
       ),
     );
   }
-  
-  // This helper determines which view to show
+
   Widget _buildCurrentView(bool isOnline) {
     if (_selectedSubject == null) {
       return _buildSubjectsView(isOnline);
@@ -81,7 +77,8 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
   }
 
   Widget _buildSubjectsView(bool isOnline) {
-    final subjectsAsync = ref.watch(subjectsNotifierProvider).handleError(ref);
+    // ## FIX: Removed the call to .handleError() ##
+    final subjectsAsync = ref.watch(subjectsNotifierProvider);
 
     return subjectsAsync.when(
       data: (subjects) {
@@ -126,14 +123,15 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
       loading: () =>
           const ContentLoadingWidget(message: 'Loading subjects...'),
       error: (error, stack) => _buildErrorView(
-        message: _getErrorMessage(error), 
+        message: _getErrorMessage(error),
         onRetry: () => ref.invalidate(subjectsNotifierProvider),
       ),
     );
   }
 
   Widget _buildTopicsView(String subjectName, bool isOnline) {
-    final topicsAsync = ref.watch(topicsNotifierProvider(subjectName)).handleError(ref);
+    // ## FIX: Removed the call to .handleError() ##
+    final topicsAsync = ref.watch(topicsNotifierProvider(subjectName));
 
     return Column(
       children: [
@@ -195,7 +193,8 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
   }
 
   Widget _buildLessonsView(String subjectName, String topicName, bool isOnline) {
-    final lessonsAsync = ref.watch(lessonsNotifierProvider(subjectName: subjectName, topicName: topicName)).handleError(ref);
+    // ## FIX: Removed the call to .handleError() ##
+    final lessonsAsync = ref.watch(lessonsNotifierProvider(subjectName: subjectName, topicName: topicName));
 
     return Column(
       children: [
@@ -722,7 +721,6 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
     return DateFormat('dd/MM/yyyy').format(date);
   }
 
-  /// Utility method to extract user-friendly error messages
   String _getErrorMessage(dynamic error) {
     if (error is AppFailure) {
       return error.userFriendlyMessage;
@@ -735,7 +733,6 @@ class _BrowseTabState extends ConsumerState<BrowseTab> {
     }
   }
 
-  /// Utility method to show error snackbars consistently
   void _showErrorSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
