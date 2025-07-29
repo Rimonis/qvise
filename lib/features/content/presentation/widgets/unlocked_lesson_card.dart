@@ -8,17 +8,20 @@ import 'package:qvise/features/content/domain/entities/lesson.dart';
 class UnlockedLessonCard extends StatelessWidget {
   final Lesson lesson;
   final VoidCallback onTap;
-  final VoidCallback? onDelete; // The onDelete callback is now correctly added
+  final VoidCallback? onDelete;
 
   const UnlockedLessonCard({
     super.key,
     required this.lesson,
     required this.onTap,
-    this.onDelete, // Added to the constructor
+    this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
+    // A lesson is considered "Empty" if it has no content.
+    final bool isEmpty = lesson.flashcardCount == 0 && lesson.fileCount == 0 && lesson.noteCount == 0;
+
     return Card(
       elevation: 1,
       margin: EdgeInsets.zero,
@@ -36,7 +39,7 @@ class UnlockedLessonCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Icon representing the lesson/content
+              // Icon representing the lesson
               Container(
                 padding: AppSpacing.paddingAllMd,
                 decoration: BoxDecoration(
@@ -44,13 +47,13 @@ class UnlockedLessonCard extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.edit_note,
+                  Icons.edit_note_sharp,
                   color: context.primaryColor,
                   size: 28,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
-              // Lesson details
+              // Lesson Title, Path, and Content Counts
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,28 +74,36 @@ class UnlockedLessonCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpacing.sm),
+                    // ## NEW: Content count chips ##
                     Row(
                       children: [
                         _buildStatChip(
                           context,
                           '${lesson.flashcardCount}',
-                          'Cards',
-                          Icons.style_outlined,
+                          Icons.style_outlined, // Flashcards
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         _buildStatChip(
                           context,
-                          '${(lesson.proficiency * 100).toInt()}%',
-                          'Mastery',
-                          Icons.psychology_alt_outlined,
+                          '${lesson.fileCount}',
+                          Icons.attach_file_outlined, // Files
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        _buildStatChip(
+                          context,
+                          '${lesson.noteCount}',
+                          Icons.note_alt_outlined, // Notes
                         ),
                       ],
-                    )
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    // ## NEW: Status indicator ##
+                    _buildStatusIndicator(context, isEmpty),
                   ],
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              // Trailing icons (edit and delete)
+              // Trailing Action Icons
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -100,7 +111,6 @@ class UnlockedLessonCard extends StatelessWidget {
                     Icons.arrow_forward_ios,
                     size: 18,
                   ),
-                  // The delete button is now correctly placed and functional
                   if (onDelete != null)
                     IconButton(
                       icon: Icon(
@@ -121,8 +131,8 @@ class UnlockedLessonCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatChip(
-      BuildContext context, String value, String label, IconData icon) {
+  // A small, reusable widget for displaying content counts.
+  Widget _buildStatChip(BuildContext context, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -146,10 +156,39 @@ class UnlockedLessonCard extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // A new widget to show if the lesson is empty or ready.
+  Widget _buildStatusIndicator(BuildContext context, bool isEmpty) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: isEmpty
+            ? Colors.grey.withOpacity(0.1)
+            : AppColors.success.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isEmpty ? Icons.circle_outlined : Icons.check_circle,
+            size: 14,
+            color: isEmpty ? Colors.grey[600] : AppColors.success,
+          ),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            label,
-            style: context.textTheme.bodySmall,
+            isEmpty ? 'Empty' : 'Ready to Lock',
+            style: context.textTheme.labelSmall?.copyWith(
+              color: isEmpty ? Colors.grey[700] : AppColors.success,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
