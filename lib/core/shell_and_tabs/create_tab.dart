@@ -11,6 +11,7 @@ import 'package:qvise/core/theme/theme_extensions.dart';
 import 'package:qvise/features/content/domain/entities/lesson.dart';
 import 'package:qvise/features/content/presentation/providers/content_error_handler.dart';
 import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
+import 'package:qvise/features/content/presentation/screens/lesson_screen.dart';
 import 'package:qvise/features/content/presentation/widgets/content_loading_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/empty_content_widget.dart';
 import 'package:qvise/features/content/presentation/widgets/unlocked_lesson_card.dart';
@@ -74,10 +75,16 @@ class _CreateTabState extends ConsumerState<CreateTab>
                           padding: const EdgeInsets.only(bottom: AppSpacing.md),
                           child: UnlockedLessonCard(
                             lesson: lesson,
-                            onTap: () => context
-                                .push('${RouteNames.app}/lesson/${lesson.id}'),
-                            onDelete: () =>
-                                _showDeleteDialog(context, ref, lesson),
+                            // OPTION 1: Using GoRouter (cleaner and more consistent)
+                            onTap: () {
+                              context.push('${RouteNames.app}/lesson/${lesson.id}').then((_) {
+                                // Refresh the create tab when returning
+                                ref.invalidate(unlockedLessonsProvider);
+                              });
+                            },
+                            onDelete: isOnline
+                                ? () => _showDeleteDialog(context, ref, lesson)
+                                : null,
                           ),
                         );
                       },

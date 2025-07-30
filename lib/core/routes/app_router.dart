@@ -12,8 +12,8 @@ import 'package:qvise/features/auth/presentation/screens/splash_screen.dart';
 import 'package:qvise/features/auth/presentation/screens/email_verification_screen.dart';
 import 'package:qvise/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:qvise/features/content/presentation/screens/create_lesson_screen.dart';
+import 'package:qvise/features/content/presentation/screens/lesson_screen.dart';
 import 'package:qvise/features/content/presentation/screens/subject_selection_screen.dart';
-import 'package:qvise/features/content/presentation/screens/unlocked_lesson_screen.dart';
 import 'package:qvise/features/flashcards/presentation/screens/flashcard_preview_screen.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'route_guard.dart';
@@ -181,7 +181,7 @@ GoRouter router(Ref ref) {
               final lessonId = state.pathParameters['lessonId']!;
               return _buildPage(
                 key: state.pageKey,
-                child: UnlockedLessonScreen(lessonId: lessonId),
+                child: LessonScreen(lessonId: lessonId),
                 name: 'unlocked-lesson-$lessonId',
               );
             },
