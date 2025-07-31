@@ -13,12 +13,15 @@ import '../../domain/entities/file.dart';
 import '../../domain/repositories/file_repository.dart';
 import '../../domain/usecases/create_file.dart';
 import '../../domain/usecases/delete_file.dart';
-import '../../domain/usecases/delete_files_by_lesson.dart'; // Added import
+import '../../domain/usecases/delete_files_by_lesson.dart';
 import '../../domain/usecases/get_files_by_lesson.dart';
 import '../../domain/usecases/get_starred_files.dart';
 import '../../domain/usecases/sync_files.dart';
 import '../../domain/usecases/toggle_file_starred.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+// Export the params class for use in widgets
+export '../../domain/usecases/toggle_file_starred.dart' show ToggleFileStarredParams;
 
 part 'file_providers.g.dart';
 
@@ -125,49 +128,28 @@ class LessonFiles extends _$LessonFiles {
     final useCase = ref.read(createFileProvider);
     final params = CreateFileParams(lessonId: _lessonId, localPath: localPath);
     final result = await useCase(params);
-
+    
     result.fold(
       (failure) => throw failure,
       (_) => ref.invalidateSelf(),
     );
   }
 
-  Future<void> deleteFile(String fileId) async {
+  Future<void> removeFile(String fileId) async {
     final useCase = ref.read(deleteFileProvider);
     final result = await useCase(fileId);
-
+    
     result.fold(
       (failure) => throw failure,
       (_) => ref.invalidateSelf(),
     );
   }
 
-  Future<void> toggleStar(String fileId, bool currentStatus) async {
+  Future<void> starFile(String fileId, bool isStarred) async {
     final useCase = ref.read(toggleFileStarredProvider);
-    final params = ToggleFileStarredParams(fileId: fileId, isStarred: !currentStatus);
+    final params = ToggleFileStarredParams(fileId: fileId, isStarred: isStarred);
     final result = await useCase(params);
-
-    result.fold(
-      (failure) => throw failure,
-      (_) => ref.invalidateSelf(),
-    );
-  }
-
-  Future<void> deleteFile(String fileId) async {
-    final useCase = ref.read(deleteFileProvider);
-    final result = await useCase(fileId);
-
-    result.fold(
-      (failure) => throw failure,
-      (_) => ref.invalidateSelf(),
-    );
-  }
-
-  Future<void> toggleStar(String fileId, bool currentStatus) async {
-    final useCase = ref.read(toggleFileStarredProvider);
-    final params = ToggleFileStarredParams(fileId: fileId, isStarred: !currentStatus);
-    final result = await useCase(params);
-
+    
     result.fold(
       (failure) => throw failure,
       (_) => ref.invalidateSelf(),
@@ -175,7 +157,7 @@ class LessonFiles extends _$LessonFiles {
   }
 }
 
-// Starred files for the Browse tab
+// Starred files provider
 @riverpod
 class StarredFiles extends _$StarredFiles {
   @override
@@ -188,13 +170,7 @@ class StarredFiles extends _$StarredFiles {
     );
   }
 
-  void refresh() {
+  Future<void> refresh() async {
     ref.invalidateSelf();
   }
-}
-
-// Mock Firebase Storage for development until package is added
-class MockFirebaseStorage {
-  // This is a placeholder until firebase_storage is added to pubspec.yaml
-  // Once the package is added, replace this with the actual FirebaseStorage.instance
 }

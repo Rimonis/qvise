@@ -82,7 +82,7 @@ class FileListItem extends ConsumerWidget {
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              ref.read(lessonFilesProvider(file.lessonId).notifier).deleteFile(file.id);
+              ref.read(lessonFilesProvider(file.lessonId).notifier).removeFile(file.id); // FIXED: Use removeFile instead of deleteFile
               onDeleted?.call();
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -177,7 +177,7 @@ class FileListItem extends ConsumerWidget {
                     onPressed: () {
                       ref
                           .read(lessonFilesProvider(file.lessonId).notifier)
-                          .toggleStar(file.id, file.isStarred);
+                          .starFile(file.id, !file.isStarred); // FIXED: Use starFile with correct parameters
                     },
                   ),
                   IconButton(

@@ -327,7 +327,7 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
       if (lesson != null) {
         final lockedLesson = lesson.copyWith(
           isLocked: true,
-          lockedAt: DateTime.now().millisecondsSinceEpoch,
+          lockedAt: DateTime.now(),  // <-- FIXED: Remove .millisecondsSinceEpoch
           updatedAt: DateTime.now(),
         );
         await localDataSource.insertOrUpdateLesson(lockedLesson);
