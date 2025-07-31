@@ -8,14 +8,10 @@ abstract class FileRepository {
     required String lessonId,
     required String localPath,
   });
-
-  Future<Either<AppFailure, List<FileEntity>>> getFilesByLesson(String lessonId);
-  
-  Future<Either<AppFailure, List<FileEntity>>> getStarredFiles();
-
-  Future<Either<AppFailure, void>> toggleFileStarred(String fileId, bool isStarred);
-
   Future<Either<AppFailure, void>> deleteFile(String fileId);
-
+  Future<Either<AppFailure, void>> deleteFilesByLesson(String lessonId); // Added for cascade delete
+  Future<Either<AppFailure, void>> toggleFileStarred(String fileId, bool isStarred);
+  Future<Either<AppFailure, List<FileEntity>>> getFilesByLesson(String lessonId);
+  Future<Either<AppFailure, List<FileEntity>>> getStarredFiles();
   Future<Either<AppFailure, void>> syncFiles();
 }

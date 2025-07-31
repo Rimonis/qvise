@@ -8,6 +8,8 @@ abstract class FileLocalDataSource {
   Future<void> createFile(FileModel file);
   Future<void> updateFile(FileModel file);
   Future<void> deleteFile(String fileId);
+  Future<void> deleteFilesByLesson(String lessonId); // Added for cascade delete
+  Future<List<FileModel>> getFilesByLessonIds(List<String> lessonIds); // Added for bulk operations
   Future<FileModel?> getFileById(String fileId);
   Future<List<FileModel>> getFilesByLessonId(String lessonId);
   Future<List<FileModel>> getStarredFiles();
@@ -35,6 +37,27 @@ class FileLocalDataSourceImpl extends TransactionalDataSource implements FileLoc
   Future<void> deleteFile(String fileId) async {
     final db = await database;
     await db.delete(_tableName, where: 'id = ?', whereArgs: [fileId]);
+  }
+
+  @override
+  Future<void> deleteFilesByLesson(String lessonId) async {
+    final db = await database;
+    await db.delete(_tableName, where: 'lesson_id = ?', whereArgs: [lessonId]);
+  }
+
+  @override
+  Future<List<FileModel>> getFilesByLessonIds(List<String> lessonIds) async {
+    if (lessonIds.isEmpty) return [];
+    
+    final db = await database;
+    final placeholders = lessonIds.map((_) => '?').join(',');
+    final maps = await db.query(
+      _tableName,
+      where: 'lesson_id IN ($placeholders)',
+      whereArgs: lessonIds,
+      orderBy: 'created_at DESC',
+    );
+    return maps.map((map) => FileModel.fromDb(map)).toList();
   }
 
   @override

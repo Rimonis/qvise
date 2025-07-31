@@ -1,6 +1,4 @@
 // lib/features/files/presentation/providers/file_providers.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:qvise/core/data/providers/data_providers.dart';
@@ -15,6 +13,7 @@ import '../../domain/entities/file.dart';
 import '../../domain/repositories/file_repository.dart';
 import '../../domain/usecases/create_file.dart';
 import '../../domain/usecases/delete_file.dart';
+import '../../domain/usecases/delete_files_by_lesson.dart'; // Added import
 import '../../domain/usecases/get_files_by_lesson.dart';
 import '../../domain/usecases/get_starred_files.dart';
 import '../../domain/usecases/sync_files.dart';
@@ -41,15 +40,21 @@ UserService userService(Ref ref) {
   );
 }
 
-// --- Data Layer ---
+// --- Data Sources ---
+@riverpod
+FileLocalDataSource fileLocalDataSource(Ref ref) {
+  return FileLocalDataSourceImpl();
+}
+
 @riverpod
 FileRemoteDataSource fileRemoteDataSource(Ref ref) {
   return FileRemoteDataSourceImpl(
-    firestore: FirebaseFirestore.instance,
-    storage: MockFirebaseStorage(), // Use mock for now since package not added
+    firestore: ref.watch(firebaseFirestoreProvider),
+    storage: null, // Add firebase_storage when package is added
   );
 }
 
+// --- Repository ---
 @riverpod
 FileRepository fileRepository(Ref ref) {
   return FileRepositoryImpl(
@@ -64,43 +69,51 @@ FileRepository fileRepository(Ref ref) {
 
 // --- Use Cases ---
 @riverpod
-GetFilesByLesson getFilesByLesson(Ref ref) {
-  return GetFilesByLesson(ref.watch(fileRepositoryProvider));
-}
-
-@riverpod
-GetStarredFiles getStarredFiles(Ref ref) {
-  return GetStarredFiles(ref.watch(fileRepositoryProvider));
-}
-
-@riverpod
-CreateFile createFile(Ref ref) {
+CreateFile createFileProvider(Ref ref) {
   return CreateFile(ref.watch(fileRepositoryProvider));
 }
 
 @riverpod
-DeleteFile deleteFile(Ref ref) {
+DeleteFile deleteFileProvider(Ref ref) {
   return DeleteFile(ref.watch(fileRepositoryProvider));
 }
 
 @riverpod
-ToggleFileStarred toggleFileStarred(Ref ref) {
-  return ToggleFileStarred(ref.watch(fileRepositoryProvider));
+DeleteFilesByLesson deleteFilesByLessonProvider(Ref ref) {
+  return DeleteFilesByLesson(ref.watch(fileRepositoryProvider));
 }
 
 @riverpod
-SyncFiles syncFiles(Ref ref) {
+GetFilesByLesson getFilesByLessonProvider(Ref ref) {
+  return GetFilesByLesson(ref.watch(fileRepositoryProvider));
+}
+
+@riverpod
+GetStarredFiles getStarredFilesProvider(Ref ref) {
+  return GetStarredFiles(ref.watch(fileRepositoryProvider));
+}
+
+@riverpod
+SyncFiles syncFilesProvider(Ref ref) {
   return SyncFiles(ref.watch(fileRepositoryProvider));
 }
 
-// --- State Notifiers ---
+@riverpod
+ToggleFileStarred toggleFileStarredProvider(Ref ref) {
+  return ToggleFileStarred(ref.watch(fileRepositoryProvider));
+}
+
+// --- State Management ---
 
 // Files for a specific lesson
 @riverpod
 class LessonFiles extends _$LessonFiles {
+  late String _lessonId;
+
   @override
   Future<List<FileEntity>> build(String lessonId) async {
-    final useCase = ref.watch(getFilesByLessonProvider);
+    _lessonId = lessonId;
+    final useCase = ref.read(getFilesByLessonProvider);
     final result = await useCase(lessonId);
     return result.fold(
       (failure) => throw failure,
@@ -110,7 +123,28 @@ class LessonFiles extends _$LessonFiles {
 
   Future<void> addFile(String localPath) async {
     final useCase = ref.read(createFileProvider);
-    final params = CreateFileParams(lessonId: lessonId, localPath: localPath);
+    final params = CreateFileParams(lessonId: _lessonId, localPath: localPath);
+    final result = await useCase(params);
+
+    result.fold(
+      (failure) => throw failure,
+      (_) => ref.invalidateSelf(),
+    );
+  }
+
+  Future<void> deleteFile(String fileId) async {
+    final useCase = ref.read(deleteFileProvider);
+    final result = await useCase(fileId);
+
+    result.fold(
+      (failure) => throw failure,
+      (_) => ref.invalidateSelf(),
+    );
+  }
+
+  Future<void> toggleStar(String fileId, bool currentStatus) async {
+    final useCase = ref.read(toggleFileStarredProvider);
+    final params = ToggleFileStarredParams(fileId: fileId, isStarred: !currentStatus);
     final result = await useCase(params);
 
     result.fold(
@@ -146,7 +180,7 @@ class LessonFiles extends _$LessonFiles {
 class StarredFiles extends _$StarredFiles {
   @override
   Future<List<FileEntity>> build() async {
-    final useCase = ref.watch(getStarredFilesProvider);
+    final useCase = ref.read(getStarredFilesProvider);
     final result = await useCase();
     return result.fold(
       (failure) => throw failure,

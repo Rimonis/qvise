@@ -6,6 +6,8 @@ import '../models/file_model.dart';
 abstract class FileRemoteDataSource {
   Future<FileModel> uploadFile(FileModel fileToUpload);
   Future<void> deleteFile(String fileId, String userId);
+  Future<void> deleteFilesByLesson(String lessonId, String userId); // Added for cascade delete
+  Future<void> deleteFilesByLessonIds(List<String> lessonIds, String userId); // Added for bulk operations
 }
 
 class FileRemoteDataSourceImpl implements FileRemoteDataSource {
@@ -94,5 +96,85 @@ class FileRemoteDataSourceImpl implements FileRemoteDataSource {
       print('Could not delete file from storage: $e');
     }
     */
+  }
+
+  @override
+  Future<void> deleteFilesByLesson(String lessonId, String userId) async {
+    try {
+      // Get all files for this lesson
+      final querySnapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('files')
+          .where('lesson_id', isEqualTo: lessonId)
+          .get();
+
+      // Delete each file (both metadata and storage)
+      final batch = _firestore.batch();
+      for (final doc in querySnapshot.docs) {
+        batch.delete(doc.reference);
+        
+        // For mock, we don't delete from storage
+        // Real implementation would delete from Firebase Storage here
+        /* Real implementation (uncomment when firebase_storage is added):
+        try {
+          final fileId = doc.id;
+          final storageRef = _storage.ref('users/$userId/files/$fileId');
+          await storageRef.delete();
+        } catch (e) {
+          // File might not exist in storage, which is fine
+          print('Could not delete file from storage: $e');
+        }
+        */
+      }
+      
+      await batch.commit();
+    } catch (e) {
+      print('Non-critical failure: Could not delete remote files for lesson $lessonId: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteFilesByLessonIds(List<String> lessonIds, String userId) async {
+    if (lessonIds.isEmpty) return;
+    
+    try {
+      // Process in chunks to avoid Firestore query limits
+      const chunkSize = 10; // Firestore 'in' query limit
+      
+      for (int i = 0; i < lessonIds.length; i += chunkSize) {
+        final chunk = lessonIds.skip(i).take(chunkSize).toList();
+        
+        final querySnapshot = await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('files')
+            .where('lesson_id', whereIn: chunk)
+            .get();
+
+        // Delete each file (both metadata and storage)
+        final batch = _firestore.batch();
+        for (final doc in querySnapshot.docs) {
+          batch.delete(doc.reference);
+          
+          // For mock, we don't delete from storage
+          // Real implementation would delete from Firebase Storage here
+          /* Real implementation (uncomment when firebase_storage is added):
+          try {
+            final fileId = doc.id;
+            final storageRef = _storage.ref('users/$userId/files/$fileId');
+            await storageRef.delete();
+          } catch (e) {
+            // File might not exist in storage, which is fine
+            print('Could not delete file from storage: $e');
+          }
+          */
+        }
+        
+        await batch.commit();
+      }
+    } catch (e) {
+      print('Non-critical failure: Could not delete remote files for lessons: $e');
+    }
   }
 }

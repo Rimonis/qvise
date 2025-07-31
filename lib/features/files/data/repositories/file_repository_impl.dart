@@ -150,7 +150,7 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
         }
       }
 
-      // TODO: Add logic to queue deletion from remote storage if it was synced
+      // Delete from remote storage if it was synced
       if (fileModel.remoteUrl != null) {
         try {
           await remoteDataSource.deleteFile(fileId, fileModel.userId);
@@ -158,6 +158,47 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
           // Log error but don't fail the operation
           debugPrint('Failed to delete remote file: $e');
         }
+      }
+    });
+  }
+
+  @override
+  Future<Either<AppFailure, void>> deleteFilesByLesson(String lessonId) async {
+    return guard(() async {
+      // Get all files for this lesson
+      final fileModels = await localDataSource.getFilesByLessonId(lessonId);
+      if (fileModels.isEmpty) return;
+
+      final userId = await userService.getCurrentUserId();
+
+      // Delete local files from storage
+      for (final fileModel in fileModels) {
+        final localFile = File(fileModel.filePath);
+        if (await localFile.exists()) {
+          try {
+            await localFile.delete();
+          } catch (e) {
+            debugPrint('Failed to delete local file ${fileModel.name}: $e');
+          }
+        }
+      }
+
+      // Delete from local database (this will be handled by foreign key cascade)
+      await localDataSource.deleteFilesByLesson(lessonId);
+
+      // Delete from remote storage and Firestore
+      try {
+        await remoteDataSource.deleteFilesByLesson(lessonId, userId);
+      } catch (e) {
+        debugPrint('Failed to delete remote files for lesson $lessonId: $e');
+      }
+
+      // Update lesson file count
+      final lesson = await unitOfWork.content.getLesson(lessonId);
+      if (lesson != null) {
+        await unitOfWork.content.insertOrUpdateLesson(
+          lesson.copyWith(fileCount: 0),
+        );
       }
     });
   }
@@ -231,13 +272,13 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
 
       final updatedModel = fileModel.copyWith(
         isStarred: isStarred ? 1 : 0,
-        updatedAt: DateTime.now().millisecondsSinceEpoch,
         syncStatus: shouldQueueSync ? 'queued' : fileModel.syncStatus,
+        updatedAt: DateTime.now().millisecondsSinceEpoch,
       );
 
       await localDataSource.updateFile(updatedModel);
 
-      // Trigger sync if applicable (fire and forget)
+      // Attempt sync if needed (fire and forget)
       if (shouldQueueSync) {
         syncFiles();
       }

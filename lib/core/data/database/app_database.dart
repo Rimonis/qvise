@@ -25,9 +25,13 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 3, // Increment version for files table
+      version: 4, // Increment version for foreign key constraints
       onCreate: _createAllTables,
       onUpgrade: _onUpgrade,
+      onConfigure: (db) async {
+        // Enable foreign key constraints
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
     );
   }
 
@@ -40,6 +44,47 @@ class AppDatabase {
     if (oldVersion < 3) {
       await _createFilesTable(db);
     }
+    if (oldVersion < 4) {
+      // Enable foreign keys and recreate tables with constraints
+      await db.execute('PRAGMA foreign_keys = OFF');
+      await _addForeignKeyConstraints(db);
+      await db.execute('PRAGMA foreign_keys = ON');
+    }
+  }
+
+  static Future<void> _addForeignKeyConstraints(Database db) async {
+    // Since SQLite doesn't support adding foreign keys to existing tables,
+    // we need to recreate the tables with constraints
+    
+    // Backup existing data
+    await db.execute('CREATE TEMP TABLE flashcards_backup AS SELECT * FROM flashcards');
+    await db.execute('CREATE TEMP TABLE files_backup AS SELECT * FROM files');
+    await db.execute('CREATE TEMP TABLE topics_backup AS SELECT * FROM topics');
+    await db.execute('CREATE TEMP TABLE lessons_backup AS SELECT * FROM lessons');
+    
+    // Drop existing tables
+    await db.execute('DROP TABLE flashcards');
+    await db.execute('DROP TABLE files');
+    await db.execute('DROP TABLE topics');
+    await db.execute('DROP TABLE lessons');
+    
+    // Recreate with foreign keys
+    await _createTopicsTableWithFK(db);
+    await _createLessonsTableWithFK(db);
+    await _createFlashcardsTableWithFK(db);
+    await _createFilesTableWithFK(db);
+    
+    // Restore data
+    await db.execute('INSERT INTO topics SELECT * FROM topics_backup');
+    await db.execute('INSERT INTO lessons SELECT * FROM lessons_backup');
+    await db.execute('INSERT INTO flashcards SELECT * FROM flashcards_backup');
+    await db.execute('INSERT INTO files SELECT * FROM files_backup');
+    
+    // Drop backup tables
+    await db.execute('DROP TABLE flashcards_backup');
+    await db.execute('DROP TABLE files_backup');
+    await db.execute('DROP TABLE topics_backup');
+    await db.execute('DROP TABLE lessons_backup');
   }
 
   static Future<void> _createConflictsTable(Database db) async {
@@ -69,6 +114,10 @@ class AppDatabase {
   }
 
   static Future<void> _createFilesTable(Database db) async {
+    await _createFilesTableWithFK(db);
+  }
+
+  static Future<void> _createFilesTableWithFK(Database db) async {
     await db.execute('''
       CREATE TABLE files(
         id TEXT PRIMARY KEY,
@@ -83,7 +132,8 @@ class AppDatabase {
         created_at INTEGER NOT NULL,
         updated_at INTEGER,
         sync_status TEXT NOT NULL DEFAULT 'local_only',
-        version INTEGER NOT NULL DEFAULT 1
+        version INTEGER NOT NULL DEFAULT 1,
+        FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
       )
     ''');
 
@@ -94,23 +144,7 @@ class AppDatabase {
     await db.execute('CREATE INDEX idx_files_sync ON files(sync_status)');
   }
 
-  static Future<void> _createAllTables(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE subjects(
-        name TEXT NOT NULL,
-        userId TEXT NOT NULL,
-        proficiency REAL NOT NULL,
-        lessonCount INTEGER NOT NULL,
-        topicCount INTEGER NOT NULL,
-        lastStudied INTEGER NOT NULL,
-        createdAt INTEGER NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1,
-        is_deleted INTEGER NOT NULL DEFAULT 0,
-        updated_at INTEGER,
-        PRIMARY KEY (userId, name)
-      )
-    ''');
-
+  static Future<void> _createTopicsTableWithFK(Database db) async {
     await db.execute('''
       CREATE TABLE topics(
         name TEXT NOT NULL,
@@ -123,10 +157,13 @@ class AppDatabase {
         version INTEGER NOT NULL DEFAULT 1,
         is_deleted INTEGER NOT NULL DEFAULT 0,
         updated_at INTEGER,
-        PRIMARY KEY (userId, subjectName, name)
+        PRIMARY KEY (userId, subjectName, name),
+        FOREIGN KEY (userId, subjectName) REFERENCES subjects(userId, name) ON DELETE CASCADE
       )
     ''');
+  }
 
+  static Future<void> _createLessonsTableWithFK(Database db) async {
     await db.execute('''
       CREATE TABLE lessons(
         id TEXT PRIMARY KEY,
@@ -147,10 +184,13 @@ class AppDatabase {
         noteCount INTEGER NOT NULL DEFAULT 0,
         version INTEGER NOT NULL DEFAULT 1,
         is_deleted INTEGER NOT NULL DEFAULT 0,
-        updated_at INTEGER
+        updated_at INTEGER,
+        FOREIGN KEY (userId, subjectName, topicName) REFERENCES topics(userId, subjectName, name) ON DELETE CASCADE
       )
     ''');
+  }
 
+  static Future<void> _createFlashcardsTableWithFK(Database db) async {
     await db.execute('''
       CREATE TABLE flashcards (
         id TEXT PRIMARY KEY,
@@ -181,12 +221,35 @@ class AppDatabase {
         last_reviewed_at TEXT,
         sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('synced', 'pending', 'conflict')),
         version INTEGER NOT NULL DEFAULT 1,
-        is_deleted INTEGER NOT NULL DEFAULT 0
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+      )
+    ''');
+  }
+
+  static Future<void> _createAllTables(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE subjects(
+        name TEXT NOT NULL,
+        userId TEXT NOT NULL,
+        proficiency REAL NOT NULL,
+        lessonCount INTEGER NOT NULL,
+        topicCount INTEGER NOT NULL,
+        lastStudied INTEGER NOT NULL,
+        createdAt INTEGER NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER,
+        PRIMARY KEY (userId, name)
       )
     ''');
 
+    await _createTopicsTableWithFK(db);
+    await _createLessonsTableWithFK(db);
+    await _createFlashcardsTableWithFK(db);
+
     // Create files table
-    await _createFilesTable(db);
+    await _createFilesTableWithFK(db);
 
     await _createConflictsTable(db);
 
