@@ -280,11 +280,13 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: () => _createFlashcard(lesson),
-                icon: const Icon(Icons.add),
-                label: const Text('Add'),
-              ),
+              // ONLY SHOW ADD BUTTON IN EDIT MODE
+              if (!lesson.isLocked)
+                ElevatedButton.icon(
+                  onPressed: () => _createFlashcard(lesson),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add'),
+                ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -304,13 +306,19 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
                           style: context.textTheme.headlineSmall,
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        const Text('Add flashcards to start learning!'),
-                        const SizedBox(height: AppSpacing.lg),
-                        ElevatedButton.icon(
-                          onPressed: () => _createFlashcard(lesson),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Create First Flashcard'),
+                        Text(
+                          lesson.isLocked 
+                              ? 'No flashcards have been created for this lesson'
+                              : 'Add flashcards to start learning!',
                         ),
+                        const SizedBox(height: AppSpacing.lg),
+                        // ONLY SHOW CREATE BUTTON IN EDIT MODE
+                        if (!lesson.isLocked)
+                          ElevatedButton.icon(
+                            onPressed: () => _createFlashcard(lesson),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create First Flashcard'),
+                          ),
                       ],
                     ),
                   );
@@ -329,10 +337,13 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _editFlashcard(lesson, flashcard),
-                        ),
+                        // ONLY SHOW EDIT BUTTON IN EDIT MODE
+                        trailing: !lesson.isLocked 
+                            ? IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () => _editFlashcard(lesson, flashcard),
+                              )
+                            : null,
                       ),
                     );
                   },
@@ -362,33 +373,22 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: () => _showFileUploadOptions(context, lesson),
-                icon: const Icon(Icons.upload_file),
-                label: const Text('Upload'),
-              ),
+              // ONLY SHOW UPLOAD BUTTON IN EDIT MODE (when lesson is not locked)
+              if (!lesson.isLocked)
+                ElevatedButton.icon(
+                  onPressed: () => _uploadFile(lesson),
+                  icon: const Icon(Icons.upload),
+                  label: const Text('Upload'),
+                ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           
           Expanded(
-            child: fileCount > 0
-                ? FileListWidget(lessonId: lesson.id)
-                : Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.attachment, size: 64, color: Colors.grey),
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          'No Files Yet',
-                          style: context.textTheme.headlineSmall,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        const Text('Upload files to support your learning!'),
-                      ],
-                    ),
-                  ),
+            child: FileListWidget(
+              lessonId: lesson.id,
+              allowEditing: !lesson.isLocked, // PASS EDITING PERMISSION BASED ON LOCK STATUS
+            ),
           ),
         ],
       ),
@@ -674,16 +674,16 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
   }
 
   void _viewAllFlashcards(lesson) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FlashcardPreviewScreen(
-          lessonId: lesson.id,
-          allowEditing: true,
-        ),
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => FlashcardPreviewScreen(
+        lessonId: lesson.id,
+        allowEditing: !lesson.isLocked,  // ← FIX: Use lesson lock status
       ),
-    ).then((_) => _refreshLessonData());
-  }
+    ),
+  ).then((_) => _refreshLessonData());
+}
 
   // PROMINENT LOCK LESSON FUNCTIONALITY (moved from dropdown to main button)
   void _lockLesson(lesson) async {

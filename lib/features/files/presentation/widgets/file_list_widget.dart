@@ -3,17 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/features/files/presentation/providers/file_providers.dart';
 import 'package:qvise/features/files/presentation/widgets/file_list_item.dart';
-import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
+
 import 'package:qvise/core/services/file_picker_service.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
 
 class FileListWidget extends ConsumerWidget {
   final String lessonId;
+  final bool allowEditing; // ADD THIS PARAMETER
 
   const FileListWidget({
     super.key,
     required this.lessonId,
+    this.allowEditing = true, // DEFAULT TO TRUE FOR BACKWARD COMPATIBILITY
   });
 
   @override
@@ -28,18 +30,19 @@ class FileListWidget extends ConsumerWidget {
 
         return Column(
           children: [
-            // Add file button
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _showAddFileOptions(context, ref),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add File'),
+            // Add file button - ONLY SHOW IF EDITING IS ALLOWED
+            if (allowEditing)
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showAddFileOptions(context, ref),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add File'),
+                  ),
                 ),
               ),
-            ),
             
             // Files list
             Expanded(
@@ -48,19 +51,11 @@ class FileListWidget extends ConsumerWidget {
                   ref.invalidate(lessonFilesProvider(lessonId));
                 },
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   itemCount: files.length,
                   itemBuilder: (context, index) {
                     final file = files[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: FileListItem(
-                        file: file,
-                        onDeleted: () {
-                          // Refresh files and update counts
-                          _refreshAfterFileChange(ref);
-                        },
-                      ),
+                    return FileListItem(
+                      file: file,
                     );
                   },
                 ),
@@ -76,20 +71,7 @@ class FileListWidget extends ConsumerWidget {
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: AppSpacing.md),
-            Text(
-              'Error loading files',
-              style: context.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              error.toString(),
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: context.textSecondaryColor,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            Text('Error loading files: $error'),
             const SizedBox(height: AppSpacing.lg),
             ElevatedButton.icon(
               onPressed: () => ref.refresh(lessonFilesProvider(lessonId)),
@@ -124,18 +106,22 @@ class FileListWidget extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Add files to enhance your lesson content',
+              allowEditing 
+                  ? 'Add files to enhance your lesson content'
+                  : 'No files have been added to this lesson', // DIFFERENT MESSAGE FOR STUDY MODE
               style: context.textTheme.bodyMedium?.copyWith(
                 color: Colors.grey[500],
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.lg),
-            ElevatedButton.icon(
-              onPressed: () => _showAddFileOptions(context, ref),
-              icon: const Icon(Icons.add),
-              label: const Text('Add File'),
-            ),
+            // ONLY SHOW ADD BUTTON IF EDITING IS ALLOWED
+            if (allowEditing)
+              ElevatedButton.icon(
+                onPressed: () => _showAddFileOptions(context, ref),
+                icon: const Icon(Icons.add),
+                label: const Text('Add File'),
+              ),
           ],
         ),
       ),
@@ -149,111 +135,83 @@ class FileListWidget extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: Text(
-                'Add File',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            ListTile(
+              leading: const Icon(Icons.upload_file),
+              title: const Text('Upload from Device'),
+              onTap: () {
+                Navigator.pop(context);
+                _uploadFromDevice(context, ref);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt),
               title: const Text('Take Photo'),
-              subtitle: const Text('Capture with camera'),
-              onTap: () async {
+              onTap: () {
                 Navigator.pop(context);
-                await _addFile(context, ref, FileSource.camera);
+                _takePhoto(context, ref);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Photo Gallery'),
-              subtitle: const Text('Choose from gallery'),
-              onTap: () async {
-                Navigator.pop(context);
-                await _addFile(context, ref, FileSource.gallery);
-              },
+              leading: const Icon(Icons.cancel),
+              title: const Text('Cancel'),
+              onTap: () => Navigator.pop(context),
             ),
-            ListTile(
-              leading: const Icon(Icons.insert_drive_file),
-              title: const Text('Browse Files'),
-              subtitle: const Text('Documents, PDFs, etc.'),
-              onTap: () async {
-                Navigator.pop(context);
-                await _addFile(context, ref, FileSource.files);
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _addFile(BuildContext context, WidgetRef ref, FileSource source) async {
+  void _uploadFromDevice(BuildContext context, WidgetRef ref) async {
     try {
-      final filePicker = ref.read(filePickerServiceProvider);
-      final filePath = await filePicker.pickFile(source);
+      final filePickerService = ref.read(filePickerServiceProvider);
+      final filePaths = await filePickerService.pickMultipleFiles(FileSource.files);
       
-      if (filePath != null) {
-        await ref.read(lessonFilesProvider(lessonId).notifier).addFile(filePath);
+      if (filePaths.isNotEmpty) {
+        final lessonFilesNotifier = ref.read(lessonFilesProvider(lessonId).notifier);
         
-        // Refresh files and update all related data
-        _refreshAfterFileChange(ref);
+        for (final filePath in filePaths) {
+          await lessonFilesNotifier.addFile(filePath);
+        }
         
         if (context.mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('File added successfully!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
-          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Files uploaded successfully!')),
+          );
         }
       }
     } catch (e) {
       if (context.mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to add file: $e'),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          }
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload files: $e')),
+        );
       }
     }
   }
 
-  void _refreshAfterFileChange(WidgetRef ref) {
-    // Refresh file list
-    ref.invalidate(lessonFilesProvider(lessonId));
-    
-    // Refresh lesson data to update file count
-    ref.invalidate(lessonProvider(lessonId));
-    
-    // Refresh unlocked lessons list
-    ref.invalidate(unlockedLessonsProvider);
-    
-    // Refresh subject/topic lists that show file counts
-    ref.invalidate(subjectsNotifierProvider);
-  }
-}
+  void _takePhoto(BuildContext context, WidgetRef ref) async {
+    try {
+      final filePickerService = ref.read(filePickerServiceProvider);
+      final filePaths = await filePickerService.pickMultipleFiles(FileSource.camera);
+      
+      if (filePaths.isNotEmpty) {
+        final lessonFilesNotifier = ref.read(lessonFilesProvider(lessonId).notifier);
+        
+        for (final filePath in filePaths) {
+          await lessonFilesNotifier.addFile(filePath);
+        }
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Photo added successfully!')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to take photo: $e')),
+        );
+      }
+    }
+}}

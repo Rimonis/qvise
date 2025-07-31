@@ -43,7 +43,10 @@ class LessonFilesScreen extends ConsumerWidget {
               ],
             ),
           ),
-          body: FileListWidget(lessonId: lessonId),
+          body: FileListWidget(
+            lessonId: lessonId,
+            allowEditing: !lesson.isLocked, // PASS EDITING PERMISSION BASED ON LOCK STATUS
+          ),
         );
       },
       loading: () => Scaffold(

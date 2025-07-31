@@ -251,24 +251,26 @@ class _FlashcardPreviewScreenState extends ConsumerState<FlashcardPreviewScreen>
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
       ),
-      floatingActionButton: (widget.allowEditing && (flashcardsAsync.valueOrNull?.isNotEmpty ?? false))
-          ? lessonAsync.when(
-              data: (lesson) => lesson != null
-                  ? FloatingActionButton.extended(
-                      onPressed: () => _navigateToCreateScreen(
-                        context,
-                        ref,
-                        lesson.subjectName,
-                        lesson.topicName,
-                      ),
-                      label: const Text('New Flashcard'),
-                      icon: const Icon(Icons.add),
-                    )
-                  : null,
-              loading: () => null,
-              error: (_, __) => null,
-            )
-          : null,
+      // Only show floating action button in edit mode
+      floatingActionButton: !widget.allowEditing ? null : 
+          (flashcardsAsync.valueOrNull?.isNotEmpty ?? false)
+              ? lessonAsync.when(
+                  data: (lesson) => lesson != null
+                      ? FloatingActionButton.extended(
+                          onPressed: () => _navigateToCreateScreen(
+                            context,
+                            ref,
+                            lesson.subjectName,
+                            lesson.topicName,
+                          ),
+                          label: const Text('New Flashcard'),
+                          icon: const Icon(Icons.add),
+                        )
+                      : null,
+                  loading: () => null,
+                  error: (_, __) => null,
+                )
+              : null,
     );
   }
 
