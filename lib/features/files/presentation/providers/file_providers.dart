@@ -6,24 +6,36 @@ import 'package:qvise/core/providers/providers.dart';
 import 'package:qvise/core/services/file_picker_service.dart';
 import 'package:qvise/core/services/subscription_service.dart';
 import 'package:qvise/core/services/user_service.dart';
-import '../../data/datasources/file_local_data_source.dart';
 import '../../data/datasources/file_remote_data_source.dart';
 import '../../data/repositories/file_repository_impl.dart';
 import '../../domain/entities/file.dart';
 import '../../domain/repositories/file_repository.dart';
 import '../../domain/usecases/create_file.dart';
-import '../../domain/usecases/delete_file.dart';
-import '../../domain/usecases/delete_files_by_lesson.dart';
-import '../../domain/usecases/get_files_by_lesson.dart';
-import '../../domain/usecases/get_starred_files.dart';
-import '../../domain/usecases/sync_files.dart';
-import '../../domain/usecases/toggle_file_starred.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-// Export the params class for use in widgets
-export '../../domain/usecases/toggle_file_starred.dart' show ToggleFileStarredParams;
-
 part 'file_providers.g.dart';
+
+// Define ToggleFileStarredParams class
+class ToggleFileStarredParams {
+  final String fileId;
+  final bool isStarred;
+
+  const ToggleFileStarredParams({
+    required this.fileId,
+    required this.isStarred,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ToggleFileStarredParams &&
+        other.fileId == fileId &&
+        other.isStarred == isStarred;
+  }
+
+  @override
+  int get hashCode => Object.hash(fileId, isStarred);
+}
 
 // --- Core Services ---
 @riverpod
@@ -45,11 +57,6 @@ UserService userService(Ref ref) {
 
 // --- Data Sources ---
 @riverpod
-FileLocalDataSource fileLocalDataSource(Ref ref) {
-  return FileLocalDataSourceImpl();
-}
-
-@riverpod
 FileRemoteDataSource fileRemoteDataSource(Ref ref) {
   return FileRemoteDataSourceImpl(
     firestore: ref.watch(firebaseFirestoreProvider),
@@ -70,43 +77,7 @@ FileRepository fileRepository(Ref ref) {
   );
 }
 
-// --- Use Cases ---
-@riverpod
-CreateFile createFileProvider(Ref ref) {
-  return CreateFile(ref.watch(fileRepositoryProvider));
-}
-
-@riverpod
-DeleteFile deleteFileProvider(Ref ref) {
-  return DeleteFile(ref.watch(fileRepositoryProvider));
-}
-
-@riverpod
-DeleteFilesByLesson deleteFilesByLessonProvider(Ref ref) {
-  return DeleteFilesByLesson(ref.watch(fileRepositoryProvider));
-}
-
-@riverpod
-GetFilesByLesson getFilesByLessonProvider(Ref ref) {
-  return GetFilesByLesson(ref.watch(fileRepositoryProvider));
-}
-
-@riverpod
-GetStarredFiles getStarredFilesProvider(Ref ref) {
-  return GetStarredFiles(ref.watch(fileRepositoryProvider));
-}
-
-@riverpod
-SyncFiles syncFilesProvider(Ref ref) {
-  return SyncFiles(ref.watch(fileRepositoryProvider));
-}
-
-@riverpod
-ToggleFileStarred toggleFileStarredProvider(Ref ref) {
-  return ToggleFileStarred(ref.watch(fileRepositoryProvider));
-}
-
-// --- State Management ---
+// --- State Management (Direct Repository Access Only) ---
 
 // Files for a specific lesson
 @riverpod
@@ -116,8 +87,8 @@ class LessonFiles extends _$LessonFiles {
   @override
   Future<List<FileEntity>> build(String lessonId) async {
     _lessonId = lessonId;
-    final useCase = ref.read(getFilesByLessonProvider);
-    final result = await useCase(lessonId);
+    final repository = ref.read(fileRepositoryProvider);
+    final result = await repository.getFilesByLesson(lessonId);
     return result.fold(
       (failure) => throw failure,
       (files) => files,
@@ -125,9 +96,11 @@ class LessonFiles extends _$LessonFiles {
   }
 
   Future<void> addFile(String localPath) async {
-    final useCase = ref.read(createFileProvider);
-    final params = CreateFileParams(lessonId: _lessonId, localPath: localPath);
-    final result = await useCase(params);
+    final repository = ref.read(fileRepositoryProvider);
+    final result = await repository.createFile(
+      lessonId: _lessonId,
+      localPath: localPath,
+    );
     
     result.fold(
       (failure) => throw failure,
@@ -136,8 +109,8 @@ class LessonFiles extends _$LessonFiles {
   }
 
   Future<void> removeFile(String fileId) async {
-    final useCase = ref.read(deleteFileProvider);
-    final result = await useCase(fileId);
+    final repository = ref.read(fileRepositoryProvider);
+    final result = await repository.deleteFile(fileId);
     
     result.fold(
       (failure) => throw failure,
@@ -146,9 +119,8 @@ class LessonFiles extends _$LessonFiles {
   }
 
   Future<void> starFile(String fileId, bool isStarred) async {
-    final useCase = ref.read(toggleFileStarredProvider);
-    final params = ToggleFileStarredParams(fileId: fileId, isStarred: isStarred);
-    final result = await useCase(params);
+    final repository = ref.read(fileRepositoryProvider);
+    final result = await repository.toggleFileStarred(fileId, isStarred);
     
     result.fold(
       (failure) => throw failure,
@@ -162,8 +134,8 @@ class LessonFiles extends _$LessonFiles {
 class StarredFiles extends _$StarredFiles {
   @override
   Future<List<FileEntity>> build() async {
-    final useCase = ref.read(getStarredFilesProvider);
-    final result = await useCase();
+    final repository = ref.read(fileRepositoryProvider);
+    final result = await repository.getStarredFiles();
     return result.fold(
       (failure) => throw failure,
       (files) => files,
@@ -172,5 +144,75 @@ class StarredFiles extends _$StarredFiles {
 
   Future<void> refresh() async {
     ref.invalidateSelf();
+  }
+}
+
+// --- State Notifiers for UI Operations ---
+@riverpod
+class CreateFileNotifier extends _$CreateFileNotifier {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  Future<void> createFile(CreateFileParams params) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      final repository = ref.read(fileRepositoryProvider);
+      final result = await repository.createFile(
+        lessonId: params.lessonId,
+        localPath: params.localPath,
+      );
+      
+      result.fold(
+        (failure) => state = AsyncValue.error(failure, StackTrace.current),
+        (_) => state = const AsyncValue.data(null),
+      );
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+}
+
+@riverpod
+class DeleteFileNotifier extends _$DeleteFileNotifier {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  Future<void> deleteFile(String fileId) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      final repository = ref.read(fileRepositoryProvider);
+      final result = await repository.deleteFile(fileId);
+      
+      result.fold(
+        (failure) => state = AsyncValue.error(failure, StackTrace.current),
+        (_) => state = const AsyncValue.data(null),
+      );
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+}
+
+@riverpod
+class ToggleFileStarredNotifier extends _$ToggleFileStarredNotifier {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  Future<void> toggleStarred(ToggleFileStarredParams params) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      final repository = ref.read(fileRepositoryProvider);
+      final result = await repository.toggleFileStarred(params.fileId, params.isStarred);
+      
+      result.fold(
+        (failure) => state = AsyncValue.error(failure, StackTrace.current),
+        (_) => state = const AsyncValue.data(null),
+      );
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
   }
 }

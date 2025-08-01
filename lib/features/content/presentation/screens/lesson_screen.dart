@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qvise/features/content/presentation/providers/content_state_providers.dart';
-// Removed unused import
 import 'package:qvise/features/flashcards/creation/presentation/screens/flashcard_creation_screen.dart';
 import 'package:qvise/features/flashcards/presentation/screens/flashcard_preview_screen.dart';
 import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_count_provider.dart';
@@ -35,6 +34,31 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    
+    // Fixed: Listen to create file state changes properly
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.listen<AsyncValue<void>>(createFileNotifierProvider, (previous, next) {
+        next.whenOrNull(
+          error: (error, stack) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to upload file: $error')),
+              );
+            }
+          },
+          data: (_) {
+            if (previous?.isLoading == true) {
+              _refreshLessonData();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('File uploaded successfully')),
+                );
+              }
+            }
+          },
+        );
+      });
+    });
   }
 
   @override
@@ -66,7 +90,7 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
   }
 
   // Edit Mode: For unlocked lessons (content creation)
-  Widget _buildEditMode(lesson) {
+  Widget _buildEditMode(dynamic lesson) {
     final flashcardCount = ref.watch(flashcardCountProvider(lesson.id));
     final filesAsync = ref.watch(lessonFilesProvider(lesson.id));
     final fileCount = filesAsync.maybeWhen(
@@ -76,422 +100,96 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(lesson.displayTitle),
+        title: Text(
+          lesson.displayTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
-          PopupMenuButton(
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Delete Lesson'),
-                  ],
-                ),
-              ),
-            ],
+          PopupMenuButton<String>(
             onSelected: (value) {
-              if (value == 'delete') {
-                _deleteLesson(lesson);
+              switch (value) {
+                case 'lock':
+                  _lockLesson(lesson);
+                  break;
+                case 'delete':
+                  _showDeleteConfirmation(lesson);
+                  break;
               }
             },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Summary Cards
-          Container(
-            width: double.infinity,
-            padding: AppSpacing.screenPaddingAll,
-            decoration: BoxDecoration(
-              color: context.surfaceVariantColor.withValues(alpha: 0.3), // FIXED: withOpacity to withValues
-              border: Border(
-                bottom: BorderSide(
-                  color: context.dividerColor,
-                  width: 1,
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'lock',
+                child: ListTile(
+                  leading: Icon(Icons.lock),
+                  title: Text('Lock for Study'),
+                  contentPadding: EdgeInsets.zero,
                 ),
               ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildSummaryCard(
-                    context,
-                    'Flashcards',
-                    flashcardCount.asData?.value?.toString() ?? '0',
-                    Icons.quiz,
-                    onTap: () => _tabController.animateTo(0),
-                  ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: ListTile(
+                  leading: Icon(Icons.delete, color: Colors.red),
+                  title: Text('Delete Lesson', style: TextStyle(color: Colors.red)),
+                  contentPadding: EdgeInsets.zero,
                 ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: _buildSummaryCard(
-                    context,
-                    'Files',
-                    fileCount.toString(),
-                    Icons.folder,
-                    onTap: () => _tabController.animateTo(1),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Tab Bar
-          TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(icon: Icon(Icons.quiz), text: 'Flashcards'),
-              Tab(icon: Icon(Icons.folder), text: 'Files'),
+              ),
             ],
           ),
-          
-          // Tab Content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildFlashcardsTab(lesson),
-                _buildFilesTab(lesson, fileCount),
-              ],
-            ),
-          ),
-          
-          // Lock Button
-          Container(
-            width: double.infinity,
-            padding: AppSpacing.screenPaddingAll,
-            decoration: BoxDecoration(
-              color: context.surfaceColor,
-              border: Border(
-                top: BorderSide(
-                  color: context.dividerColor,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: ElevatedButton.icon(
-              onPressed: () => _lockLesson(lesson),
-              icon: const Icon(Icons.lock),
-              label: const Text('Lock & Start Learning'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(AppSpacing.md),
-              ),
-            ),
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard(
-    BuildContext context,
-    String title,
-    String count,
-    IconData icon, {
-    VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: context.surfaceColor,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-          border: Border.all(
-            color: context.borderColor,
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 32,
-              color: context.primaryColor,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(
+              icon: const Icon(Icons.quiz),
+              text: 'Flashcards ($flashcardCount)',
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              count,
-              style: context.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: context.primaryColor,
-              ),
-            ),
-            Text(
-              title,
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: context.textSecondaryColor,
-              ),
+            Tab(
+              icon: const Icon(Icons.attach_file),
+              text: 'Files ($fileCount)',
             ),
           ],
         ),
       ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildFlashcardsTab(lesson),
+          _buildFilesTab(lesson),
+        ],
+      ),
+      floatingActionButton: _buildFloatingActionButton(lesson),
     );
   }
 
-  Widget _buildFlashcardsTab(lesson) {
+  Widget _buildFlashcardsTab(dynamic lesson) {
+    // Fixed: Use correct provider name - flashcardsByLessonProvider instead of lessonFlashcardsProvider
     final flashcardsAsync = ref.watch(flashcardsByLessonProvider(lesson.id));
     
-    return Padding(
-      padding: AppSpacing.screenPaddingAll,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Flashcards',
-                style: context.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () => _createFlashcard(lesson),
-                icon: const Icon(Icons.add),
-                label: const Text('Create'),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          
-          Expanded(
-            child: flashcardsAsync.when(
-              data: (flashcards) {
-                if (flashcards.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.quiz_outlined,
-                          size: 64,
-                          color: context.textTertiaryColor,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          'No Flashcards Yet',
-                          style: context.textTheme.titleMedium?.copyWith(
-                            color: context.textSecondaryColor,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          lesson.isLocked
-                              ? 'No flashcards have been created for this lesson'
-                              : 'Add flashcards to start learning!',
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        // ONLY SHOW CREATE BUTTON IN EDIT MODE
-                        if (!lesson.isLocked)
-                          ElevatedButton.icon(
-                            onPressed: () => _createFlashcard(lesson),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Create First Flashcard'),
-                          ),
-                      ],
-                    ),
-                  );
-                }
-                
-                return ListView.builder(
-                  itemCount: flashcards.length,
-                  itemBuilder: (context, index) {
-                    final flashcard = flashcards[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: ListTile(
-                        title: Text(flashcard.frontContent),
-                        subtitle: Text(
-                          flashcard.backContent,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        // ONLY SHOW EDIT BUTTON IN EDIT MODE
-                        trailing: !lesson.isLocked 
-                            ? IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () => _editFlashcard(lesson, flashcard),
-                              )
-                            : null,
-                      ),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('Error: $error')),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilesTab(lesson, int fileCount) {
-    return Padding(
-      padding: AppSpacing.screenPaddingAll,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Files ($fileCount)',
-                style: context.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              // ONLY SHOW UPLOAD BUTTON IN EDIT MODE (when lesson is not locked)
-              if (!lesson.isLocked)
-                ElevatedButton.icon(
-                  onPressed: () => _showFileUploadOptions(lesson), // FIXED: Call the upload options method
-                  icon: const Icon(Icons.upload),
-                  label: const Text('Upload'),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          
-          Expanded(
-            child: FileListWidget(
-              lessonId: lesson.id,
-              allowEditing: !lesson.isLocked,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStudyMode(lesson) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(lesson.displayTitle),
-        backgroundColor: context.primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: Padding(
-        padding: AppSpacing.screenPaddingAll,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: context.primaryColor.withValues(alpha: 0.1), // FIXED: withOpacity to withValues
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
-                border: Border.all(
-                  color: context.primaryColor.withValues(alpha: 0.3), // FIXED: withOpacity to withValues
-                ),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.school,
-                    size: 48,
-                    color: context.primaryColor,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Study Mode',
-                    style: context.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: context.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'This lesson is locked and ready for spaced repetition learning.',
-                    textAlign: TextAlign.center,
-                    style: context.textTheme.bodyMedium?.copyWith(
-                      color: context.textSecondaryColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            
-            // Quick actions for study mode
-            _buildQuickActions(lesson),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickActions(lesson) {
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () => _startFlashcardSession(lesson),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Start Flashcard Session'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.all(AppSpacing.md),
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () => _viewFiles(lesson),
-            icon: const Icon(Icons.folder_open),
-            label: const Text('View Files'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.all(AppSpacing.md),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNotFoundScreen() {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Lesson Not Found')),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey),
-            SizedBox(height: AppSpacing.md),
-            Text('The requested lesson could not be found.'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadingScreen() {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
-  }
-
-  Widget _buildErrorScreen(String error) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Error')),
-      body: Center(
+    return flashcardsAsync.when(
+      data: (flashcards) {
+        if (flashcards.isEmpty) {
+          return _buildEmptyFlashcardsState(lesson);
+        }
+        
+        return FlashcardPreviewScreen(
+          lessonId: lesson.id,
+          allowEditing: true,
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: AppSpacing.md),
-            Text('Error: $error'),
-            const SizedBox(height: AppSpacing.md),
-            ElevatedButton(
-              onPressed: () => ref.refresh(lessonProvider(widget.lessonId)),
-              child: const Text('Retry'),
+            Text('Error loading flashcards: $error'),
+            const SizedBox(height: AppSpacing.lg),
+            ElevatedButton.icon(
+              // Fixed: Use correct provider name
+              onPressed: () => ref.refresh(flashcardsByLessonProvider(lesson.id)),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
             ),
           ],
         ),
@@ -499,72 +197,84 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
     );
   }
 
-  // FIXED: Properly refresh flashcard list after creation/editing
-  void _createFlashcard(lesson) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FlashcardCreationScreen(
-          lessonId: lesson.id,
-          subjectName: lesson.subjectName,
-          topicName: lesson.topicName,
-        ),
-      ),
-    ).then((_) {
-      // FIXED: Refresh both providers immediately when returning
-      ref.invalidate(flashcardsByLessonProvider(lesson.id));
-      ref.invalidate(flashcardCountProvider(lesson.id));
-      _refreshLessonData();
-    });
+  Widget _buildFilesTab(dynamic lesson) {
+    return FileListWidget(
+      lessonId: lesson.id,
+      allowEditing: true,
+    );
   }
 
-  void _editFlashcard(lesson, flashcard) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FlashcardCreationScreen(
-          lessonId: lesson.id,
-          subjectName: lesson.subjectName,
-          topicName: lesson.topicName,
-          flashcardToEdit: flashcard,
+  Widget _buildEmptyFlashcardsState(dynamic lesson) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.quiz,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'No Flashcards Yet',
+              style: context.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Create flashcards to start studying this lesson',
+              style: context.textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            ElevatedButton.icon(
+              onPressed: () => _createFlashcard(lesson),
+              icon: const Icon(Icons.add),
+              label: const Text('Create Flashcard'),
+            ),
+          ],
         ),
       ),
-    ).then((_) {
-      // FIXED: Refresh both providers immediately when returning
-      ref.invalidate(flashcardsByLessonProvider(lesson.id));
-      ref.invalidate(flashcardCountProvider(lesson.id));
-      _refreshLessonData();
-    });
+    );
   }
 
-  void _showFileUploadOptions(lesson) {
+  Widget _buildFloatingActionButton(dynamic lesson) {
+    return FloatingActionButton(
+      onPressed: () => _showAddMenu(lesson),
+      child: const Icon(Icons.add),
+    );
+  }
+
+  void _showAddMenu(dynamic lesson) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Text(
-                'Upload File',
-                style: TextStyle(
-                  fontSize: 18,
+                'Add Content',
+                style: context.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.quiz),
+              title: const Text('Create Flashcard'),
+              subtitle: const Text('Add a new flashcard to this lesson'),
+              onTap: () {
+                Navigator.pop(context);
+                _createFlashcard(lesson);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt),
@@ -600,7 +310,7 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
     );
   }
 
-  void _uploadFile(lesson, [FileSource source = FileSource.files]) async {
+  void _uploadFile(dynamic lesson, [FileSource source = FileSource.files]) async {
     try {
       final filePickerService = ref.read(filePickerServiceProvider);
       final filePaths = source == FileSource.files 
@@ -608,41 +318,18 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
           : [await filePickerService.pickFile(source)].where((path) => path != null).cast<String>().toList();
       
       if (filePaths.isNotEmpty) {
-        final createFileUseCase = ref.read(createFileProvider);
+        final createFileNotifier = ref.read(createFileNotifierProvider.notifier);
         
         for (final filePath in filePaths) {
-          try {
-            final fileResult = await createFileUseCase(CreateFileParams(
-              lessonId: lesson.id,
-              localPath: filePath,
-            ));
-            
-            fileResult.fold(
-              (failure) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to upload file: ${failure.userFriendlyMessage}')),
-                  );
-                }
-              },
-              (fileEntity) {
-                // File uploaded successfully
-              },
-            );
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to upload file: $e')),
-              );
-            }
-          }
+          await createFileNotifier.createFile(CreateFileParams(
+            lessonId: lesson.id,
+            localPath: filePath,
+          ));
         }
-        
-        _refreshLessonData();
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${filePaths.length} file(s) uploaded successfully!')),
+            SnackBar(content: Text('${filePaths.length} file(s) upload started')),
           );
         }
       }
@@ -655,19 +342,28 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
     }
   }
 
-  void _refreshLessonData() {
-    ref.invalidate(lessonFilesProvider(widget.lessonId));
-    ref.invalidate(lessonProvider(widget.lessonId));
-    ref.invalidate(flashcardCountProvider(widget.lessonId));
+  void _createFlashcard(dynamic lesson) {
+    // Fixed: Pass required subjectName and topicName parameters
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FlashcardCreationScreen(
+          lessonId: lesson.id,
+          subjectName: lesson.subjectName,
+          topicName: lesson.topicName,
+        ),
+      ),
+    );
   }
 
-  void _lockLesson(lesson) async {
+  void _lockLesson(dynamic lesson) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Lock Lesson'),
+        title: const Text('Lock Lesson for Study'),
         content: const Text(
-          'This will start the spaced repetition schedule for this lesson. You can still add content later.',
+          'This will lock the lesson and make it available for studying. '
+          'You won\'t be able to edit flashcards or add files after locking.',
         ),
         actions: [
           TextButton(
@@ -683,35 +379,91 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
     );
 
     if (confirmed == true) {
-      try {
-        await ref.read(lessonsNotifierProvider(
-          subjectName: lesson.subjectName,
-          topicName: lesson.topicName,
-        ).notifier).lockLesson(lesson.id);
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Lesson locked successfully!')),
-          );
-          Navigator.pop(context);
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to lock lesson: $e')),
-          );
-        }
+      // Fixed: Pass required subjectName and topicName parameters to lessonsNotifierProvider
+      final lessonNotifier = ref.read(lessonsNotifierProvider(
+        subjectName: lesson.subjectName,
+        topicName: lesson.topicName,
+      ).notifier);
+      await lessonNotifier.lockLesson(lesson.id);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${lesson.displayTitle} is now ready for study!'),
+            action: SnackBarAction(
+              label: 'Study Now',
+              onPressed: () {
+                // Navigate to study mode
+                _refreshLessonData();
+              },
+            ),
+          ),
+        );
       }
     }
   }
 
-  void _deleteLesson(lesson) async {
+  void _showDeleteConfirmation(dynamic lesson) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Lesson'),
-        content: const Text(
-          'This will permanently delete the lesson and all its content (flashcards and files). This action cannot be undone.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: AppSpacing.paddingAllSm,
+              decoration: BoxDecoration(
+                color: context.infoColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                border: Border.all(
+                  color: context.infoColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Title: ${lesson.displayTitle}',
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: context.textPrimaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  // Fixed: Remove null-aware operator since lesson can't be null here
+                  Text(
+                    'Created: ${_formatDate(lesson.createdAt)}',
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.textSecondaryColor,
+                    ),
+                  ),
+                  Text(
+                    'Proficiency: ${(lesson.proficiency * 100).toInt()}%',
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.textSecondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: AppSpacing.paddingAllSm,
+              decoration: BoxDecoration(
+                color: context.errorColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                border: Border.all(
+                  color: context.errorColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: const Text(
+                'This will also delete all flashcards and files in this lesson.\n\nThis action cannot be undone.',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -731,43 +483,247 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
     );
 
     if (confirmed == true) {
-      try {
-        await ref.read(lessonsNotifierProvider(
-          subjectName: lesson.subjectName,
-          topicName: lesson.topicName,
-        ).notifier).deleteLesson(lesson.id);
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Lesson deleted successfully!')),
-          );
-          Navigator.pop(context);
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete lesson: $e')),
-          );
-        }
+      // Fixed: Pass required subjectName and topicName parameters to lessonsNotifierProvider
+      final lessonNotifier = ref.read(lessonsNotifierProvider(
+        subjectName: lesson.subjectName,
+        topicName: lesson.topicName,
+      ).notifier);
+      await lessonNotifier.deleteLesson(lesson.id);
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lesson deleted successfully')),
+        );
       }
     }
   }
 
-  void _startFlashcardSession(lesson) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FlashcardPreviewScreen(lessonId: lesson.id),
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  // Study Mode: For locked lessons (study session)
+  Widget _buildStudyMode(dynamic lesson) {
+    final flashcardCount = ref.watch(flashcardCountProvider(lesson.id));
+    final filesAsync = ref.watch(lessonFilesProvider(lesson.id));
+    final fileCount = filesAsync.maybeWhen(
+      data: (files) => files.length,
+      orElse: () => 0,
+    );
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          lesson.displayTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            onPressed: () => _viewFiles(lesson),
+            icon: const Icon(Icons.folder_open),
+            tooltip: 'View Files',
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Lesson stats
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: context.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+                border: Border.all(
+                  color: context.primaryColor.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    lesson.displayTitle,
+                    style: context.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStatCard('Flashcards', flashcardCount.toString()),
+                      _buildStatCard('Files', fileCount.toString()),
+                      _buildStatCard('Proficiency', '${(lesson.proficiency * 100).toInt()}%'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            
+            // Study session info
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.school,
+                    size: 64,
+                    color: context.primaryColor,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Ready to Study!',
+                    style: context.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: context.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'This lesson is locked and ready for your study session',
+                    textAlign: TextAlign.center,
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      color: context.textSecondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            
+            // Quick actions for study mode
+            _buildQuickActions(lesson),
+          ],
+        ),
       ),
     );
   }
 
-  void _viewFiles(lesson) {
+  Widget _buildStatCard(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: context.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: context.primaryColor,
+          ),
+        ),
+        Text(
+          label,
+          style: context.textTheme.bodySmall?.copyWith(
+            color: context.textSecondaryColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActions(dynamic lesson) {
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => _startFlashcardSession(lesson),
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Start Flashcard Session'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.all(AppSpacing.md),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => _viewFiles(lesson),
+            icon: const Icon(Icons.folder_open),
+            label: const Text('View Files'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.all(AppSpacing.md),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _startFlashcardSession(dynamic lesson) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FlashcardPreviewScreen(
+          lessonId: lesson.id,
+          allowEditing: false,
+        ),
+      ),
+    );
+  }
+
+  void _viewFiles(dynamic lesson) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => LessonFilesScreen(lessonId: lesson.id),
       ),
     );
+  }
+
+  Widget _buildNotFoundScreen() {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Lesson Not Found')),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            SizedBox(height: AppSpacing.md),
+            Text('The requested lesson could not be found.'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingScreen() {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Loading...')),
+      body: const Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  Widget _buildErrorScreen(String error) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Error')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: AppSpacing.md),
+            Text('Error: $error'),
+            const SizedBox(height: AppSpacing.lg),
+            ElevatedButton.icon(
+              onPressed: () => ref.refresh(lessonProvider(widget.lessonId)),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _refreshLessonData() {
+    ref.invalidate(lessonProvider(widget.lessonId));
+    ref.invalidate(lessonFilesProvider(widget.lessonId));
+    ref.invalidate(flashcardCountProvider(widget.lessonId));
+    // Fixed: Use correct provider name
+    ref.invalidate(flashcardsByLessonProvider(widget.lessonId));
   }
 }
