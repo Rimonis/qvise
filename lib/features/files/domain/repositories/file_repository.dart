@@ -17,5 +17,7 @@ abstract class FileRepository {
 
   Future<Either<AppFailure, void>> deleteFile(String fileId);
 
+  Future<Either<AppFailure, void>> deleteFilesByLesson(String lessonId);
+
   Future<Either<AppFailure, void>> syncFiles();
 }

@@ -1,3 +1,4 @@
+// lib/features/content/data/models/topic_model.dart
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../domain/entities/topic.dart';
 
@@ -14,6 +15,8 @@ class TopicModel with _$TopicModel {
     required int lessonCount,
     required DateTime lastStudied,
     required DateTime createdAt,
+    DateTime? updatedAt,
+    @Default(1) int version,
   }) = _TopicModel;
 
   const TopicModel._();
@@ -29,6 +32,7 @@ class TopicModel with _$TopicModel {
       lessonCount: topic.lessonCount,
       lastStudied: topic.lastStudied,
       createdAt: topic.createdAt,
+      updatedAt: DateTime.now(),
     );
   }
 
@@ -53,6 +57,8 @@ class TopicModel with _$TopicModel {
       'lessonCount': lessonCount,
       'lastStudied': lastStudied.millisecondsSinceEpoch,
       'createdAt': createdAt.millisecondsSinceEpoch,
+      'updated_at': updatedAt?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch,
+      'version': version,
     };
   }
 
@@ -65,6 +71,8 @@ class TopicModel with _$TopicModel {
       lessonCount: map['lessonCount'] as int,
       lastStudied: DateTime.fromMillisecondsSinceEpoch(map['lastStudied'] as int),
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int),
+      updatedAt: map['updated_at'] != null ? DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int) : null,
+      version: map['version'] as int? ?? 1,
     );
   }
 }

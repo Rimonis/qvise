@@ -163,6 +163,28 @@ class FileRepositoryImpl extends BaseRepository implements FileRepository {
   }
 
   @override
+  Future<Either<AppFailure, void>> deleteFilesByLesson(String lessonId) async {
+    return guard(() async {
+      final filesToDelete = await localDataSource.getFilesByLessonId(lessonId);
+      if (filesToDelete.isEmpty) return;
+
+      final userId = await userService.getCurrentUserId();
+      await remoteDataSource.deleteFilesByLesson(lessonId, userId);
+
+      await localDataSource.deleteFilesByLesson(lessonId);
+
+      for (final file in filesToDelete) {
+        final localFile = File(file.filePath);
+        if (await localFile.exists()) {
+          await localFile.delete().catchError((e) {
+            debugPrint("Failed to delete local file from storage: $e");
+          });
+        }
+      }
+    });
+  }
+
+  @override
   Future<Either<AppFailure, List<FileEntity>>> getFilesByLesson(String lessonId) async {
     return guard(() async {
       final fileModels = await localDataSource.getFilesByLessonId(lessonId);

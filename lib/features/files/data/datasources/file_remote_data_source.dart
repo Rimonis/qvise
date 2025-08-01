@@ -6,6 +6,8 @@ import '../models/file_model.dart';
 abstract class FileRemoteDataSource {
   Future<FileModel> uploadFile(FileModel fileToUpload);
   Future<void> deleteFile(String fileId, String userId);
+  Future<void> deleteFilesByLesson(String lessonId, String userId);
+  Future<void> deleteFilesByLessonIds(List<String> lessonIds, String userId);
 }
 
 class FileRemoteDataSourceImpl implements FileRemoteDataSource {
@@ -16,6 +18,9 @@ class FileRemoteDataSourceImpl implements FileRemoteDataSource {
     required FirebaseFirestore firestore,
     required dynamic storage,
   }) : _firestore = firestore, _storage = storage;
+
+  CollectionReference<Map<String, dynamic>> _filesCollection(String userId) =>
+      _firestore.collection('users').doc(userId).collection('files');
 
   @override
   Future<FileModel> uploadFile(FileModel fileToUpload) async {
@@ -30,62 +35,19 @@ class FileRemoteDataSourceImpl implements FileRemoteDataSource {
     );
     
     // Save metadata to Firestore
-    final docRef = _firestore
-        .collection('users')
-        .doc(fileToUpload.userId)
-        .collection('files')
-        .doc(syncedFile.id);
+    final docRef = _filesCollection(fileToUpload.userId).doc(syncedFile.id);
     await docRef.set(syncedFile.toJson());
 
     return syncedFile;
-
-    /* Real implementation (uncomment when firebase_storage is added):
-    final file = File(fileToUpload.filePath);
-    if (!await file.exists()) {
-      throw Exception('File not found at path: ${fileToUpload.filePath}');
-    }
-
-    final userId = fileToUpload.userId;
-    final fileName = '${fileToUpload.id}.${fileToUpload.name.split('.').last}';
-    final storageRef = _storage.ref('users/$userId/files/$fileName');
-    
-    // 1. Upload file to Firebase Storage
-    final uploadTask = storageRef.putFile(file);
-    final snapshot = await uploadTask.whenComplete(() => {});
-    final remoteUrl = await snapshot.ref.getDownloadURL();
-
-    // 2. Update model with remote URL and sync status
-    final syncedFile = fileToUpload.copyWith(
-      remoteUrl: remoteUrl,
-      syncStatus: 'synced',
-      updatedAt: DateTime.now().millisecondsSinceEpoch,
-    );
-    
-    // 3. Save metadata to Firestore
-    final docRef = _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('files')
-        .doc(syncedFile.id);
-    await docRef.set(syncedFile.toJson());
-
-    return syncedFile;
-    */
   }
 
   @override
   Future<void> deleteFile(String fileId, String userId) async {
     // Delete from Firestore
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('files')
-        .doc(fileId)
-        .delete();
+    await _filesCollection(userId).doc(fileId).delete();
 
-    // For mock, we don't need to delete from storage
     // Real implementation would delete from Firebase Storage here
-    /* Real implementation (uncomment when firebase_storage is added):
+    /*
     try {
       final storageRef = _storage.ref('users/$userId/files/$fileId');
       await storageRef.delete();
@@ -94,5 +56,35 @@ class FileRemoteDataSourceImpl implements FileRemoteDataSource {
       print('Could not delete file from storage: $e');
     }
     */
+  }
+
+  @override
+  Future<void> deleteFilesByLesson(String lessonId, String userId) async {
+    final batch = _firestore.batch();
+    final querySnapshot = await _filesCollection(userId)
+        .where('lesson_id', isEqualTo: lessonId)
+        .get();
+        
+    for (final doc in querySnapshot.docs) {
+      batch.delete(doc.reference);
+      // In real implementation, add storage deletion here
+    }
+    await batch.commit();
+  }
+
+  @override
+  Future<void> deleteFilesByLessonIds(List<String> lessonIds, String userId) async {
+    if (lessonIds.isEmpty) return;
+    
+    final batch = _firestore.batch();
+    final querySnapshot = await _filesCollection(userId)
+        .where('lesson_id', whereIn: lessonIds)
+        .get();
+        
+    for (final doc in querySnapshot.docs) {
+      batch.delete(doc.reference);
+      // In real implementation, add storage deletion here
+    }
+    await batch.commit();
   }
 }

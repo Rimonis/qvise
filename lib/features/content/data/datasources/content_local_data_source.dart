@@ -2,12 +2,18 @@
 
 import 'package:qvise/core/data/datasources/transactional_data_source.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:qvise/core/data/database/app_database.dart';
 import '../models/subject_model.dart';
 import '../models/topic_model.dart';
 import '../models/lesson_model.dart';
 
 abstract class ContentLocalDataSource extends TransactionalDataSource {
   Future<void> initDatabase();
+  Future<void> createLessonAndHierarchy({
+    required LessonModel lesson,
+    SubjectModel? subjectToUpdate,
+    TopicModel? topicToUpdate,
+  });
   Future<List<SubjectModel>> getSubjects(String userId);
   Future<SubjectModel?> getSubject(String userId, String subjectName);
   Future<void> insertOrUpdateSubject(SubjectModel subject);
@@ -47,6 +53,36 @@ class ContentLocalDataSourceImpl extends TransactionalDataSource
   @override
   Future<void> initDatabase() async {
     await database;
+  }
+
+  @override
+  Future<void> createLessonAndHierarchy({
+    required LessonModel lesson,
+    SubjectModel? subjectToUpdate,
+    TopicModel? topicToUpdate,
+  }) async {
+    final db = await AppDatabase.database;
+    await db.transaction((txn) async {
+      if (subjectToUpdate != null) {
+        await txn.insert(
+          'subjects',
+          subjectToUpdate.toDatabase(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      if (topicToUpdate != null) {
+        await txn.insert(
+          'topics',
+          topicToUpdate.toDatabase(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await txn.insert(
+        'lessons',
+        lesson.toDatabase(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
   }
 
   @override

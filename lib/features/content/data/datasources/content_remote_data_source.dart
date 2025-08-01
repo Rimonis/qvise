@@ -9,7 +9,7 @@ import '../models/topic_model.dart';
 abstract class ContentRemoteDataSource {
   Future<LessonModel> createLesson(LessonModel lesson);
   Future<void> updateLesson(LessonModel lesson);
-  Future<void> deleteLesson(String lessonId);
+  Future<void> deleteLesson(String lessonId, String userId);
   Future<void> deleteLessonsByTopic(
       String userId, String subjectName, String topicName);
   Future<void> deleteLessonsBySubject(String userId, String subjectName);
@@ -45,6 +45,9 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       _firestore.collection('subjects');
   CollectionReference<Map<String, dynamic>> get _topicsCollection =>
       _firestore.collection('topics');
+  
+  CollectionReference<Map<String, dynamic>> _filesCollection(String userId) =>
+      _firestore.collection('users').doc(userId).collection('files');
 
   @override
   Future<LessonModel> createLesson(LessonModel lesson) async {
@@ -66,11 +69,24 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
   }
 
   @override
-  Future<void> deleteLesson(String lessonId) async {
+  Future<void> deleteLesson(String lessonId, String userId) async {
     try {
-      await _lessonsCollection.doc(lessonId).delete();
+      final batch = _firestore.batch();
+      
+      // Delete lesson
+      batch.delete(_lessonsCollection.doc(lessonId));
+
+      // Delete associated files
+      final filesSnapshot = await _filesCollection(userId)
+          .where('lessonId', isEqualTo: lessonId)
+          .get();
+      for (final doc in filesSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
     } catch (e) {
-      throw Exception('Failed to delete lesson: $e');
+      throw Exception('Failed to delete lesson and associated files: $e');
     }
   }
 

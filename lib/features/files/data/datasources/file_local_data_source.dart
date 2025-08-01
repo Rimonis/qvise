@@ -8,8 +8,10 @@ abstract class FileLocalDataSource {
   Future<void> createFile(FileModel file);
   Future<void> updateFile(FileModel file);
   Future<void> deleteFile(String fileId);
+  Future<void> deleteFilesByLesson(String lessonId);
   Future<FileModel?> getFileById(String fileId);
   Future<List<FileModel>> getFilesByLessonId(String lessonId);
+  Future<List<FileModel>> getFilesByLessonIds(List<String> lessonIds);
   Future<List<FileModel>> getStarredFiles();
   Future<List<FileModel>> getFilesForSync();
 }
@@ -38,6 +40,12 @@ class FileLocalDataSourceImpl extends TransactionalDataSource implements FileLoc
   }
 
   @override
+  Future<void> deleteFilesByLesson(String lessonId) async {
+    final db = await database;
+    await db.delete(_tableName, where: 'lesson_id = ?', whereArgs: [lessonId]);
+  }
+
+  @override
   Future<FileModel?> getFileById(String fileId) async {
     final db = await database;
     final maps = await db.query(_tableName, where: 'id = ?', whereArgs: [fileId]);
@@ -55,6 +63,18 @@ class FileLocalDataSourceImpl extends TransactionalDataSource implements FileLoc
       where: 'lesson_id = ?',
       whereArgs: [lessonId],
       orderBy: 'created_at DESC',
+    );
+    return maps.map((map) => FileModel.fromDb(map)).toList();
+  }
+
+  @override
+  Future<List<FileModel>> getFilesByLessonIds(List<String> lessonIds) async {
+    final db = await database;
+    if (lessonIds.isEmpty) return [];
+    final maps = await db.query(
+      _tableName,
+      where: 'lesson_id IN (${List.filled(lessonIds.length, '?').join(',')})',
+      whereArgs: lessonIds,
     );
     return maps.map((map) => FileModel.fromDb(map)).toList();
   }

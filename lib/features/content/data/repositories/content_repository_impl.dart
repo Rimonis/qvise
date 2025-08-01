@@ -1,21 +1,24 @@
 // lib/features/content/data/repositories/content_repository_impl.dart
+import 'dart:io';
 import 'package:dartz/dartz.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:qvise/core/data/unit_of_work.dart';
-import 'package:uuid/uuid.dart';
+import 'package:flutter/foundation.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:qvise/core/data/repositories/base_repository.dart';
+import 'package:qvise/core/data/unit_of_work.dart';
 import 'package:qvise/core/error/app_failure.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../domain/entities/create_lesson_params.dart';
+import '../../domain/entities/lesson.dart';
 import '../../domain/entities/subject.dart';
 import '../../domain/entities/topic.dart';
-import '../../domain/entities/lesson.dart';
-import '../../domain/entities/create_lesson_params.dart';
 import '../../domain/repositories/content_repository.dart';
 import '../datasources/content_local_data_source.dart';
 import '../datasources/content_remote_data_source.dart';
+import '../models/lesson_model.dart';
 import '../models/subject_model.dart';
 import '../models/topic_model.dart';
-import '../models/lesson_model.dart';
 
 class ContentRepositoryImpl extends BaseRepository implements ContentRepository {
   final ContentLocalDataSource localDataSource;
@@ -56,7 +59,7 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
           await localDataSource.markLessonAsSynced(lesson.id);
         } catch (e) {
           // Non-critical error, sync coordinator will handle it later
-          print('Failed to immediately sync updated lesson: $e');
+          debugPrint('Failed to immediately sync updated lesson: $e');
         }
       }
 
@@ -125,8 +128,8 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         throw const AppFailure(
             type: FailureType.auth, message: 'User not authenticated');
       }
-      final lessons =
-          await localDataSource.getLessonsByTopic(_userId, subjectName, topicName);
+      final lessons = await localDataSource.getLessonsByTopic(
+          _userId, subjectName, topicName);
       return lessons.map((l) => l.toEntity()).toList();
     });
   }
@@ -199,13 +202,71 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         isSynced: false,
       );
 
+      // Perform high-latency remote operation first
       final syncedLesson = await remoteDataSource.createLesson(lessonModel);
-      await localDataSource.insertOrUpdateLesson(syncedLesson);
-      await _updateContentHierarchy(params.subjectName, params.topicName, now);
+
+      // Prepare local data models
+      final subject = await _prepareSubjectModel(params, now);
+      final topic = await _prepareTopicModel(params, now);
+
+      // Then perform fast, local transactional database operations
+      await localDataSource.createLessonAndHierarchy(
+        lesson: syncedLesson,
+        subjectToUpdate: subject,
+        topicToUpdate: topic,
+      );
+
+      await recalculateProficiencies();
 
       return syncedLesson.toEntity();
     });
   }
+
+  Future<SubjectModel> _prepareSubjectModel(CreateLessonParams params, DateTime now) async {
+    final subject = await localDataSource.getSubject(_userId, params.subjectName);
+    if (params.isNewSubject || subject == null) {
+      return SubjectModel(
+        name: params.subjectName,
+        userId: _userId,
+        proficiency: 0.0,
+        lessonCount: 1,
+        topicCount: 1,
+        lastStudied: now,
+        createdAt: now,
+        updatedAt: now,
+      );
+    } else {
+      return subject.copyWith(
+        lessonCount: subject.lessonCount + 1,
+        topicCount: params.isNewTopic ? subject.topicCount + 1 : subject.topicCount,
+        lastStudied: now,
+        updatedAt: now,
+      );
+    }
+  }
+
+  Future<TopicModel> _prepareTopicModel(CreateLessonParams params, DateTime now) async {
+    final topic = await localDataSource.getTopic(_userId, params.subjectName, params.topicName);
+    if (params.isNewTopic || topic == null) {
+      return TopicModel(
+        name: params.topicName,
+        subjectName: params.subjectName,
+        userId: _userId,
+        proficiency: 0.0,
+        lessonCount: 1,
+        lastStudied: now,
+        createdAt: now,
+        updatedAt: now,
+      );
+    } else {
+      return topic.copyWith(
+        lessonCount: topic.lessonCount + 1,
+        lastStudied: now,
+        updatedAt: now,
+      );
+    }
+  }
+
 
   @override
   Future<Either<AppFailure, void>> deleteLesson(String lessonId) async {
@@ -221,21 +282,30 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
 
       final lesson = await localDataSource.getLesson(lessonId);
       if (lesson == null) {
-        throw const AppFailure(type: FailureType.cache, message: 'Lesson not found');
+        throw const AppFailure(
+            type: FailureType.cache, message: 'Lesson not found');
       }
 
-      await unitOfWork.transaction(() async {
-        await unitOfWork.flashcard.deleteFlashcardsByLesson(lessonId);
-        await unitOfWork.content.deleteLesson(lessonId);
-      });
+      final filesToDelete = await unitOfWork.file.getFilesByLessonId(lessonId);
 
       try {
-        await remoteDataSource.deleteLesson(lessonId);
+        await remoteDataSource.deleteLesson(lessonId, _userId);
       } catch (e) {
-        print('Non-critical failure: Could not delete remote lesson $lessonId: $e');
+        debugPrint(
+            'Non-critical failure: Could not delete remote lesson $lessonId: $e');
       }
 
-      await _cleanupEmptyTopicAndSubject(lesson.subjectName, lesson.topicName);
+      await localDataSource.deleteLesson(lessonId); // This will cascade locally
+
+      for (final file in filesToDelete) {
+        final localFile = File(file.filePath);
+        if (await localFile.exists()) {
+          await localFile.delete().catchError((e) {
+            debugPrint('Failed to delete file from storage: $e');
+            throw e; // Rethrow to satisfy return type
+          });
+        }
+      }
     });
   }
 
@@ -252,24 +322,31 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
             type: FailureType.network, message: 'Network connection required');
       }
 
-      await unitOfWork.transaction(() async {
-        final lessons = await unitOfWork.content
-            .getLessonsByTopic(_userId, subjectName, topicName);
-        for (final lesson in lessons) {
-          await unitOfWork.flashcard.deleteFlashcardsByLesson(lesson.id);
-          await unitOfWork.content.deleteLesson(lesson.id);
-        }
-        await unitOfWork.content.deleteTopic(_userId, subjectName, topicName);
-      });
+      final lessons = await localDataSource.getLessonsByTopic(
+          _userId, subjectName, topicName);
+      final lessonIds = lessons.map((l) => l.id).toList();
+      final filesToDelete = await unitOfWork.file.getFilesByLessonIds(lessonIds);
 
       try {
-        await remoteDataSource.deleteLessonsByTopic(_userId, subjectName, topicName);
+        await remoteDataSource.deleteLessonsByTopic(
+            _userId, subjectName, topicName);
       } catch (e) {
-        print(
-            'Non-critical failure: Could not delete remote lessons for topic $topicName: $e');
+        debugPrint(
+            'Non-critical failure: Could not delete remote topic $topicName: $e');
       }
 
-      await _cleanupEmptySubject(subjectName);
+      await localDataSource.deleteTopic(
+          _userId, subjectName, topicName); // This will cascade locally
+
+      for (final file in filesToDelete) {
+        final localFile = File(file.filePath);
+        if (await localFile.exists()) {
+          await localFile.delete().catchError((e) {
+            debugPrint('Failed to delete file from storage: $e');
+            throw e; // Rethrow to satisfy return type
+          });
+        }
+      }
     });
   }
 
@@ -285,26 +362,34 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
             type: FailureType.network, message: 'Network connection required');
       }
 
-      await unitOfWork.transaction(() async {
-        final topics =
-            await unitOfWork.content.getTopicsBySubject(_userId, subjectName);
-        for (final topic in topics) {
-          final lessons = await unitOfWork.content
-              .getLessonsByTopic(_userId, subjectName, topic.name);
-          for (final lesson in lessons) {
-            await unitOfWork.flashcard.deleteFlashcardsByLesson(lesson.id);
-            await unitOfWork.content.deleteLesson(lesson.id);
-          }
-          await unitOfWork.content.deleteTopic(_userId, subjectName, topic.name);
-        }
-        await unitOfWork.content.deleteSubject(_userId, subjectName);
-      });
+      final topics =
+          await localDataSource.getTopicsBySubject(_userId, subjectName);
+      final lessonIds = <String>[];
+      for (var topic in topics) {
+        final lessons = await localDataSource.getLessonsByTopic(
+            _userId, subjectName, topic.name);
+        lessonIds.addAll(lessons.map((l) => l.id));
+      }
+      final filesToDelete = await unitOfWork.file.getFilesByLessonIds(lessonIds);
 
       try {
         await remoteDataSource.deleteLessonsBySubject(_userId, subjectName);
       } catch (e) {
-        print(
-            'Non-critical failure: Could not delete remote lessons for subject $subjectName: $e');
+        debugPrint(
+            'Non-critical failure: Could not delete remote subject $subjectName: $e');
+      }
+
+      await localDataSource.deleteSubject(
+          _userId, subjectName); // This will cascade locally
+
+      for (final file in filesToDelete) {
+        final localFile = File(file.filePath);
+        if (await localFile.exists()) {
+          await localFile.delete().catchError((e) {
+            debugPrint('Failed to delete file from storage: $e');
+            throw e; // Rethrow to satisfy return type
+          });
+        }
       }
     });
   }
@@ -333,7 +418,6 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
       for (final lesson in remoteLessons) {
         await localDataSource.insertOrUpdateLesson(lesson);
       }
-      await _rebuildContentHierarchy();
     });
   }
 
@@ -388,7 +472,8 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
     return guard(() async {
       final lesson = await localDataSource.getLesson(lessonId);
       if (lesson == null) {
-        throw const AppFailure(type: FailureType.cache, message: 'Lesson not found');
+        throw const AppFailure(
+            type: FailureType.cache, message: 'Lesson not found');
       }
       final updatedLesson = lesson.copyWith(
           isLocked: true,
@@ -406,146 +491,5 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         }
       }
     });
-  }
-
-  Future<void> _updateContentHierarchy(
-      String subjectName, String topicName, DateTime now) async {
-    var topic = await localDataSource.getTopic(_userId, subjectName, topicName);
-    if (topic == null) {
-      topic = TopicModel(
-        name: topicName,
-        subjectName: subjectName,
-        userId: _userId,
-        proficiency: 0.0,
-        lessonCount: 1,
-        lastStudied: now,
-        createdAt: now,
-      );
-    } else {
-      topic = topic.copyWith(lessonCount: topic.lessonCount + 1, lastStudied: now);
-    }
-    await localDataSource.insertOrUpdateTopic(topic);
-
-    var subject = await localDataSource.getSubject(_userId, subjectName);
-    if (subject == null) {
-      subject = SubjectModel(
-        name: subjectName,
-        userId: _userId,
-        proficiency: 0.0,
-        lessonCount: 1,
-        topicCount: 1,
-        lastStudied: now,
-        createdAt: now,
-      );
-    } else {
-      final topicCount =
-          (await localDataSource.getTopicsBySubject(_userId, subjectName)).length;
-      subject = subject.copyWith(
-          lessonCount: subject.lessonCount + 1,
-          topicCount: topicCount,
-          lastStudied: now);
-    }
-    await localDataSource.insertOrUpdateSubject(subject);
-    await recalculateProficiencies();
-  }
-
-  Future<void> _cleanupEmptyTopicAndSubject(
-      String subjectName, String topicName) async {
-    final topicLessons =
-        await localDataSource.getLessonsByTopic(_userId, subjectName, topicName);
-    if (topicLessons.isEmpty) {
-      await localDataSource.deleteTopic(_userId, subjectName, topicName);
-      await _cleanupEmptySubject(subjectName);
-    } else {
-      final topic = await localDataSource.getTopic(_userId, subjectName, topicName);
-      if (topic != null) {
-        await localDataSource
-            .insertOrUpdateTopic(topic.copyWith(lessonCount: topicLessons.length));
-      }
-      await _updateSubjectCounts(subjectName);
-      await recalculateProficiencies();
-    }
-  }
-
-  Future<void> _cleanupEmptySubject(String subjectName) async {
-    final subjectTopics =
-        await localDataSource.getTopicsBySubject(_userId, subjectName);
-    if (subjectTopics.isEmpty) {
-      await localDataSource.deleteSubject(_userId, subjectName);
-    } else {
-      await _updateSubjectCounts(subjectName);
-      await recalculateProficiencies();
-    }
-  }
-
-  Future<void> _updateSubjectCounts(String subjectName) async {
-    final subject = await localDataSource.getSubject(_userId, subjectName);
-    if (subject != null) {
-      final topics =
-          await localDataSource.getTopicsBySubject(_userId, subjectName);
-      int totalLessons = 0;
-      for (final topic in topics) {
-        final lessons = await localDataSource.getLessonsByTopic(
-            _userId, subjectName, topic.name);
-        totalLessons += lessons.length;
-      }
-      await localDataSource.insertOrUpdateSubject(subject.copyWith(
-          topicCount: topics.length, lessonCount: totalLessons));
-    }
-  }
-
-  Future<void> _rebuildContentHierarchy() async {
-    final lessons = await localDataSource.getAllLessons(_userId);
-    final subjectMap = <String, Map<String, List<LessonModel>>>{};
-
-    for (final lesson in lessons) {
-      subjectMap.putIfAbsent(lesson.subjectName, () => {});
-      subjectMap[lesson.subjectName]!
-          .putIfAbsent(lesson.topicName, () => []);
-      subjectMap[lesson.subjectName]![lesson.topicName]!.add(lesson);
-    }
-
-    for (final subjectEntry in subjectMap.entries) {
-      final subjectName = subjectEntry.key;
-      final topicsMap = subjectEntry.value;
-      DateTime lastStudied = DateTime(1970);
-      int totalLessons = 0;
-
-      for (final topicEntry in topicsMap.entries) {
-        final topicName = topicEntry.key;
-        final topicLessons = topicEntry.value;
-        totalLessons += topicLessons.length;
-        for (final lesson in topicLessons) {
-          if (lesson.lastReviewedAt != null &&
-              lesson.lastReviewedAt!.isAfter(lastStudied)) {
-            lastStudied = lesson.lastReviewedAt!;
-          }
-        }
-        final topic = TopicModel(
-          name: topicName,
-          subjectName: subjectName,
-          userId: _userId,
-          proficiency: 0.0,
-          lessonCount: topicLessons.length,
-          lastStudied: lastStudied,
-          createdAt: topicLessons
-              .map((l) => l.createdAt)
-              .reduce((a, b) => a.isBefore(b) ? a : b),
-        );
-        await localDataSource.insertOrUpdateTopic(topic);
-      }
-
-      final subject = SubjectModel(
-        name: subjectName,
-        userId: _userId,
-        proficiency: 0.0,
-        lessonCount: totalLessons,
-        topicCount: topicsMap.length,
-        lastStudied: lastStudied,
-        createdAt: DateTime.now(),
-      );
-      await localDataSource.insertOrUpdateSubject(subject);
-    }
-    await recalculateProficiencies();
   }
 }
