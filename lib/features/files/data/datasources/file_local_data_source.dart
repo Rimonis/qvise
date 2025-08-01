@@ -4,7 +4,8 @@ import 'package:qvise/core/data/database/app_database.dart';
 import 'package:qvise/core/data/datasources/transactional_data_source.dart';
 import '../models/file_model.dart';
 
-abstract class FileLocalDataSource {
+// FIXED: Abstract class now extends TransactionalDataSource
+abstract class FileLocalDataSource extends TransactionalDataSource {
   Future<void> createFile(FileModel file);
   Future<void> updateFile(FileModel file);
   Future<void> deleteFile(String fileId);
@@ -84,8 +85,9 @@ class FileLocalDataSourceImpl extends TransactionalDataSource implements FileLoc
     final db = await database;
     final maps = await db.query(
       _tableName,
-      where: 'is_starred = 1',
-      orderBy: 'updated_at DESC NULLS LAST, created_at DESC',
+      where: 'is_starred = ?',
+      whereArgs: [1],
+      orderBy: 'created_at DESC',
     );
     return maps.map((map) => FileModel.fromDb(map)).toList();
   }
@@ -95,7 +97,9 @@ class FileLocalDataSourceImpl extends TransactionalDataSource implements FileLoc
     final db = await database;
     final maps = await db.query(
       _tableName,
-      where: "sync_status IN ('queued', 'failed')",
+      where: 'sync_status = ?',
+      whereArgs: ['queued'],
+      orderBy: 'created_at ASC',
     );
     return maps.map((map) => FileModel.fromDb(map)).toList();
   }

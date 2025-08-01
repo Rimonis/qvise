@@ -82,9 +82,8 @@ AuthRemoteDataSource authRemoteDataSource(Ref ref) {
 }
 
 @Riverpod(keepAlive: true)
-Future<AuthLocalDataSource> authLocalDataSource(Ref ref) async {
-  final database = await AuthLocalDataSourceImpl.createDatabase();
-  return AuthLocalDataSourceImpl(database: database);
+AuthLocalDataSource authLocalDataSource(Ref ref) {
+  return AuthLocalDataSourceImpl(); // Remove database parameter
 }
 
 // Repositories

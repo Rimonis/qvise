@@ -9,32 +9,23 @@ import '../models/lesson_model.dart';
 
 abstract class ContentLocalDataSource extends TransactionalDataSource {
   Future<void> initDatabase();
-  Future<void> createLessonAndHierarchy({
-    required LessonModel lesson,
-    SubjectModel? subjectToUpdate,
-    TopicModel? topicToUpdate,
-  });
   Future<List<SubjectModel>> getSubjects(String userId);
   Future<SubjectModel?> getSubject(String userId, String subjectName);
   Future<void> insertOrUpdateSubject(SubjectModel subject);
   Future<void> deleteSubject(String userId, String subjectName);
   Future<List<TopicModel>> getTopicsBySubject(String userId, String subjectName);
-  Future<TopicModel?> getTopic(
-      String userId, String subjectName, String topicName);
+  Future<TopicModel?> getTopic(String userId, String subjectName, String topicName);
   Future<void> insertOrUpdateTopic(TopicModel topic);
   Future<void> deleteTopic(String userId, String subjectName, String topicName);
-  Future<List<LessonModel>> getLessonsByTopic(
-      String userId, String subjectName, String topicName);
+  Future<List<LessonModel>> getLessonsByTopic(String userId, String subjectName, String topicName);
   Future<List<LessonModel>> getAllLessons(String userId);
   Future<List<LessonModel>> getUnsyncedLessons(String userId);
   Future<LessonModel?> getLesson(String lessonId);
   Future<void> insertOrUpdateLesson(LessonModel lesson);
   Future<void> deleteLesson(String lessonId);
   Future<void> markLessonAsSynced(String lessonId);
-  Future<void> updateSubjectProficiency(
-      String userId, String subjectName, double proficiency);
-  Future<void> updateTopicProficiency(
-      String userId, String subjectName, String topicName, double proficiency);
+  Future<void> updateSubjectProficiency(String userId, String subjectName, double proficiency);
+  Future<void> updateTopicProficiency(String userId, String subjectName, String topicName, double proficiency);
 
   // New methods for sync service
   Future<List<LessonModel>> getModifiedSince(DateTime since);
@@ -48,41 +39,10 @@ abstract class ContentLocalDataSource extends TransactionalDataSource {
   Future<void> markTopicAsSynced(String userId, String subjectName, String name);
 }
 
-class ContentLocalDataSourceImpl extends TransactionalDataSource
-    implements ContentLocalDataSource {
+class ContentLocalDataSourceImpl extends TransactionalDataSource implements ContentLocalDataSource {
   @override
   Future<void> initDatabase() async {
     await database;
-  }
-
-  @override
-  Future<void> createLessonAndHierarchy({
-    required LessonModel lesson,
-    SubjectModel? subjectToUpdate,
-    TopicModel? topicToUpdate,
-  }) async {
-    final db = await AppDatabase.database;
-    await db.transaction((txn) async {
-      if (subjectToUpdate != null) {
-        await txn.insert(
-          'subjects',
-          subjectToUpdate.toDatabase(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      if (topicToUpdate != null) {
-        await txn.insert(
-          'topics',
-          topicToUpdate.toDatabase(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      await txn.insert(
-        'lessons',
-        lesson.toDatabase(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    });
   }
 
   @override
@@ -132,8 +92,7 @@ class ContentLocalDataSourceImpl extends TransactionalDataSource
   }
 
   @override
-  Future<List<TopicModel>> getTopicsBySubject(
-      String userId, String subjectName) async {
+  Future<List<TopicModel>> getTopicsBySubject(String userId, String subjectName) async {
     final db = await database;
     final maps = await db.query(
       'topics',
@@ -145,8 +104,7 @@ class ContentLocalDataSourceImpl extends TransactionalDataSource
   }
 
   @override
-  Future<TopicModel?> getTopic(
-      String userId, String subjectName, String topicName) async {
+  Future<TopicModel?> getTopic(String userId, String subjectName, String topicName) async {
     final db = await database;
     final maps = await db.query(
       'topics',
@@ -169,8 +127,7 @@ class ContentLocalDataSourceImpl extends TransactionalDataSource
   }
 
   @override
-  Future<void> deleteTopic(
-      String userId, String subjectName, String topicName) async {
+  Future<void> deleteTopic(String userId, String subjectName, String topicName) async {
     final db = await database;
     await db.update(
       'topics',
@@ -181,8 +138,7 @@ class ContentLocalDataSourceImpl extends TransactionalDataSource
   }
 
   @override
-  Future<List<LessonModel>> getLessonsByTopic(
-      String userId, String subjectName, String topicName) async {
+  Future<List<LessonModel>> getLessonsByTopic(String userId, String subjectName, String topicName) async {
     final db = await database;
     final maps = await db.query(
       'lessons',
@@ -200,7 +156,7 @@ class ContentLocalDataSourceImpl extends TransactionalDataSource
       'lessons',
       where: 'userId = ? AND is_deleted = 0',
       whereArgs: [userId],
-      orderBy: 'nextReviewDate ASC',
+      orderBy: 'createdAt DESC',
     );
     return maps.map((map) => LessonModel.fromDatabase(map)).toList();
   }
@@ -262,8 +218,7 @@ class ContentLocalDataSourceImpl extends TransactionalDataSource
   }
 
   @override
-  Future<void> updateSubjectProficiency(
-      String userId, String subjectName, double proficiency) async {
+  Future<void> updateSubjectProficiency(String userId, String subjectName, double proficiency) async {
     final db = await database;
     await db.update(
       'subjects',
@@ -274,8 +229,7 @@ class ContentLocalDataSourceImpl extends TransactionalDataSource
   }
 
   @override
-  Future<void> updateTopicProficiency(
-      String userId, String subjectName, String topicName, double proficiency) async {
+  Future<void> updateTopicProficiency(String userId, String subjectName, String topicName, double proficiency) async {
     final db = await database;
     await db.update(
       'topics',
@@ -365,8 +319,7 @@ class ContentLocalDataSourceImpl extends TransactionalDataSource
   }
 
   @override
-  Future<void> markTopicAsSynced(
-      String userId, String subjectName, String name) async {
+  Future<void> markTopicAsSynced(String userId, String subjectName, String name) async {
     final db = await database;
     await db.update(
       'topics',

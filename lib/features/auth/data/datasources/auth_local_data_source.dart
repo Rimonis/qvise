@@ -1,6 +1,7 @@
+// lib/features/auth/data/datasources/auth_local_data_source.dart
 import 'dart:convert';
+import 'package:qvise/core/data/database/app_database.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
 import '../models/user_model.dart';
 
 abstract class AuthLocalDataSource {
@@ -10,26 +11,23 @@ abstract class AuthLocalDataSource {
 }
 
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
-  final Database database;
-
-  AuthLocalDataSourceImpl({required this.database});
-
-  static Future<Database> createDatabase() async {
-    return openDatabase(
-      join(await getDatabasesPath(), 'app_database.db'),
-      onCreate: (db, version) {
-        return db.execute(
-          'CREATE TABLE users(id TEXT PRIMARY KEY, data TEXT)',
-        );
-      },
-      version: 1,
-    );
-  }
+  // FIXED: Use shared AppDatabase instead of separate database
+  Future<Database> get _database async => AppDatabase.database;
 
   @override
   Future<UserModel?> getCachedUser() async {
     try {
-      final List<Map<String, dynamic>> maps = await database.query(
+      final db = await _database;
+      
+      // Create users table if it doesn't exist
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS users(
+          id TEXT PRIMARY KEY, 
+          data TEXT
+        )
+      ''');
+
+      final List<Map<String, dynamic>> maps = await db.query(
         'users',
         limit: 1,
       );
@@ -46,7 +44,17 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<void> cacheUser(UserModel user) async {
-    await database.insert(
+    final db = await _database;
+    
+    // Ensure table exists
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS users(
+        id TEXT PRIMARY KEY, 
+        data TEXT
+      )
+    ''');
+
+    await db.insert(
       'users',
       {
         'id': user.id,
@@ -58,7 +66,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<void> clearCachedUser() async {
-    await database.delete('users');
+    final db = await _database;
+    await db.delete('users');
   }
 }
-
