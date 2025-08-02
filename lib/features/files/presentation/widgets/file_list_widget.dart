@@ -2,13 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qvise/core/services/file_picker_service.dart';
 import 'package:qvise/core/theme/app_spacing.dart';
 import 'package:qvise/core/theme/theme_extensions.dart';
 import '../../domain/entities/file.dart';
 import '../providers/file_providers.dart';
-import '../screens/file_viewer_screen.dart';
-import 'file_item_widget.dart';
+import 'file_list_item.dart';
 
 class FileListWidget extends ConsumerWidget {
   final String lessonId;
@@ -43,15 +41,9 @@ class FileListWidget extends ConsumerWidget {
         final file = files[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: FileItemWidget(
+          child: FileListItem(
             file: file,
-            onTap: () => _openFile(context, file),
-            onStarToggle: allowEditing
-                ? () => _toggleStar(context, ref, file)
-                : null,
-            onDelete: allowEditing
-                ? () => _deleteFile(context, ref, file)
-                : null,
+            allowEditing: allowEditing,
           ),
         );
       },
@@ -120,83 +112,4 @@ class FileListWidget extends ConsumerWidget {
     );
   }
 
-  void _openFile(BuildContext context, FileEntity file) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => FileViewerScreen(file: file),
-      ),
-    );
-  }
-
-  Future<void> _toggleStar(BuildContext context, WidgetRef ref, FileEntity file) async {
-    try {
-      final lessonFilesNotifier = ref.read(lessonFilesProvider(lessonId).notifier);
-      await lessonFilesNotifier.toggleStar(file.id, file.isStarred);
-      
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(file.isStarred ? 'Removed from favorites' : 'Added to favorites'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update favorite status: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _deleteFile(BuildContext context, WidgetRef ref, FileEntity file) async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete File'),
-        content: Text('Are you sure you want to delete "${file.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    ) ?? false;
-
-    if (shouldDelete && context.mounted) {
-      try {
-        final lessonFilesNotifier = ref.read(lessonFilesProvider(lessonId).notifier);
-        await lessonFilesNotifier.deleteFile(file.id);
-        
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('File deleted successfully'),
-            ),
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to delete file: $e'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
-        }
-      }
-    }
-  }
 }

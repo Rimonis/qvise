@@ -11,11 +11,13 @@ import '../providers/file_providers.dart';
 class FileListItem extends ConsumerWidget {
   final FileEntity file;
   final VoidCallback? onDeleted;
+  final bool allowEditing;
 
   const FileListItem({
-    super.key, 
+    super.key,
     required this.file,
     this.onDeleted,
+    this.allowEditing = false,
   });
 
   IconData _getIconForFileType(FileType type) {
@@ -166,26 +168,27 @@ class FileListItem extends ConsumerWidget {
               ),
               
               // Action buttons
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      file.isStarred ? Icons.star : Icons.star_border,
-                      color: file.isStarred ? Colors.amber : Colors.grey,
+              if (allowEditing)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        file.isStarred ? Icons.star : Icons.star_border,
+                        color: file.isStarred ? Colors.amber : Colors.grey,
+                      ),
+                      onPressed: () {
+                        ref
+                            .read(lessonFilesProvider(file.lessonId).notifier)
+                            .toggleStar(file.id, file.isStarred);
+                      },
                     ),
-                    onPressed: () {
-                      ref
-                          .read(lessonFilesProvider(file.lessonId).notifier)
-                          .toggleStar(file.id, file.isStarred);
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                    onPressed: () => _showDeleteConfirmation(context, ref),
-                  ),
-                ],
-              ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                      onPressed: () => _showDeleteConfirmation(context, ref),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
