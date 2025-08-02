@@ -14,6 +14,7 @@ import '../../domain/usecases/delete_topic.dart';
 import '../../domain/usecases/get_lessons_by_topic.dart';
 import '../../domain/usecases/get_subjects.dart';
 import '../../domain/usecases/get_topics_by_subject.dart';
+import '../../domain/usecases/lock_lesson.dart';
 
 part 'content_providers.g.dart';
 
@@ -67,4 +68,10 @@ DeleteTopic deleteTopic(Ref ref) {
 @riverpod
 DeleteLesson deleteLesson(Ref ref) {
   return DeleteLesson(ref.watch(contentRepositoryProvider));
+}
+
+// FIX: Added the missing lockLessonUseCase provider
+@riverpod
+LockLesson lockLessonUseCase(Ref ref) {
+  return LockLesson(ref.watch(contentRepositoryProvider));
 }

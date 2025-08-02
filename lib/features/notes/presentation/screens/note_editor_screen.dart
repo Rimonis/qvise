@@ -10,11 +10,13 @@ import '../providers/note_providers.dart';
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final String lessonId;
   final Note? existingNote;
+  final String? initialContent;
 
   const NoteEditorScreen({
     super.key,
     required this.lessonId,
     this.existingNote,
+    this.initialContent,
   });
 
   @override
@@ -22,46 +24,46 @@ class NoteEditorScreen extends ConsumerStatefulWidget {
 }
 
 class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
-  final _titleController = TextEditingController();
-  final _contentController = TextEditingController();
-  final _titleFocusNode = FocusNode();
-  final _contentFocusNode = FocusNode();
+  late TextEditingController _titleController;
+  late TextEditingController _contentController;
+  late FocusNode _titleFocusNode;
+  late FocusNode _contentFocusNode;
   
-  bool _isSaving = false;
   bool _hasUnsavedChanges = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeControllers();
-    _setupTextListeners();
-  }
+    _titleController = TextEditingController(text: widget.existingNote?.title ?? '');
+    _contentController = TextEditingController(
+      text: widget.existingNote?.content ?? widget.initialContent ?? ''
+    );
+    _titleFocusNode = FocusNode();
+    _contentFocusNode = FocusNode();
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _contentController.dispose();
-    _titleFocusNode.dispose();
-    _contentFocusNode.dispose();
-    super.dispose();
-  }
-
-  void _initializeControllers() {
-    if (widget.existingNote != null) {
-      _titleController.text = widget.existingNote!.title ?? '';
-      _contentController.text = widget.existingNote!.content;
-    }
-  }
-
-  void _setupTextListeners() {
+    // Listen for changes to enable save button
     _titleController.addListener(_onTextChanged);
     _contentController.addListener(_onTextChanged);
   }
 
   void _onTextChanged() {
     if (!_hasUnsavedChanges) {
-      setState(() => _hasUnsavedChanges = true);
+      setState(() {
+        _hasUnsavedChanges = true;
+      });
     }
+  }
+
+  @override
+  void dispose() {
+    _titleController.removeListener(_onTextChanged);
+    _contentController.removeListener(_onTextChanged);
+    _titleController.dispose();
+    _contentController.dispose();
+    _titleFocusNode.dispose();
+    _contentFocusNode.dispose();
+    super.dispose();
   }
 
   @override
@@ -76,17 +78,16 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             onPressed: _handleClose,
           ),
           actions: [
-            if (_hasUnsavedChanges || widget.existingNote != null)
-              TextButton(
-                onPressed: _canSave() ? _saveNote : null,
-                child: _isSaving
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Save'),
-              ),
+            TextButton(
+              onPressed: _canSave() ? _saveNote : null,
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
+            ),
           ],
         ),
         body: Column(
@@ -97,7 +98,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: context.primaryColor.withValues(alpha: 0.1),
+                    color: context.colorScheme.outline.withValues(alpha: 0.2),
                   ),
                 ),
               ),
@@ -142,27 +143,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           decoration: BoxDecoration(
             border: Border(
               top: BorderSide(
-                color: context.primaryColor.withValues(alpha: 0.1),
+                color: context.colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
           ),
           child: SafeArea(
             child: Row(
               children: [
-                Icon(
-                  Icons.info_outline,
-                  size: 16,
-                  color: Theme.of(context).hintColor,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'Your notes are automatically saved as you type',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).hintColor,
-                    ),
-                  ),
-                ),
                 if (widget.existingNote != null)
                   IconButton(
                     onPressed: _showDeleteDialog,
@@ -171,6 +158,17 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                       color: Theme.of(context).colorScheme.error,
                     ),
                   ),
+                Expanded(
+                  child: Text(
+                    _hasUnsavedChanges 
+                        ? 'Tap Save to keep your changes'
+                        : 'Start typing to make changes',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).hintColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ],
             ),
           ),
@@ -180,7 +178,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 
   bool _canSave() {
-    return _contentController.text.trim().isNotEmpty && !_isSaving;
+    return _contentController.text.trim().isNotEmpty && 
+           !_isSaving && 
+           _hasUnsavedChanges;
   }
 
   Future<void> _saveNote() async {
@@ -192,33 +192,60 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       if (widget.existingNote != null) {
         // Update existing note
         final updateUseCase = ref.read(updateNoteProvider);
-        await updateUseCase(
+        final result = await updateUseCase(
           noteId: widget.existingNote!.id,
           title: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
           content: _contentController.text.trim(),
         );
+
+        result.fold(
+          (failure) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to update note: ${failure.userFriendlyMessage}'),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            }
+          },
+          (_) {
+            setState(() => _hasUnsavedChanges = false);
+            if (mounted) {
+              // Refresh the notes list
+              ref.invalidate(lessonNotesProvider(widget.lessonId));
+              Navigator.of(context).pop(true);
+            }
+          },
+        );
       } else {
         // Create new note
         final createUseCase = ref.read(createNoteProvider);
-        await createUseCase(
+        final result = await createUseCase(
           lessonId: widget.lessonId,
           title: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
           content: _contentController.text.trim(),
         );
-      }
 
-      setState(() => _hasUnsavedChanges = false);
-      
-      if (mounted) {
-        Navigator.of(context).pop(true);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save note: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+        result.fold(
+          (failure) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to save note: ${failure.userFriendlyMessage}'),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            }
+          },
+          (_) {
+            setState(() => _hasUnsavedChanges = false);
+            if (mounted) {
+              // Refresh the notes list
+              ref.invalidate(lessonNotesProvider(widget.lessonId));
+              Navigator.of(context).pop(true);
+            }
+          },
         );
       }
     } finally {
@@ -258,7 +285,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Discard'),
+            child: Text(
+              'Discard',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),
@@ -270,44 +300,53 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Note'),
-        content: const Text('Are you sure you want to delete this note? This action cannot be undone.'),
+        content: Text('Are you sure you want to delete "${widget.existingNote!.displayTitle}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
             child: const Text('Delete'),
           ),
         ],
       ),
-    );
+    ) ?? false;
 
-    if (shouldDelete == true && widget.existingNote != null) {
-      await _deleteNote();
-    }
-  }
-
-  Future<void> _deleteNote() async {
-    try {
-      final deleteUseCase = ref.read(deleteNoteProvider);
-      await deleteUseCase(widget.existingNote!.id);
+    if (shouldDelete && mounted) {
+      setState(() => _isSaving = true);
       
-      if (mounted) {
-        Navigator.of(context).pop(true);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete note: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+      try {
+        final deleteUseCase = ref.read(deleteNoteProvider);
+        final result = await deleteUseCase(widget.existingNote!.id);
+        
+        result.fold(
+          (failure) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to delete note: ${failure.userFriendlyMessage}'),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            }
+          },
+          (_) {
+            if (mounted) {
+              // Refresh the notes list
+              ref.invalidate(lessonNotesProvider(widget.lessonId));
+              Navigator.of(context).pop(true);
+            }
+          },
         );
+      } finally {
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
       }
     }
   }

@@ -37,90 +37,101 @@ class _NoteQuickAddWidgetState extends ConsumerState<NoteQuickAddWidget> {
     return Container(
       margin: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: context.primaryColor.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+        color: context.colorScheme.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
         border: Border.all(
-          color: context.primaryColor.withValues(alpha: 0.2),
+          color: _isExpanded 
+              ? context.colorScheme.primary 
+              : context.colorScheme.outline.withValues(alpha: 0.5),
+          width: _isExpanded ? 2 : 1,
         ),
+        boxShadow: _isExpanded
+            ? [
+                BoxShadow(
+                  color: context.colorScheme.primary.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Quick add input
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              decoration: InputDecoration(
-                hintText: 'Quick note...',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
+          if (!_isExpanded)
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _isExpanded = true;
+                });
+                _focusNode.requestFocus();
+              },
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMedium),
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
                   children: [
-                    // Expand button
-                    IconButton(
-                      onPressed: _openFullEditor,
-                      icon: const Icon(Icons.open_in_full),
-                      tooltip: 'Open full editor',
+                    Icon(
+                      Icons.add_circle_outline,
+                      color: context.colorScheme.primary,
                     ),
-                    // Add button
-                    IconButton(
-                      onPressed: _canSave() ? _saveQuickNote : null,
-                      icon: _isSaving
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.add),
-                      tooltip: 'Add note',
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      'Add a quick note...',
+                      style: TextStyle(
+                        color: context.textSecondaryColor,
+                      ),
                     ),
                   ],
                 ),
               ),
-              style: Theme.of(context).textTheme.bodyMedium,
-              textCapitalization: TextCapitalization.sentences,
-              maxLines: _isExpanded ? 5 : 1,
-              onTap: () => setState(() => _isExpanded = true),
-              onSubmitted: (_) => _canSave() ? _saveQuickNote() : null,
-            ),
-          ),
-          
-          // Expanded actions
-          if (_isExpanded)
-            Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: context.primaryColor.withValues(alpha: 0.2),
-                  ),
-                ),
-              ),
+            )
+          else
+            Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
+              child: Column(
                 children: [
-                  TextButton(
-                    onPressed: _collapse,
-                    child: const Text('Cancel'),
+                  TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'Type your note here...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+                      ),
+                      filled: true,
+                      fillColor: context.colorScheme.surfaceContainerHighest,
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  TextButton.icon(
-                    onPressed: _openFullEditor,
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Full Editor'),
-                  ),
-                  const Spacer(),
-                  ElevatedButton.icon(
-                    onPressed: _canSave() ? _saveQuickNote : null,
-                    icon: _isSaving
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.add, size: 16),
-                    label: const Text('Add Note'),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: _isSaving ? null : _collapse,
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      TextButton.icon(
+                        onPressed: _canSave() ? _openFullEditor : null,
+                        icon: const Icon(Icons.open_in_full, size: 16),
+                        label: const Text('Full Editor'),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      ElevatedButton.icon(
+                        onPressed: _canSave() ? _saveQuickNote : null,
+                        icon: _isSaving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.add, size: 16),
+                        label: const Text('Add Note'),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -141,50 +152,67 @@ class _NoteQuickAddWidgetState extends ConsumerState<NoteQuickAddWidget> {
 
     try {
       final createUseCase = ref.read(createNoteProvider);
-      await createUseCase(
+      final result = await createUseCase(
         lessonId: widget.lessonId,
         content: _controller.text.trim(),
       );
 
-      // Clear input and collapse
-      _controller.clear();
-      setState(() {
-        _isExpanded = false;
-        _isSaving = false;
-      });
-      _focusNode.unfocus();
+      result.fold(
+        (failure) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to add note: ${failure.userFriendlyMessage}'),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+        },
+        (_) {
+          // Clear input and collapse
+          _controller.clear();
+          setState(() {
+            _isExpanded = false;
+            _isSaving = false;
+          });
+          _focusNode.unfocus();
 
+          // Refresh notes list
+          ref.invalidate(lessonNotesProvider(widget.lessonId));
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Note added'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        },
+      );
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Note added'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() => _isSaving = false);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to add note: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        setState(() => _isSaving = false);
       }
     }
   }
 
   void _openFullEditor() {
+    final noteContent = _controller.text.trim();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => NoteEditorScreen(
           lessonId: widget.lessonId,
+          initialContent: noteContent,
         ),
         fullscreenDialog: true,
       ),
-    );
+    ).then((saved) {
+      if (saved == true) {
+        _controller.clear();
+        _collapse();
+      }
+    });
   }
 
   void _collapse() {

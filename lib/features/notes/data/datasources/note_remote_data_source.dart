@@ -12,6 +12,7 @@ abstract class NoteRemoteDataSource {
   Future<List<NoteModel>> getNotesByUser(String userId);
   Future<void> batchUpsert(List<NoteModel> notes);
   Future<List<NoteModel>> getUpdatedSince(DateTime? lastSync);
+  Future<List<NoteModel>> getNotesByIds(List<String> noteIds); // FIX: Added missing method
 }
 
 class NoteRemoteDataSourceImpl implements NoteRemoteDataSource {
@@ -113,5 +114,32 @@ class NoteRemoteDataSourceImpl implements NoteRemoteDataSource {
     return querySnapshot.docs
         .map((doc) => NoteModel.fromJson(doc.data() as Map<String, dynamic>))
         .toList();
+  }
+
+  // FIX: Added implementation for getNotesByIds
+  @override
+  Future<List<NoteModel>> getNotesByIds(List<String> noteIds) async {
+    if (noteIds.isEmpty) return [];
+    
+    final List<NoteModel> notes = [];
+    
+    // Firestore has a limit of 10 for 'whereIn' queries, so we need to batch
+    const batchSize = 10;
+    for (int i = 0; i < noteIds.length; i += batchSize) {
+      final batch = noteIds.skip(i).take(batchSize).toList();
+      
+      final querySnapshot = await firestore
+          .collection(collection)
+          .where(FieldPath.documentId, whereIn: batch)
+          .get();
+      
+      notes.addAll(
+        querySnapshot.docs
+            .map((doc) => NoteModel.fromJson(doc.data()))
+            .toList()
+      );
+    }
+    
+    return notes;
   }
 }

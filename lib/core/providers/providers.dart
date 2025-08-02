@@ -11,6 +11,7 @@ import 'package:qvise/core/sync/services/conflict_resolver.dart';
 import 'package:qvise/core/sync/services/sync_service.dart';
 import 'package:qvise/features/content/presentation/providers/content_providers.dart';
 import 'package:qvise/features/flashcards/shared/presentation/providers/flashcard_providers.dart';
+import 'package:qvise/features/notes/presentation/providers/note_providers.dart';
 import 'package:qvise/firebase_options.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -91,7 +92,7 @@ AuthLocalDataSource authLocalDataSource(Ref ref) {
 Future<AuthRepository> authRepository(Ref ref) async {
   return AuthRepositoryImpl(
     remoteDataSource: ref.watch(authRemoteDataSourceProvider),
-    localDataSource: await ref.watch(authLocalDataSourceProvider.future),
+    localDataSource: ref.watch(authLocalDataSourceProvider), // FIX: Removed .future
     connectionChecker: ref.watch(internetConnectionCheckerProvider),
   );
 }
@@ -160,6 +161,7 @@ Future<SyncService> syncService(Ref ref) async {
     unitOfWork: ref.watch(unitOfWorkProvider),
     remoteContent: ref.watch(contentRemoteDataSourceProvider),
     remoteFlashcard: ref.watch(flashcardRemoteDataSourceProvider),
+    remoteNote: ref.watch(noteRemoteDataSourceProvider), // FIX: Added missing remoteNote parameter
     conflictDataSource: ref.watch(conflictDataSourceProvider),
     conflictResolver: ref.watch(conflictResolverProvider),
     prefs: prefs,

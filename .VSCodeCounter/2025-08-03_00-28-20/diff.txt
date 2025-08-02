@@ -1,0 +1,86 @@
+Date : 2025-08-03 00:28:20
+Directory : d:\Codes\Test\Flutter\qvise\lib
+Total : 27 files,  1468 codes, 62 comments, 227 blanks, all 1757 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Dart     |         27 |      1,468 |         62 |        227 |      1,757 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                              | files      | code       | comment    | blank      | total      |
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                 |         27 |      1,468 |         62 |        227 |      1,757 |
+| core                                                                                              |          6 |        140 |          0 |         16 |        156 |
+| core\data                                                                                         |          3 |         41 |         -1 |          2 |         42 |
+| core\data (Files)                                                                                 |          1 |          7 |          0 |         -1 |          6 |
+| core\data\database                                                                                |          1 |         28 |         -2 |          2 |         28 |
+| core\data\providers                                                                               |          1 |          6 |          1 |          1 |          8 |
+| core\providers                                                                                    |          1 |          2 |          0 |          0 |          2 |
+| core\sync                                                                                         |          2 |         97 |          1 |         14 |        112 |
+| core\sync\services                                                                                |          1 |         98 |          1 |         13 |        112 |
+| core\sync\utils                                                                                   |          1 |         -1 |          0 |          1 |          0 |
+| features                                                                                          |         21 |      1,328 |         62 |        211 |      1,601 |
+| features\content                                                                                  |          5 |       -183 |        -12 |          6 |       -189 |
+| features\content\data                                                                             |          2 |         20 |          3 |         14 |         37 |
+| features\content\data\datasources                                                                 |          1 |         -1 |          1 |         -1 |         -1 |
+| features\content\data\repositories                                                                |          1 |         21 |          2 |         15 |         38 |
+| features\content\domain                                                                           |          1 |         11 |          1 |          4 |         16 |
+| features\content\domain\usecases                                                                  |          1 |         11 |          1 |          4 |         16 |
+| features\content\presentation                                                                     |          2 |       -214 |        -16 |        -12 |       -242 |
+| features\content\presentation\providers                                                           |          1 |          5 |          1 |          1 |          7 |
+| features\content\presentation\screens                                                             |          1 |       -219 |        -17 |        -13 |       -249 |
+| features\files                                                                                    |          1 |          0 |          1 |          0 |          1 |
+| features\files\data                                                                               |          1 |          0 |          1 |          0 |          1 |
+| features\files\data\datasources                                                                   |          1 |          0 |          1 |          0 |          1 |
+| features\notes                                                                                    |         15 |      1,511 |         73 |        205 |      1,789 |
+| features\notes\data                                                                               |          4 |        420 |         20 |         75 |        515 |
+| features\notes\data\datasources                                                                   |          2 |        259 |          4 |         45 |        308 |
+| features\notes\data\models                                                                        |          1 |         74 |          2 |          9 |         85 |
+| features\notes\data\repositories                                                                  |          1 |         87 |         14 |         21 |        122 |
+| features\notes\domain                                                                             |          6 |        234 |         24 |         46 |        304 |
+| features\notes\domain\entities                                                                    |          1 |         31 |          2 |          8 |         41 |
+| features\notes\domain\repositories                                                                |          1 |         13 |          1 |          2 |         16 |
+| features\notes\domain\usecases                                                                    |          4 |        190 |         21 |         36 |        247 |
+| features\notes\presentation                                                                       |          5 |        857 |         29 |         84 |        970 |
+| features\notes\presentation\providers                                                             |          1 |         75 |          5 |         12 |         92 |
+| features\notes\presentation\screens                                                               |          1 |        282 |          5 |         27 |        314 |
+| features\notes\presentation\widgets                                                               |          3 |        500 |         19 |         45 |        564 |
++---------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++---------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                          | language | code       | comment    | blank      | total      |
++---------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| d:\Codes\Test\Flutter\qvise\lib\core\data\database\app_database.dart                              | Dart     |         28 |         -2 |          2 |         28 |
+| d:\Codes\Test\Flutter\qvise\lib\core\data\providers\data_providers.dart                           | Dart     |          6 |          1 |          1 |          8 |
+| d:\Codes\Test\Flutter\qvise\lib\core\data\unit_of_work.dart                                       | Dart     |          7 |          0 |         -1 |          6 |
+| d:\Codes\Test\Flutter\qvise\lib\core\providers\providers.dart                                     | Dart     |          2 |          0 |          0 |          2 |
+| d:\Codes\Test\Flutter\qvise\lib\core\sync\services\sync_service.dart                              | Dart     |         98 |          1 |         13 |        112 |
+| d:\Codes\Test\Flutter\qvise\lib\core\sync\utils\batch_helpers.dart                                | Dart     |         -1 |          0 |          1 |          0 |
+| d:\Codes\Test\Flutter\qvise\lib\features\content\data\datasources\content_remote_data_source.dart | Dart     |         -1 |          1 |         -1 |         -1 |
+| d:\Codes\Test\Flutter\qvise\lib\features\content\data\repositories\content_repository_impl.dart   | Dart     |         21 |          2 |         15 |         38 |
+| d:\Codes\Test\Flutter\qvise\lib\features\content\domain\usecases\lock_lesson.dart                 | Dart     |         11 |          1 |          4 |         16 |
+| d:\Codes\Test\Flutter\qvise\lib\features\content\presentation\providers\content_providers.dart    | Dart     |          5 |          1 |          1 |          7 |
+| d:\Codes\Test\Flutter\qvise\lib\features\content\presentation\screens\lesson_screen.dart          | Dart     |       -219 |        -17 |        -13 |       -249 |
+| d:\Codes\Test\Flutter\qvise\lib\features\files\data\datasources\file_local_data_source.dart       | Dart     |          0 |          1 |          0 |          1 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\data\datasources\note_local_data_source.dart       | Dart     |        144 |          1 |         18 |        163 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\data\datasources\note_remote_data_source.dart      | Dart     |        115 |          3 |         27 |        145 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\data\models\note_model.dart                        | Dart     |         74 |          2 |          9 |         85 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\data\repositories\note_repository_impl.dart        | Dart     |         87 |         14 |         21 |        122 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\domain\entities\note.dart                          | Dart     |         31 |          2 |          8 |         41 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\domain\repositories\note_repository.dart           | Dart     |         13 |          1 |          2 |         16 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\domain\usecases\create_note.dart                   | Dart     |         48 |          5 |          9 |         62 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\domain\usecases\delete_note.dart                   | Dart     |         45 |          5 |          9 |         59 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\domain\usecases\get_notes_by_lesson.dart           | Dart     |         35 |          4 |          7 |         46 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\domain\usecases\update_note.dart                   | Dart     |         62 |          7 |         11 |         80 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\presentation\providers\note_providers.dart         | Dart     |         75 |          5 |         12 |         92 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\presentation\screens\note_editor_screen.dart       | Dart     |        282 |          5 |         27 |        314 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\presentation\widgets\note_card_widget.dart         | Dart     |        149 |          8 |         12 |        169 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\presentation\widgets\note_list_widget.dart         | Dart     |        180 |          5 |         16 |        201 |
+| d:\Codes\Test\Flutter\qvise\lib\features\notes\presentation\widgets\note_quick_add_widget.dart    | Dart     |        171 |          6 |         17 |        194 |
+| Total                                                                                             |          |      1,468 |         62 |        227 |      1,757 |
++---------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
