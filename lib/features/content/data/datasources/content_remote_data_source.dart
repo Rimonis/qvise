@@ -52,8 +52,10 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
   @override
   Future<LessonModel> createLesson(LessonModel lesson) async {
     try {
-      final docRef = await _lessonsCollection.add(lesson.toFirestore());
-      return lesson.copyWith(id: docRef.id, isSynced: true);
+      // FIXED: Use the existing lesson ID instead of generating a new one
+      final docRef = _lessonsCollection.doc(lesson.id);
+      await docRef.set(lesson.toFirestore());
+      return lesson.copyWith(isSynced: true);
     } catch (e) {
       throw Exception('Failed to create lesson: $e');
     }
@@ -230,22 +232,23 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
   @override
   Future<List<TopicModel>> getTopicsByIds(List<String> ids) async {
     return BatchHelpers.batchProcess<String, TopicModel>(
-        items: ids,
-        processBatch: (batch) async {
-          final snapshot = await _topicsCollection
-              .where(FieldPath.documentId, whereIn: batch)
-              .get();
-          return snapshot.docs
-              .map((doc) => TopicModel.fromJson(doc.data()))
-              .toList();
-        });
+      items: ids,
+      processBatch: (batch) async {
+        final snapshot = await _topicsCollection
+            .where(FieldPath.documentId, whereIn: batch)
+            .get();
+        return snapshot.docs
+            .map((doc) => TopicModel.fromJson(doc.data()))
+            .toList();
+      },
+    );
   }
 
   @override
   Future<void> batchUpdateSubjects(List<SubjectModel> subjects) async {
     final batch = _firestore.batch();
     for (final subject in subjects) {
-      final docRef = _subjectsCollection.doc('${subject.userId}_${subject.name}');
+      final docRef = _subjectsCollection.doc(subject.name);
       batch.set(docRef, subject.toJson(), SetOptions(merge: true));
     }
     await batch.commit();
@@ -255,8 +258,7 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
   Future<void> batchUpdateTopics(List<TopicModel> topics) async {
     final batch = _firestore.batch();
     for (final topic in topics) {
-      final docRef = _topicsCollection
-          .doc('${topic.userId}_${topic.subjectName}_${topic.name}');
+      final docRef = _topicsCollection.doc(topic.name);
       batch.set(docRef, topic.toJson(), SetOptions(merge: true));
     }
     await batch.commit();
@@ -267,7 +269,7 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       DateTime since, String userId) async {
     final snapshot = await _subjectsCollection
         .where('userId', isEqualTo: userId)
-        .where('updated_at', isGreaterThan: Timestamp.fromDate(since))
+        .where('updatedAt', isGreaterThan: Timestamp.fromDate(since))
         .get();
     return snapshot.docs
         .map((doc) => SubjectModel.fromJson(doc.data()))
@@ -279,10 +281,8 @@ class ContentRemoteDataSourceImpl implements ContentRemoteDataSource {
       DateTime since, String userId) async {
     final snapshot = await _topicsCollection
         .where('userId', isEqualTo: userId)
-        .where('updated_at', isGreaterThan: Timestamp.fromDate(since))
+        .where('updatedAt', isGreaterThan: Timestamp.fromDate(since))
         .get();
-    return snapshot.docs
-        .map((doc) => TopicModel.fromJson(doc.data()))
-        .toList();
+    return snapshot.docs.map((doc) => TopicModel.fromJson(doc.data())).toList();
   }
 }

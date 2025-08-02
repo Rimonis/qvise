@@ -41,14 +41,29 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
 
   @override
   Future<Either<AppFailure, Lesson>> createLesson(CreateLessonParams params) async {
+    debugPrint('=== CREATE LESSON START ===');
+    debugPrint('Params: subject=${params.subjectName}, topic=${params.topicName}, title=${params.lessonTitle}');
+    debugPrint('isNewSubject=${params.isNewSubject}, isNewTopic=${params.isNewTopic}');
+    
     return guard(() async {
+      // Check user ID
+      debugPrint('Current user ID: $_userId');
+      debugPrint('Firebase auth current user: ${firebaseAuth.currentUser?.email}');
+      
       if (_userId.isEmpty) {
+        debugPrint('ERROR: User ID is empty!');
         throw const AppFailure(
           type: FailureType.auth,
           message: 'User not authenticated'
         );
       }
-      if (!await connectionChecker.hasConnection) {
+      
+      // Check connection
+      final hasConnection = await connectionChecker.hasConnection;
+      debugPrint('Has connection: $hasConnection');
+      
+      if (!hasConnection) {
+        debugPrint('ERROR: No internet connection!');
         throw const AppFailure(
           type: FailureType.network,
           message: 'Network connection required to create lessons'
@@ -56,8 +71,11 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
       }
 
       final now = DateTime.now();
+      final lessonId = _uuid.v4();
+      debugPrint('Generated lesson ID: $lessonId');
+      
       final lessonModel = LessonModel(
-        id: _uuid.v4(),
+        id: lessonId,
         userId: _userId,
         subjectName: params.subjectName,
         topicName: params.topicName,
@@ -69,24 +87,44 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         proficiency: 0.0,
         isSynced: false,
       );
+      
+      debugPrint('Created lesson model: ${lessonModel.id}');
 
-      // Perform high-latency remote operation first
-      final syncedLesson = await remoteDataSource.createLesson(lessonModel);
+      try {
+        // Perform high-latency remote operation first
+        debugPrint('Creating lesson in Firestore...');
+        final syncedLesson = await remoteDataSource.createLesson(lessonModel);
+        debugPrint('Firestore creation successful. Synced lesson ID: ${syncedLesson.id}');
 
-      // FIXED: All local operations in single transaction
-      await unitOfWork.transaction(() async {
-        await _updateContentHierarchy(
-          params.subjectName,
-          params.topicName,
-          now,
-          isNewSubject: params.isNewSubject,
-          isNewTopic: params.isNewTopic,
-        );
-        await unitOfWork.content.insertOrUpdateLesson(syncedLesson);
-        await _recalculateProficienciesInTransaction();
-      });
+        // FIXED: All local operations in single transaction
+        debugPrint('Starting local transaction...');
+        await unitOfWork.transaction(() async {
+          debugPrint('Inside transaction - updating content hierarchy...');
+          
+          await _updateContentHierarchy(
+            params.subjectName,
+            params.topicName,
+            now,
+            isNewSubject: params.isNewSubject,
+            isNewTopic: params.isNewTopic,
+          );
+          
+          debugPrint('Content hierarchy updated. Inserting lesson locally...');
+          await unitOfWork.content.insertOrUpdateLesson(syncedLesson);
+          
+          debugPrint('Lesson inserted. Recalculating proficiencies...');
+          await _recalculateProficienciesInTransaction();
+          
+          debugPrint('Transaction complete!');
+        });
 
-      return syncedLesson.toEntity();
+        debugPrint('=== CREATE LESSON SUCCESS ===');
+        return syncedLesson.toEntity();
+      } catch (e, stackTrace) {
+        debugPrint('ERROR in createLesson: $e');
+        debugPrint('Stack trace: $stackTrace');
+        rethrow;
+      }
     });
   }
 
@@ -97,8 +135,12 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
     required bool isNewSubject,
     required bool isNewTopic,
   }) async {
+    debugPrint('_updateContentHierarchy: subject=$subjectName, topic=$topicName');
+    
     // Handle subject
     final existingSubject = await unitOfWork.content.getSubject(_userId, subjectName);
+    debugPrint('Existing subject found: ${existingSubject != null}');
+    
     if (isNewSubject || existingSubject == null) {
       final newSubject = SubjectModel(
         name: subjectName,
@@ -110,6 +152,7 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         createdAt: now,
         updatedAt: now,
       );
+      debugPrint('Creating new subject...');
       await unitOfWork.content.insertOrUpdateSubject(newSubject);
     } else {
       final updatedSubject = existingSubject.copyWith(
@@ -118,11 +161,14 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         lastStudied: now,
         updatedAt: now,
       );
+      debugPrint('Updating existing subject...');
       await unitOfWork.content.insertOrUpdateSubject(updatedSubject);
     }
 
     // Handle topic
     final existingTopic = await unitOfWork.content.getTopic(_userId, subjectName, topicName);
+    debugPrint('Existing topic found: ${existingTopic != null}');
+    
     if (isNewTopic || existingTopic == null) {
       final newTopic = TopicModel(
         name: topicName,
@@ -134,6 +180,7 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         createdAt: now,
         updatedAt: now,
       );
+      debugPrint('Creating new topic...');
       await unitOfWork.content.insertOrUpdateTopic(newTopic);
     } else {
       final updatedTopic = existingTopic.copyWith(
@@ -141,14 +188,19 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         lastStudied: now,
         updatedAt: now,
       );
+      debugPrint('Updating existing topic...');
       await unitOfWork.content.insertOrUpdateTopic(updatedTopic);
     }
   }
 
   // FIXED: Version that works within transaction
   Future<void> _recalculateProficienciesInTransaction() async {
+    debugPrint('Recalculating proficiencies...');
+    
     final lessons = await unitOfWork.content.getAllLessons(_userId);
     final subjects = await unitOfWork.content.getSubjects(_userId);
+    
+    debugPrint('Found ${lessons.length} lessons and ${subjects.length} subjects');
     
     for (final subject in subjects) {
       final subjectLessons = lessons.where((l) => l.subjectName == subject.name).toList();
@@ -183,6 +235,8 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         }
       }
     }
+    
+    debugPrint('Proficiencies recalculated');
   }
 
   @override
@@ -202,12 +256,6 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   @override
   Future<Either<AppFailure, Subject?>> getSubject(String subjectName) async {
     return guard(() async {
-      if (_userId.isEmpty) {
-        throw const AppFailure(
-          type: FailureType.auth,
-          message: 'User not authenticated'
-        );
-      }
       final subject = await localDataSource.getSubject(_userId, subjectName);
       return subject?.toEntity();
     });
@@ -230,12 +278,6 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
   @override
   Future<Either<AppFailure, Topic?>> getTopic(String subjectName, String topicName) async {
     return guard(() async {
-      if (_userId.isEmpty) {
-        throw const AppFailure(
-          type: FailureType.auth,
-          message: 'User not authenticated'
-        );
-      }
       final topic = await localDataSource.getTopic(_userId, subjectName, topicName);
       return topic?.toEntity();
     });
@@ -426,7 +468,8 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
       }
 
       final lessons = await localDataSource.getAllLessons(_userId);
-      final lessonIds = lessons.where((l) => l.subjectName == subjectName).map((l) => l.id).toList();
+      final subjectLessons = lessons.where((l) => l.subjectName == subjectName).toList();
+      final lessonIds = subjectLessons.map((l) => l.id).toList();
       final filesToDelete = await unitOfWork.file.getFilesByLessonIds(lessonIds);
 
       try {
@@ -461,7 +504,7 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
       if (!await connectionChecker.hasConnection) {
         throw const AppFailure(
           type: FailureType.network,
-          message: 'No internet connection'
+          message: 'Network connection required'
         );
       }
 
@@ -471,11 +514,6 @@ class ContentRepositoryImpl extends BaseRepository implements ContentRepository 
         for (final lesson in unsyncedLessons) {
           await localDataSource.markLessonAsSynced(lesson.id);
         }
-      }
-
-      final remoteLessons = await remoteDataSource.getUserLessons(_userId);
-      for (final lesson in remoteLessons) {
-        await localDataSource.insertOrUpdateLesson(lesson);
       }
     });
   }

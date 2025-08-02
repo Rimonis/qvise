@@ -17,7 +17,8 @@ abstract class FileLocalDataSource extends TransactionalDataSource {
   Future<List<FileModel>> getFilesForSync();
 }
 
-class FileLocalDataSourceImpl extends TransactionalDataSource implements FileLocalDataSource {
+// FIXED: Now extends FileLocalDataSource (which already extends TransactionalDataSource)
+class FileLocalDataSourceImpl extends FileLocalDataSource {
   static const _tableName = 'files';
 
   @override
