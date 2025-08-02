@@ -23,6 +23,16 @@ class LessonScreen extends ConsumerStatefulWidget {
   const LessonScreen({
     super.key,
     required this.lessonId,
+  });
+
+  @override
+  ConsumerState<LessonScreen> createState() => _LessonScreenState();
+}
+
+class _LessonScreenState extends ConsumerState<LessonScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   void _editFlashcard(lesson, flashcard) {
     Navigator.push(
       context,
@@ -39,15 +49,40 @@ class LessonScreen extends ConsumerStatefulWidget {
       ref.invalidate(flashcardCountProvider(lesson.id));
       ref.invalidate(flashcardsByLessonProvider(lesson.id));
     });
-  });
+  }
 
-  @override
-  ConsumerState<LessonScreen> createState() => _LessonScreenState();
-}
+  Future<void> _deleteLesson(lesson) async {
+    final shouldDelete = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Delete Lesson'),
+            content:
+                const Text('Are you sure you want to delete this lesson?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
 
-class _LessonScreenState extends ConsumerState<LessonScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+    if (shouldDelete) {
+      await ref
+          .read(
+              lessonsNotifierProvider(subjectName: lesson.subjectName, topicName: lesson.topicName).notifier)
+          .deleteLesson(lesson.id);
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    }
+  }
 
   @override
   void initState() {
