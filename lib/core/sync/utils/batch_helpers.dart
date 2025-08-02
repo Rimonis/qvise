@@ -1,35 +1,36 @@
 // lib/core/sync/utils/batch_helpers.dart
 
 class BatchHelpers {
-  static const int firestoreBatchSize = 30;
-
-  static List<List<T>> chunk<T>(List<T> list, int chunkSize) {
-    final chunks = <List<T>>[];
-    for (int i = 0; i < list.length; i += chunkSize) {
-      final end = (i + chunkSize > list.length) ? list.length : i + chunkSize;
-      chunks.add(list.sublist(i, end));
-    }
-    return chunks;
-  }
-
-  static Future<List<R>> batchProcess<T, R>({
-    required List<T> items,
-    required Future<List<R>> Function(List<T> batch) processBatch,
-    int batchSize = firestoreBatchSize,
-    bool continueOnError = true,
+  static Future<List<T>> batchProcess<S, T>({
+    required List<S> items,
+    required Future<List<T>> Function(List<S>) processBatch,
+    int batchSize = 10,
+    bool continueOnError = false,
   }) async {
-    final results = <R>[];
-    final chunks = chunk(items, batchSize);
-
-    for (int i = 0; i < chunks.length; i++) {
+    final List<T> results = [];
+    
+    for (int i = 0; i < items.length; i += batchSize) {
+      final batch = items.skip(i).take(batchSize).toList();
       try {
-        final batchResults = await processBatch(chunks[i]);
+        final batchResults = await processBatch(batch);
         results.addAll(batchResults);
       } catch (e) {
-        print('Batch $i failed: $e');
         if (!continueOnError) rethrow;
+        print('Batch processing error: $e');
       }
     }
+    
     return results;
+  }
+
+  static List<List<T>> createBatches<T>(List<T> items, int batchSize) {
+    final List<List<T>> batches = [];
+    
+    for (int i = 0; i < items.length; i += batchSize) {
+      final batch = items.skip(i).take(batchSize).toList();
+      batches.add(batch);
+    }
+    
+    return batches;
   }
 }

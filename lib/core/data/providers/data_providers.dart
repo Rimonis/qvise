@@ -5,6 +5,7 @@ import 'package:qvise/core/data/unit_of_work.dart';
 import 'package:qvise/features/content/data/datasources/content_local_data_source.dart';
 import 'package:qvise/features/flashcards/shared/data/datasources/flashcard_local_data_source.dart';
 import 'package:qvise/features/files/data/datasources/file_local_data_source.dart';
+import 'package:qvise/features/notes/data/datasources/note_local_data_source.dart'; // ADD THIS
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -33,12 +34,19 @@ FileLocalDataSource fileLocalDataSource(FileLocalDataSourceRef ref) {
   return FileLocalDataSourceImpl();
 }
 
+// ADD THIS NEW PROVIDER
+@Riverpod(keepAlive: true)
+NoteLocalDataSource noteLocalDataSource(NoteLocalDataSourceRef ref) {
+  return NoteLocalDataSourceImpl();
+}
+
 // --- Unit of Work Provider ---
 @Riverpod(keepAlive: true)
 IUnitOfWork unitOfWork(UnitOfWorkRef ref) {
   return SqliteUnitOfWork(
     content: ref.watch(contentLocalDataSourceProvider),
     flashcard: ref.watch(flashcardLocalDataSourceProvider),
-    file: ref.watch(fileLocalDataSourceProvider), // Added this line
+    file: ref.watch(fileLocalDataSourceProvider),
+    note: ref.watch(noteLocalDataSourceProvider), // ADD THIS LINE
   );
 }

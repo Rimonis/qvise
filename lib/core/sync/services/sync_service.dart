@@ -4,14 +4,15 @@ import 'dart:async';
 import 'dart:io';
 import 'package:dartz/dartz.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:qvise/core/data/unit_of_work.dart';
 import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/content/data/datasources/content_remote_data_source.dart';
 import 'package:qvise/features/content/data/models/lesson_model.dart';
-import 'package:qvise/features/content/data/models/subject_model.dart';
-import 'package:qvise/features/content/data/models/topic_model.dart';
 import 'package:qvise/features/flashcards/shared/data/datasources/flashcard_remote_data_source.dart';
 import 'package:qvise/features/flashcards/shared/data/models/flashcard_model.dart';
+import 'package:qvise/features/notes/data/datasources/note_remote_data_source.dart';
+import 'package:qvise/features/notes/data/models/note_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../data/datasources/conflict_local_datasource.dart';
@@ -26,6 +27,7 @@ class SyncService {
   final IUnitOfWork _unitOfWork;
   final ContentRemoteDataSource _remoteContent;
   final FlashcardRemoteDataSource _remoteFlashcard;
+  final NoteRemoteDataSource _remoteNote;
   final ConflictLocalDataSource _conflictDataSource;
   final SharedPreferences _prefs;
   final String _userId;
@@ -41,6 +43,7 @@ class SyncService {
     required IUnitOfWork unitOfWork,
     required ContentRemoteDataSource remoteContent,
     required FlashcardRemoteDataSource remoteFlashcard,
+    required NoteRemoteDataSource remoteNote,
     required ConflictLocalDataSource conflictDataSource,
     required SharedPreferences prefs,
     required String userId,
@@ -50,6 +53,7 @@ class SyncService {
   })  : _unitOfWork = unitOfWork,
         _remoteContent = remoteContent,
         _remoteFlashcard = remoteFlashcard,
+        _remoteNote = remoteNote,
         _conflictDataSource = conflictDataSource,
         _prefs = prefs,
         _userId = userId,
@@ -59,7 +63,7 @@ class SyncService {
 
   Future<Either<AppFailure, SyncReport>> performSync() async {
     if (_isSyncing) {
-      return Left(const AppFailure(
+      return const Left(AppFailure(
         type: FailureType.sync,
         message: 'Sync already in progress',
       ));
@@ -133,6 +137,7 @@ class SyncService {
     final conflictFutures = <Future<List<SyncConflict>>>[
       _detectLessonConflicts(lastSync),
       _detectFlashcardConflicts(lastSync),
+      _detectNoteConflicts(lastSync),
     ];
     final conflictLists = await Future.wait(conflictFutures);
     return conflictLists.expand((list) => list).toList();
@@ -162,12 +167,12 @@ class SyncService {
         }
       }
     } catch (e) {
-      print('Error detecting lesson conflicts: $e');
+      debugPrint('Error detecting lesson conflicts: $e');
     }
     return conflicts;
   }
 
-    Future<List<SyncConflict>> _detectFlashcardConflicts(DateTime lastSync) async {
+  Future<List<SyncConflict>> _detectFlashcardConflicts(DateTime lastSync) async {
     final conflicts = <SyncConflict>[];
     try {
       final localFlashcards =
@@ -179,6 +184,7 @@ class SyncService {
           await BatchHelpers.batchProcess<String, FlashcardModel>(
         items: flashcardIds,
         processBatch: (batch) => _remoteFlashcard.getFlashcardsByIds(batch),
+        continueOnError: true,
       );
 
       final remoteMap = {for (var f in remoteFlashcards) f.id: f};
@@ -190,7 +196,35 @@ class SyncService {
         }
       }
     } catch (e) {
-      print('Error detecting flashcard conflicts: $e');
+      debugPrint('Error detecting flashcard conflicts: $e');
+    }
+    return conflicts;
+  }
+
+  Future<List<SyncConflict>> _detectNoteConflicts(DateTime lastSync) async {
+    final conflicts = <SyncConflict>[];
+    try {
+      final localNotes = await _unitOfWork.note.getPendingSync();
+      if (localNotes.isEmpty) return conflicts;
+
+      final noteIds = localNotes.map((n) => n.id).toList();
+      final remoteNotes = await BatchHelpers.batchProcess<String, NoteModel>(
+        items: noteIds,
+        processBatch: (batch) => _remoteNote.getNotesByIds(batch),
+        continueOnError: true,
+      );
+
+      final remoteMap = {for (var n in remoteNotes) n.id: n};
+
+      for (final local in localNotes) {
+        final localModel = NoteModel.fromEntity(local);
+        final remote = remoteMap[local.id];
+        if (remote != null && _isConflict(localModel, remote, lastSync)) {
+          conflicts.add(await _createNoteConflict(localModel, remote));
+        }
+      }
+    } catch (e) {
+      debugPrint('Error detecting note conflicts: $e');
     }
     return conflicts;
   }
@@ -199,6 +233,7 @@ class SyncService {
     final pushFutures = <Future<int>>[
       _pushLessons(),
       _pushFlashcards(),
+      _pushNotes(),
     ];
     final results = await Future.wait(pushFutures);
     return results.reduce((a, b) => a + b);
@@ -217,7 +252,7 @@ class SyncService {
       });
       return unpushedLessons.length;
     } catch (e) {
-      print('Error pushing lessons: $e');
+      debugPrint('Error pushing lessons: $e');
       return 0;
     }
   }
@@ -236,7 +271,35 @@ class SyncService {
       });
       return unpushedFlashcards.length;
     } catch (e) {
-      print('Error pushing flashcards: $e');
+      debugPrint('Error pushing flashcards: $e');
+      return 0;
+    }
+  }
+
+  Future<int> _pushNotes() async {
+    try {
+      final pendingNotes = await _unitOfWork.note.getPendingSync();
+      if (pendingNotes.isEmpty) return 0;
+
+      final batches = BatchHelpers.createBatches(pendingNotes, _pushBatchSize);
+      int totalPushed = 0;
+
+      for (final batch in batches) {
+        final noteModels = batch.map((n) => NoteModel.fromEntity(n)).toList();
+        await _remoteNote.batchUpsert(noteModels);
+        
+        // Mark as synced
+        await _unitOfWork.transaction(() async {
+          for (final note in batch) {
+            await _unitOfWork.note.markAsSynced(note.id);
+          }
+        });
+        totalPushed += batch.length;
+      }
+
+      return totalPushed;
+    } catch (e) {
+      debugPrint('Error pushing notes: $e');
       return 0;
     }
   }
@@ -245,6 +308,7 @@ class SyncService {
     final pullFutures = <Future<int>>[
       _pullLessons(lastSync),
       _pullFlashcards(lastSync),
+      _pullNotes(lastSync),
     ];
     final results = await Future.wait(pullFutures);
     return results.reduce((a, b) => a + b);
@@ -275,7 +339,7 @@ class SyncService {
       });
       return pulled;
     } catch (e) {
-      print('Error pulling lessons: $e');
+      debugPrint('Error pulling lessons: $e');
       return 0;
     }
   }
@@ -305,7 +369,34 @@ class SyncService {
       });
       return pulled;
     } catch (e) {
-      print('Error pulling flashcards: $e');
+      debugPrint('Error pulling flashcards: $e');
+      return 0;
+    }
+  }
+
+  Future<int> _pullNotes(DateTime lastSync) async {
+    try {
+      final remoteNotes = await _remoteNote.getUpdatedSince(lastSync);
+      if (remoteNotes.isEmpty) return 0;
+
+      final conflicts = await _conflictDataSource.getUnresolvedConflicts();
+      final conflictedIds = conflicts
+          .where((c) => c.entityType == 'note')
+          .map((c) => c.entityId)
+          .toSet();
+
+      int pulled = 0;
+      await _unitOfWork.transaction(() async {
+        for (final remote in remoteNotes) {
+          if (conflictedIds.contains(remote.id)) continue;
+          final note = remote.toEntity();
+          await _unitOfWork.note.upsert(note);
+          pulled++;
+        }
+      });
+      return pulled;
+    } catch (e) {
+      debugPrint('Error pulling notes: $e');
       return 0;
     }
   }
@@ -335,6 +426,27 @@ class SyncService {
     return SyncConflict(
       id: const Uuid().v4(),
       entityType: 'flashcard',
+      entityId: local.id,
+      localData: local.toMap(),
+      remoteData: remote.toMap(),
+      localVersion: local.version,
+      remoteVersion: remote.version,
+      localUpdatedAt: local.updatedAt,
+      remoteUpdatedAt: remote.updatedAt,
+      detectedAt: DateTime.now(),
+      metadata: {
+        'userId': _userId,
+        'deviceId': await _getDeviceId(),
+        'lessonId': local.lessonId,
+      },
+    );
+  }
+
+  Future<SyncConflict> _createNoteConflict(
+      NoteModel local, NoteModel remote) async {
+    return SyncConflict(
+      id: const Uuid().v4(),
+      entityType: 'note',
       entityId: local.id,
       localData: local.toMap(),
       remoteData: remote.toMap(),

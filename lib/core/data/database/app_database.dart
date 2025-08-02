@@ -25,7 +25,7 @@ class AppDatabase {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5, // Updated to version 5 for notes
       onCreate: _createAllTables,
       onUpgrade: _onUpgrade,
       onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
@@ -40,18 +40,16 @@ class AppDatabase {
     if (oldVersion < 3) {
       await _createFilesTable(db);
     }
-    // FIXED: Properly migrate to version 4 without data loss
     if (oldVersion < 4) {
       await _addForeignKeyConstraints(db);
     }
+    if (oldVersion < 5) {
+      await _createNotesTable(db);
+    }
   }
 
-  // FIXED: Safe migration that preserves data
   static Future<void> _addForeignKeyConstraints(Database db) async {
-    // We can't add foreign key constraints to existing tables in SQLite
-    // So we need to recreate tables with constraints, but preserve data
-    
-    // First, disable foreign keys temporarily
+    // Disable foreign keys temporarily
     await db.execute('PRAGMA foreign_keys = OFF');
     
     try {
@@ -215,74 +213,6 @@ class AppDatabase {
     }
   }
 
-  static Future<void> _createIndexes(Database db) async {
-    // Create all necessary indexes
-    await db.execute('CREATE INDEX idx_lessons_user ON lessons(userId)');
-    await db.execute('CREATE INDEX idx_lessons_subject_topic ON lessons(userId, subjectName, topicName)');
-    await db.execute('CREATE INDEX idx_lessons_sync ON lessons(isSynced)');
-    await db.execute('CREATE INDEX idx_lessons_review ON lessons(nextReviewDate)');
-    await db.execute('CREATE INDEX idx_lessons_locked ON lessons(isLocked)');
-    await db.execute('CREATE INDEX idx_flashcards_lesson ON flashcards(lesson_id)');
-    await db.execute('CREATE INDEX idx_flashcards_user_lesson ON flashcards(user_id, lesson_id)');
-    await db.execute('CREATE INDEX idx_flashcards_tag ON flashcards(tag_id)');
-    await db.execute('CREATE INDEX idx_flashcards_sync ON flashcards(sync_status)');
-    await db.execute('CREATE INDEX idx_files_lesson ON files(lesson_id)');
-    await db.execute('CREATE INDEX idx_files_user_lesson ON files(user_id, lesson_id)');
-    await db.execute('CREATE INDEX idx_files_starred ON files(is_starred)');
-    await db.execute('CREATE INDEX idx_files_sync ON files(sync_status)');
-  }
-
-  static Future<void> _createConflictsTable(Database db) async {
-    await db.execute('''
-      CREATE TABLE conflicts (
-        id TEXT PRIMARY KEY,
-        entity_type TEXT NOT NULL,
-        entity_id TEXT NOT NULL,
-        local_data TEXT NOT NULL,
-        remote_data TEXT NOT NULL,
-        local_version INTEGER NOT NULL,
-        remote_version INTEGER NOT NULL,
-        local_updated_at TEXT NOT NULL,
-        remote_updated_at TEXT NOT NULL,
-        detected_at TEXT NOT NULL,
-        resolved_at TEXT,
-        status TEXT NOT NULL DEFAULT 'unresolved',
-        resolution_type TEXT,
-        resolved_by TEXT,
-        metadata TEXT,
-        CHECK (status IN ('unresolved', 'resolved'))
-      )
-    ''');
-    await db.execute('CREATE INDEX idx_conflicts_status ON conflicts(status)');
-    await db.execute('CREATE INDEX idx_conflicts_entity ON conflicts(entity_type, entity_id)');
-  }
-
-  static Future<void> _createFilesTable(Database db) async {
-    await db.execute('''
-      CREATE TABLE files(
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        lesson_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        file_path TEXT NOT NULL,
-        file_type TEXT NOT NULL,
-        file_size INTEGER NOT NULL,
-        remote_url TEXT,
-        is_starred INTEGER NOT NULL DEFAULT 0,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER,
-        sync_status TEXT NOT NULL DEFAULT 'local_only',
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    ''');
-
-    // Create indexes for files table
-    await db.execute('CREATE INDEX idx_files_lesson ON files(lesson_id)');
-    await db.execute('CREATE INDEX idx_files_user_lesson ON files(user_id, lesson_id)');
-    await db.execute('CREATE INDEX idx_files_starred ON files(is_starred)');
-    await db.execute('CREATE INDEX idx_files_sync ON files(sync_status)');
-  }
-
   static Future<void> _createAllTables(Database db, int version) async {
     await db.execute('''
       CREATE TABLE subjects(
@@ -380,9 +310,107 @@ class AppDatabase {
     // Create files table with foreign key constraint
     await _createFilesTable(db);
 
+    // Create notes table with foreign key constraint
+    await _createNotesTable(db);
+
     await _createConflictsTable(db);
 
     // Create indexes
     await _createIndexes(db);
+  }
+
+  static Future<void> _createFilesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE files(
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        lesson_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_size INTEGER NOT NULL,
+        remote_url TEXT,
+        is_starred INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER,
+        sync_status TEXT NOT NULL DEFAULT 'local_only',
+        version INTEGER NOT NULL DEFAULT 1,
+        FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // Create indexes for files table
+    await db.execute('CREATE INDEX idx_files_lesson ON files(lesson_id)');
+    await db.execute('CREATE INDEX idx_files_user_lesson ON files(user_id, lesson_id)');
+    await db.execute('CREATE INDEX idx_files_starred ON files(is_starred)');
+    await db.execute('CREATE INDEX idx_files_sync ON files(sync_status)');
+  }
+
+  static Future<void> _createNotesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE notes (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        lesson_id TEXT NOT NULL,
+        title TEXT,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('synced', 'pending', 'conflict')),
+        version INTEGER NOT NULL DEFAULT 1,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // Create indexes for notes table
+    await db.execute('CREATE INDEX idx_notes_lesson ON notes(lesson_id)');
+    await db.execute('CREATE INDEX idx_notes_user_lesson ON notes(user_id, lesson_id)');
+    await db.execute('CREATE INDEX idx_notes_sync ON notes(sync_status)');
+  }
+
+  static Future<void> _createConflictsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE conflicts (
+        id TEXT PRIMARY KEY,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        local_data TEXT NOT NULL,
+        remote_data TEXT NOT NULL,
+        local_version INTEGER NOT NULL,
+        remote_version INTEGER NOT NULL,
+        local_updated_at TEXT NOT NULL,
+        remote_updated_at TEXT NOT NULL,
+        detected_at TEXT NOT NULL,
+        resolved_at TEXT,
+        status TEXT NOT NULL DEFAULT 'unresolved',
+        resolution_type TEXT,
+        resolved_by TEXT,
+        metadata TEXT,
+        CHECK (status IN ('unresolved', 'resolved'))
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_conflicts_status ON conflicts(status)');
+    await db.execute('CREATE INDEX idx_conflicts_entity ON conflicts(entity_type, entity_id)');
+  }
+
+  static Future<void> _createIndexes(Database db) async {
+    // Create all necessary indexes
+    await db.execute('CREATE INDEX idx_lessons_user ON lessons(userId)');
+    await db.execute('CREATE INDEX idx_lessons_subject_topic ON lessons(userId, subjectName, topicName)');
+    await db.execute('CREATE INDEX idx_lessons_sync ON lessons(isSynced)');
+    await db.execute('CREATE INDEX idx_lessons_review ON lessons(nextReviewDate)');
+    await db.execute('CREATE INDEX idx_lessons_locked ON lessons(isLocked)');
+    await db.execute('CREATE INDEX idx_flashcards_lesson ON flashcards(lesson_id)');
+    await db.execute('CREATE INDEX idx_flashcards_user_lesson ON flashcards(user_id, lesson_id)');
+    await db.execute('CREATE INDEX idx_flashcards_tag ON flashcards(tag_id)');
+    await db.execute('CREATE INDEX idx_flashcards_sync ON flashcards(sync_status)');
+    await db.execute('CREATE INDEX idx_files_lesson ON files(lesson_id)');
+    await db.execute('CREATE INDEX idx_files_user_lesson ON files(user_id, lesson_id)');
+    await db.execute('CREATE INDEX idx_files_starred ON files(is_starred)');
+    await db.execute('CREATE INDEX idx_files_sync ON files(sync_status)');
+    await db.execute('CREATE INDEX idx_notes_lesson ON notes(lesson_id)');
+    await db.execute('CREATE INDEX idx_notes_user_lesson ON notes(user_id, lesson_id)');
+    await db.execute('CREATE INDEX idx_notes_sync ON notes(sync_status)');
   }
 }
