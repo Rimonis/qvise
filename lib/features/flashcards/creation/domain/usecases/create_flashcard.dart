@@ -6,13 +6,16 @@ import 'package:qvise/core/error/app_failure.dart';
 import 'package:qvise/features/flashcards/shared/domain/entities/flashcard.dart';
 import 'package:qvise/features/flashcards/shared/domain/entities/flashcard_tag.dart';
 import 'package:qvise/features/flashcards/shared/domain/repositories/flashcard_repository.dart';
+import 'package:uuid/uuid.dart';
 import '../entities/flashcard_difficulty.dart';
 
 class CreateFlashcard {
   final FlashcardRepository repository;
   final firebase_auth.FirebaseAuth firebaseAuth;
+  final Uuid _uuid;
 
-  CreateFlashcard(this.repository, this.firebaseAuth);
+  CreateFlashcard(this.repository, this.firebaseAuth, {Uuid? uuid})
+      : _uuid = uuid ?? const Uuid();
 
   Future<Either<AppFailure, Flashcard>> call({
     required String lessonId,
@@ -68,7 +71,7 @@ class CreateFlashcard {
     }
   }
 
-  String _generateId() => 'flashcard_${DateTime.now().millisecondsSinceEpoch}';
+  String _generateId() => _uuid.v4();
   
   String? _getCurrentUserId() {
     return firebaseAuth.currentUser?.uid;
