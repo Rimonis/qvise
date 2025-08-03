@@ -632,23 +632,6 @@ class _LessonScreenState extends ConsumerState<LessonScreen>
     );
   }
 
-  void _editFlashcard(lesson, flashcard) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FlashcardCreationScreen(
-          lessonId: lesson.id,
-          subjectName: lesson.subjectName,
-          topicName: lesson.topicName,
-          flashcardToEdit: flashcard,
-        ),
-      ),
-    ).then((_) {
-      // Refresh flashcard data when returning from edit screen
-      ref.invalidate(flashcardCountProvider(lesson.id));
-      ref.invalidate(flashcardsByLessonProvider(lesson.id));
-    });
-  }
 
   void _navigateToFiles(lesson) {
     Navigator.push(
