@@ -340,10 +340,10 @@ class AppDatabase {
     ''');
 
     // Create indexes for files table
-    await db.execute('CREATE INDEX idx_files_lesson ON files(lesson_id)');
-    await db.execute('CREATE INDEX idx_files_user_lesson ON files(user_id, lesson_id)');
-    await db.execute('CREATE INDEX idx_files_starred ON files(is_starred)');
-    await db.execute('CREATE INDEX idx_files_sync ON files(sync_status)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_files_lesson ON files(lesson_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_files_user_lesson ON files(user_id, lesson_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_files_starred ON files(is_starred)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_files_sync ON files(sync_status)');
   }
 
   static Future<void> _createNotesTable(Database db) async {
@@ -364,9 +364,9 @@ class AppDatabase {
     ''');
 
     // Create indexes for notes table
-    await db.execute('CREATE INDEX idx_notes_lesson ON notes(lesson_id)');
-    await db.execute('CREATE INDEX idx_notes_user_lesson ON notes(user_id, lesson_id)');
-    await db.execute('CREATE INDEX idx_notes_sync ON notes(sync_status)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_lesson ON notes(lesson_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_user_lesson ON notes(user_id, lesson_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_sync ON notes(sync_status)');
   }
 
   static Future<void> _createConflictsTable(Database db) async {
@@ -390,27 +390,27 @@ class AppDatabase {
         CHECK (status IN ('unresolved', 'resolved'))
       )
     ''');
-    await db.execute('CREATE INDEX idx_conflicts_status ON conflicts(status)');
-    await db.execute('CREATE INDEX idx_conflicts_entity ON conflicts(entity_type, entity_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_conflicts_status ON conflicts(status)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_conflicts_entity ON conflicts(entity_type, entity_id)');
   }
 
   static Future<void> _createIndexes(Database db) async {
-    // Create all necessary indexes
-    await db.execute('CREATE INDEX idx_lessons_user ON lessons(userId)');
-    await db.execute('CREATE INDEX idx_lessons_subject_topic ON lessons(userId, subjectName, topicName)');
-    await db.execute('CREATE INDEX idx_lessons_sync ON lessons(isSynced)');
-    await db.execute('CREATE INDEX idx_lessons_review ON lessons(nextReviewDate)');
-    await db.execute('CREATE INDEX idx_lessons_locked ON lessons(isLocked)');
-    await db.execute('CREATE INDEX idx_flashcards_lesson ON flashcards(lesson_id)');
-    await db.execute('CREATE INDEX idx_flashcards_user_lesson ON flashcards(user_id, lesson_id)');
-    await db.execute('CREATE INDEX idx_flashcards_tag ON flashcards(tag_id)');
-    await db.execute('CREATE INDEX idx_flashcards_sync ON flashcards(sync_status)');
-    await db.execute('CREATE INDEX idx_files_lesson ON files(lesson_id)');
-    await db.execute('CREATE INDEX idx_files_user_lesson ON files(user_id, lesson_id)');
-    await db.execute('CREATE INDEX idx_files_starred ON files(is_starred)');
-    await db.execute('CREATE INDEX idx_files_sync ON files(sync_status)');
-    await db.execute('CREATE INDEX idx_notes_lesson ON notes(lesson_id)');
-    await db.execute('CREATE INDEX idx_notes_user_lesson ON notes(user_id, lesson_id)');
-    await db.execute('CREATE INDEX idx_notes_sync ON notes(sync_status)');
+    // Create all necessary indexes with IF NOT EXISTS to prevent duplicates
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_lessons_user ON lessons(userId)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_lessons_subject_topic ON lessons(userId, subjectName, topicName)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_lessons_sync ON lessons(isSynced)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_lessons_review ON lessons(nextReviewDate)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_lessons_locked ON lessons(isLocked)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_flashcards_lesson ON flashcards(lesson_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_flashcards_user_lesson ON flashcards(user_id, lesson_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_flashcards_tag ON flashcards(tag_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_flashcards_sync ON flashcards(sync_status)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_files_lesson ON files(lesson_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_files_user_lesson ON files(user_id, lesson_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_files_starred ON files(is_starred)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_files_sync ON files(sync_status)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_lesson ON notes(lesson_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_user_lesson ON notes(user_id, lesson_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_notes_sync ON notes(sync_status)');
   }
 }

@@ -39,7 +39,7 @@ dependencies:
   # Utilities
   dartz: ^0.10.1
   freezed_annotation: ^2.4.1
-  json_annotation: ^4.8.1
+  json_annotation: ^4.9.0
   uuid: ^4.3.3 # ADDED
   device_info_plus: ^9.1.2 
 
